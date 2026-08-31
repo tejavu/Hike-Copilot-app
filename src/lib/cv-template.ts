@@ -138,7 +138,7 @@ export function buildCvHtml({ profile, earned }: { profile: CvProfile; earned: E
   );
 
   const skillsHtml = [
-    labelled("Languages", ""),
+    labelled("Languages", "—"),
     labelled("Technical Skills", technical.join(", ")),
     labelled("Certifications & Training", certNames.join("; ")),
     labelled(
