@@ -20,7 +20,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { MentorAvatar } from "@/components/mentor/MentorCard";
 import { useAddActions, useToggleAction, useUpdateSession } from "@/hooks/useMentorData";
@@ -100,11 +106,13 @@ export function UpcomingSessionCard({
       if (result.ok) toast.success("Prepped. Edit anything that doesn't sound like you.");
       else if (result.reason === "no_credits") {
         toast.info("Used my built-in prep", {
-          description: "AI credits are unavailable right now, so I wrote these from your roadmap instead.",
+          description:
+            "AI credits are unavailable right now, so I wrote these from your roadmap instead.",
         });
       } else {
         toast.info("Used my built-in prep", {
-          description: "I couldn't reach the AI just now, so these come straight from your roadmap.",
+          description:
+            "I couldn't reach the AI just now, so these come straight from your roadmap.",
         });
       }
     } catch {
@@ -138,7 +146,9 @@ export function UpcomingSessionCard({
         <div className="flex items-start gap-3">
           <MentorAvatar name={mentor.full_name} />
           <div>
-            <p className="text-xs font-semibold tracking-wide text-primary uppercase">Next session</p>
+            <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+              Next session
+            </p>
             <h3 className="font-display text-xl font-semibold">{mentor.full_name}</h3>
             <p className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
               <CalendarClock className="size-3.5" />
@@ -196,8 +206,8 @@ export function UpcomingSessionCard({
           <Video className="size-3.5" /> Meeting link
         </span>
         <p className="mt-1">
-          Microsoft Teams isn't connected, so no Teams meeting was created automatically. Add the .ics to
-          your calendar and paste the link your mentor sends into that entry.
+          Microsoft Teams isn't connected, so no Teams meeting was created automatically. Add the
+          .ics to your calendar and paste the link your mentor sends into that entry.
         </p>
       </div>
 
@@ -206,7 +216,9 @@ export function UpcomingSessionCard({
           <p className="text-sm font-medium">Move it to one of her other openings</p>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {slots.length === 0 && (
-              <p className="text-sm text-muted-foreground">No other openings in the next few weeks.</p>
+              <p className="text-sm text-muted-foreground">
+                No other openings in the next few weeks.
+              </p>
             )}
             {slots.map((slot) => (
               <Button
@@ -251,8 +263,17 @@ export function UpcomingSessionCard({
             Built from your goal, roadmap gaps, what you've built and your event notes.
           </p>
         </div>
-        <Button size="sm" className="gap-1.5" disabled={loadingPrep} onClick={() => void buildPrep()}>
-          {loadingPrep ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+        <Button
+          size="sm"
+          className="gap-1.5"
+          disabled={loadingPrep}
+          onClick={() => void buildPrep()}
+        >
+          {loadingPrep ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <Sparkles className="size-3.5" />
+          )}
           {hasPrep ? "Regenerate" : "Prepare me"}
         </Button>
       </div>
@@ -302,7 +323,11 @@ export function UpcomingSessionCard({
           </div>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" className="gap-1.5" disabled={update.isPending} onClick={savePrep}>
-              {update.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+              {update.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Check className="size-3.5" />
+              )}
               Save my version
             </Button>
             <Button
@@ -338,8 +363,8 @@ export function UpcomingSessionCard({
         </div>
       ) : (
         <p className="mt-4 rounded-2xl bg-muted p-4 text-sm leading-relaxed text-muted-foreground">
-          Nothing prepared yet. Hit "Prepare me" and I'll write you an agenda and six specific questions —
-          then edit them until they sound like you.
+          Nothing prepared yet. Hit "Prepare me" and I'll write you an agenda and six specific
+          questions — then edit them until they sound like you.
         </p>
       )}
 
@@ -446,9 +471,10 @@ export function FollowUpCard({
           </Select>
           {source === "teams_recap" && (
             <p className="rounded-2xl bg-accent/40 p-3 text-xs leading-relaxed text-accent-foreground">
-              Teams Premium's Intelligent Recap can generate a summary and action items — but only when the
-              meeting organiser's Microsoft 365 tenant has it enabled, and only inside Teams. Ada can't join,
-              record or read your calls. If you have a recap, copy it from Teams and paste it below.
+              Teams Premium's Intelligent Recap can generate a summary and action items — but only
+              when the meeting organiser's Microsoft 365 tenant has it enabled, and only inside
+              Teams. Ada can't join, record or read your calls. If you have a recap, copy it from
+              Teams and paste it below.
             </p>
           )}
         </div>
@@ -489,7 +515,9 @@ export function FollowUpCard({
                 placeholder="e.g. Rewrite my project README with results"
                 onChange={(event) =>
                   setActions((current) =>
-                    current.map((item, i) => (i === index ? { ...item, title: event.target.value } : item)),
+                    current.map((item, i) =>
+                      i === index ? { ...item, title: event.target.value } : item,
+                    ),
                   )
                 }
               />
@@ -499,7 +527,9 @@ export function FollowUpCard({
                 aria-label={`Due date for action ${index + 1}`}
                 onChange={(event) =>
                   setActions((current) =>
-                    current.map((item, i) => (i === index ? { ...item, due: event.target.value } : item)),
+                    current.map((item, i) =>
+                      i === index ? { ...item, due: event.target.value } : item,
+                    ),
                   )
                 }
               />
@@ -528,7 +558,9 @@ export function FollowUpCard({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setActions((current) => [...current, { title: "", due: "", skillId: "none" }])}
+            onClick={() =>
+              setActions((current) => [...current, { title: "", due: "", skillId: "none" }])
+            }
           >
             Add another action
           </Button>
@@ -564,7 +596,13 @@ export function FollowUpCard({
 
 /* -------------------------------- progress -------------------------------- */
 
-export function ActionPlanList({ actions, mentorName }: { actions: MentorAction[]; mentorName: string }) {
+export function ActionPlanList({
+  actions,
+  mentorName,
+}: {
+  actions: MentorAction[];
+  mentorName: string;
+}) {
   const toggle = useToggleAction();
   const done = actions.filter((action) => action.done).length;
   const pct = actions.length === 0 ? 0 : Math.round((done / actions.length) * 100);
@@ -572,8 +610,8 @@ export function ActionPlanList({ actions, mentorName }: { actions: MentorAction[
   if (actions.length === 0) {
     return (
       <p className="rounded-2xl bg-muted p-4 text-sm leading-relaxed text-muted-foreground">
-        No action items yet. After your first session with {mentorName.split(" ")[0]}, whatever you agree on
-        lands here as trackable tasks.
+        No action items yet. After your first session with {mentorName.split(" ")[0]}, whatever you
+        agree on lands here as trackable tasks.
       </p>
     );
   }
@@ -596,7 +634,11 @@ export function ActionPlanList({ actions, mentorName }: { actions: MentorAction[
             <button
               type="button"
               aria-pressed={action.done}
-              aria-label={action.done ? `Mark "${action.title}" as not done` : `Mark "${action.title}" as done`}
+              aria-label={
+                action.done
+                  ? `Mark "${action.title}" as not done`
+                  : `Mark "${action.title}" as done`
+              }
               onClick={() => toggle.mutate(action)}
               className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
                 action.done ? "border-primary bg-primary text-primary-foreground" : "border-border"

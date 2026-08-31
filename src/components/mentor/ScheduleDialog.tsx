@@ -52,14 +52,15 @@ export function ScheduleDialog({
             Book time with {mentor.full_name.split(" ")[0]}
           </DialogTitle>
           <DialogDescription>
-            These are the windows she keeps open for mentoring: {mentor.availability_summary.toLowerCase()}.
+            These are the windows she keeps open for mentoring:{" "}
+            {mentor.availability_summary.toLowerCase()}.
           </DialogDescription>
         </DialogHeader>
 
         {slots.length === 0 ? (
           <p className="rounded-2xl bg-muted p-4 text-sm text-muted-foreground">
-            She hasn't published any openings for the next few weeks. Shortlist her and check back, or pick
-            another strong match in the meantime.
+            She hasn't published any openings for the next few weeks. Shortlist her and check back,
+            or pick another strong match in the meantime.
           </p>
         ) : (
           <div className="space-y-4">
@@ -83,7 +84,9 @@ export function ScheduleDialog({
                     >
                       <span>
                         <span className="block font-medium">{formatSlot(slot.start)}</span>
-                        <span className="block text-xs text-muted-foreground">{slot.minutes} min</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {slot.minutes} min
+                        </span>
                       </span>
                       {active && <Check className="size-4 text-primary" />}
                     </button>
@@ -108,10 +111,10 @@ export function ScheduleDialog({
                 Microsoft Teams
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-accent-foreground">
-                Ada can't create a Teams meeting for you yet — that needs you to authorise Microsoft 365 so
-                a meeting can be booked in your calendar on your behalf. Until you connect it, I'll give you
-                a calendar file (.ics) to add the session anywhere, and your mentor can drop the Teams link
-                into it.
+                Ada can't create a Teams meeting for you yet — that needs you to authorise Microsoft
+                365 so a meeting can be booked in your calendar on your behalf. Until you connect
+                it, I'll give you a calendar file (.ics) to add the session anywhere, and your
+                mentor can drop the Teams link into it.
               </p>
               <Button
                 type="button"
@@ -145,7 +148,11 @@ export function ScheduleDialog({
               onConfirm({ slot, theme: theme.trim() || defaultTheme });
             }}
           >
-            {saving ? <Loader2 className="size-4 animate-spin" /> : <CalendarPlus className="size-4" />}
+            {saving ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CalendarPlus className="size-4" />
+            )}
             Confirm session
           </Button>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>

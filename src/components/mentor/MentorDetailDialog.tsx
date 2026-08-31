@@ -65,16 +65,19 @@ export function MentorDetailDialog({
             <Progress value={score} className="mt-2 h-1.5" />
             <ul className="mt-3 space-y-1.5">
               {reasons.map((reason) => (
-                <li key={reason} className="flex gap-2 text-sm leading-relaxed text-accent-foreground">
+                <li
+                  key={reason}
+                  className="flex gap-2 text-sm leading-relaxed text-accent-foreground"
+                >
                   <Star className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                   <span>{reason}</span>
                 </li>
               ))}
             </ul>
             <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              This percentage is a compatibility guide built from the preferences you gave me — skills,
-              target role, language, format and availability. It isn't a prediction of how the relationship
-              will go.
+              This percentage is a compatibility guide built from the preferences you gave me —
+              skills, target role, language, format and availability. It isn't a prediction of how
+              the relationship will go.
             </p>
           </div>
 
@@ -106,7 +109,9 @@ export function MentorDetailDialog({
             <Detail label="Location & format">
               <p className="inline-flex items-center gap-1.5 text-sm">
                 <MapPin className="size-3.5" />
-                {mentor.city ? `${mentor.city}${mentor.country ? `, ${mentor.country}` : ""}` : "Remote only"}
+                {mentor.city
+                  ? `${mentor.city}${mentor.country ? `, ${mentor.country}` : ""}`
+                  : "Remote only"}
               </p>
               <p className="mt-1 inline-flex items-center gap-1.5 text-sm">
                 <BadgeCheck className="size-3.5" />
@@ -143,8 +148,8 @@ export function MentorDetailDialog({
 
           {mentor.is_demo && (
             <p className="rounded-2xl bg-muted p-3 text-xs leading-relaxed text-muted-foreground">
-              Demo profile. This is a realistic stand-in used to build out the mentoring flow — not a real
-              person you'd be emailing yet.
+              Demo profile. This is a realistic stand-in used to build out the mentoring flow — not
+              a real person you'd be emailing yet.
             </p>
           )}
         </div>
@@ -155,7 +160,9 @@ export function MentorDetailDialog({
             {status === "selected" ? "Your mentor" : "Choose her as my mentor"}
           </Button>
           <Button variant="outline" onClick={onShortlist}>
-            {status === "shortlisted" || status === "selected" ? "Shortlisted" : "Shortlist for later"}
+            {status === "shortlisted" || status === "selected"
+              ? "Shortlisted"
+              : "Shortlist for later"}
           </Button>
         </DialogFooter>
       </DialogContent>

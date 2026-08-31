@@ -17,7 +17,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProfile, useRoadmap } from "@/hooks/useCoachData";
 import { useReflections } from "@/hooks/useNetworkData";
@@ -141,7 +147,8 @@ export function MentorMatchView() {
     [ranked, detailId],
   );
   const shortlisted = useMemo(
-    () => ranked.filter((row) => ["shortlisted", "selected"].includes(statusOf(row.mentor.id) ?? "")),
+    () =>
+      ranked.filter((row) => ["shortlisted", "selected"].includes(statusOf(row.mentor.id) ?? "")),
     [ranked, matches],
   );
 
@@ -153,7 +160,8 @@ export function MentorMatchView() {
     [sessions],
   );
   const nextSession = sortedSessions.find(
-    (session) => session.status === "scheduled" && new Date(session.starts_at).getTime() > Date.now() - 36e5,
+    (session) =>
+      session.status === "scheduled" && new Date(session.starts_at).getTime() > Date.now() - 36e5,
   );
   const awaitingLog = sortedSessions.filter(
     (session) =>
@@ -201,7 +209,8 @@ export function MentorMatchView() {
   const shortlist = (mentorId: string) => {
     const row = ranked.find((item) => item.mentor.id === mentorId);
     const already = statusOf(mentorId);
-    const next: MatchStatus = already === "shortlisted" || already === "selected" ? "suggested" : "shortlisted";
+    const next: MatchStatus =
+      already === "shortlisted" || already === "selected" ? "suggested" : "shortlisted";
     setMatchStatus.mutate(
       {
         mentorId,
@@ -212,7 +221,11 @@ export function MentorMatchView() {
       },
       {
         onSuccess: () =>
-          toast.success(next === "shortlisted" ? "Shortlisted — no pressure to decide." : "Removed from your shortlist."),
+          toast.success(
+            next === "shortlisted"
+              ? "Shortlisted — no pressure to decide."
+              : "Removed from your shortlist.",
+          ),
       },
     );
   };
@@ -231,7 +244,9 @@ export function MentorMatchView() {
         onSuccess: async () => {
           await savePreferences.mutateAsync({ selected_mentor_id: mentorId });
           setDetailId(null);
-          toast.success(`${row?.mentor.full_name.split(" ")[0] ?? "She"}'s your mentor. Let's book time.`);
+          toast.success(
+            `${row?.mentor.full_name.split(" ")[0] ?? "She"}'s your mentor. Let's book time.`,
+          );
           if (row) setScheduleFor(row.mentor);
         },
       },
@@ -294,8 +309,8 @@ export function MentorMatchView() {
           Someone who's already walked it
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed opacity-90 md:text-base">
-          Volunteer mentors who know the road you're on. I'll line them up against your goal, your roadmap
-          gaps and how you actually want to be helped — then you choose.
+          Volunteer mentors who know the road you're on. I'll line them up against your goal, your
+          roadmap gaps and how you actually want to be helped — then you choose.
         </p>
       </header>
 
@@ -304,8 +319,8 @@ export function MentorMatchView() {
           <p className="inline-flex items-start gap-2 text-sm">
             <BellRing className="mt-0.5 size-4 shrink-0 text-primary" />
             <span>
-              It's been a while since you spoke with {selectedMentor.full_name.split(" ")[0]}. Want to book
-              another session? (Reminders live here in the app — Ada isn't emailing you.)
+              It's been a while since you spoke with {selectedMentor.full_name.split(" ")[0]}. Want
+              to book another session? (Reminders live here in the app — Ada isn't emailing you.)
             </span>
           </p>
           <div className="flex gap-2">
@@ -320,7 +335,9 @@ export function MentorMatchView() {
                   reminder_pending: false,
                   next_check_in_at: nextCheckInFrom(
                     new Date(),
-                    preferences.reminder_cadence === "off" ? "monthly" : preferences.reminder_cadence,
+                    preferences.reminder_cadence === "off"
+                      ? "monthly"
+                      : preferences.reminder_cadence,
                   ),
                 })
               }
@@ -368,13 +385,18 @@ export function MentorMatchView() {
               <div className="max-w-2xl">
                 <h2 className="font-display text-xl font-semibold">Your strongest matches</h2>
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  These percentages are a compatibility guide built from what you told me — skills, target
-                  role, language, format and availability. They're not a prediction of how well you'll click.
-                  Several people here are close in fit on purpose: read them and pick the one you'd actually
-                  want in your corner.
+                  These percentages are a compatibility guide built from what you told me — skills,
+                  target role, language, format and availability. They're not a prediction of how
+                  well you'll click. Several people here are close in fit on purpose: read them and
+                  pick the one you'd actually want in your corner.
                 </p>
               </div>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setAssessing(true)}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setAssessing(true)}
+              >
                 <SlidersHorizontal className="size-3.5" />
                 Update what I need
               </Button>
@@ -494,7 +516,9 @@ export function MentorMatchView() {
                   <Switch
                     id="filter-available"
                     checked={filters.availableOnly}
-                    onCheckedChange={(checked) => setFilters({ ...filters, availableOnly: checked })}
+                    onCheckedChange={(checked) =>
+                      setFilters({ ...filters, availableOnly: checked })
+                    }
                   />
                   <Label htmlFor="filter-available" className="text-sm">
                     Has openings
@@ -520,8 +544,9 @@ export function MentorMatchView() {
             </section>
 
             <p className="rounded-2xl bg-muted p-4 text-xs leading-relaxed text-muted-foreground">
-              Every profile here is a clearly-labelled demo mentor — realistic stand-ins built so the whole
-              mentoring flow works end to end. Nobody listed is a real person waiting for your message.
+              Every profile here is a clearly-labelled demo mentor — realistic stand-ins built so
+              the whole mentoring flow works end to end. Nobody listed is a real person waiting for
+              your message.
             </p>
 
             {filtered.length === 0 ? (
@@ -564,7 +589,9 @@ export function MentorMatchView() {
                     <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                       Your mentor
                     </p>
-                    <h2 className="font-display text-xl font-semibold">{selectedMentor.full_name}</h2>
+                    <h2 className="font-display text-xl font-semibold">
+                      {selectedMentor.full_name}
+                    </h2>
                     <p className="text-sm text-muted-foreground">
                       {selectedMentor.title} · {selectedMentor.company}
                     </p>
@@ -638,8 +665,8 @@ export function MentorMatchView() {
                 <section className="rounded-3xl border border-border bg-card p-5">
                   <h3 className="font-display text-lg font-semibold">Action plan</h3>
                   <p className="mb-3 text-sm text-muted-foreground">
-                    What you agreed to do. Items linked to a roadmap skill show up there as committed work —
-                    never as proof you've mastered it.
+                    What you agreed to do. Items linked to a roadmap skill show up there as
+                    committed work — never as proof you've mastered it.
                   </p>
                   <ActionPlanList actions={actions ?? []} mentorName={selectedMentor.full_name} />
                 </section>
@@ -648,8 +675,8 @@ export function MentorMatchView() {
                   <h3 className="font-display text-lg font-semibold">Check-in history</h3>
                   {completed.length === 0 ? (
                     <p className="mt-2 text-sm text-muted-foreground">
-                      No sessions logged yet. After your first one, your recaps and the advice worth keeping
-                      live here.
+                      No sessions logged yet. After your first one, your recaps and the advice worth
+                      keeping live here.
                     </p>
                   ) : (
                     <ul className="mt-3 space-y-3">
@@ -663,7 +690,9 @@ export function MentorMatchView() {
                               </Badge>
                             )}
                           </div>
-                          {session.theme && <p className="text-sm text-muted-foreground">{session.theme}</p>}
+                          {session.theme && (
+                            <p className="text-sm text-muted-foreground">{session.theme}</p>
+                          )}
                           {session.key_advice && (
                             <p className="mt-2 border-l-2 border-primary/40 pl-3 text-sm italic">
                               {session.key_advice}
@@ -681,9 +710,9 @@ export function MentorMatchView() {
                 <section className="rounded-3xl border border-border bg-card p-5">
                   <h3 className="font-display text-lg font-semibold">Reconnect reminders</h3>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    Mentoring works when it keeps happening. I'll surface a gentle nudge here in the app when
-                    it's time — Ada doesn't send email, because that needs a verified sending domain that
-                    isn't set up for this app.
+                    Mentoring works when it keeps happening. I'll surface a gentle nudge here in the
+                    app when it's time — Ada doesn't send email, because that needs a verified
+                    sending domain that isn't set up for this app.
                   </p>
                   <div className="mt-3 flex flex-wrap items-end gap-3">
                     <div className="space-y-1.5">
@@ -708,7 +737,8 @@ export function MentorMatchView() {
                     </div>
                     {preferences?.next_check_in_at && preferences.reminder_cadence !== "off" && (
                       <p className="pb-2 text-sm text-muted-foreground">
-                        Next nudge around {new Date(preferences.next_check_in_at).toLocaleDateString()}
+                        Next nudge around{" "}
+                        {new Date(preferences.next_check_in_at).toLocaleDateString()}
                       </p>
                     )}
                   </div>
@@ -817,7 +847,9 @@ function EmptyState({
     <div className="rounded-3xl border border-dashed border-border bg-card/60 p-8 text-center">
       <Sparkles className="mx-auto size-6 text-primary" aria-hidden="true" />
       <h3 className="mt-3 font-display text-lg font-semibold">{title}</h3>
-      <p className="mx-auto mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">{body}</p>
+      <p className="mx-auto mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">
+        {body}
+      </p>
       {action && <div className="mt-4 flex justify-center">{action}</div>}
     </div>
   );

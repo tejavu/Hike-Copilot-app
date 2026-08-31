@@ -3,12 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import {
-  MEETING_PREF_LABELS,
-  initialsOf,
-  type MatchResult,
-  type MatchStatus,
-} from "@/lib/mentors";
+import { MEETING_PREF_LABELS, initialsOf, type MatchResult, type MatchStatus } from "@/lib/mentors";
 
 export function MentorAvatar({ name, className }: { name: string; className?: string }) {
   return (
@@ -57,7 +52,9 @@ export function MentorCard({
             {showMatch && (
               <div className="shrink-0 text-right">
                 <p className="font-display text-xl font-semibold text-primary">{score}%</p>
-                <p className="text-[0.65rem] tracking-wide text-muted-foreground uppercase">match</p>
+                <p className="text-[0.65rem] tracking-wide text-muted-foreground uppercase">
+                  match
+                </p>
               </div>
             )}
           </div>
@@ -68,7 +65,9 @@ export function MentorCard({
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <MapPin className="size-3.5" />
-          {mentor.city ? `${mentor.city}${mentor.country ? `, ${mentor.country}` : ""}` : "Remote only"}
+          {mentor.city
+            ? `${mentor.city}${mentor.country ? `, ${mentor.country}` : ""}`
+            : "Remote only"}
           {distance != null && distance <= 400 ? ` · ${distance} km` : ""}
         </span>
         <span className="inline-flex items-center gap-1">
@@ -90,7 +89,10 @@ export function MentorCard({
           </p>
           <ul className="mt-1.5 space-y-1">
             {reasons.slice(0, 2).map((reason) => (
-              <li key={reason} className="flex gap-1.5 text-xs leading-relaxed text-accent-foreground">
+              <li
+                key={reason}
+                className="flex gap-1.5 text-xs leading-relaxed text-accent-foreground"
+              >
                 <Star className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
                 <span>{reason}</span>
               </li>

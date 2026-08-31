@@ -5,7 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   GUIDANCE_STYLES,
@@ -50,7 +56,9 @@ export function NeedsAssessment({
       ? existing.priority_skills
       : inferred.gapSkills.slice(0, 3),
     guidance_style: existing?.guidance_style ?? "strategy",
-    language: existing?.language ?? (languages.includes("English") ? "English" : (languages[0] ?? "English")),
+    language:
+      existing?.language ??
+      (languages.includes("English") ? "English" : (languages[0] ?? "English")),
     location_pref: existing?.location_pref ?? "either",
     availability_notes: existing?.availability_notes ?? "",
     session_focus: existing?.session_focus ?? "",
@@ -119,8 +127,8 @@ export function NeedsAssessment({
           <>
             <h2 className="font-display text-2xl font-semibold">Which role are we aiming at?</h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              This is what I match mentors' day jobs against — the closer the title, the more useful their
-              instincts will be.
+              This is what I match mentors' day jobs against — the closer the title, the more useful
+              their instincts will be.
             </p>
             <Label htmlFor="na-role">Target role</Label>
             <Input
@@ -138,8 +146,8 @@ export function NeedsAssessment({
               Which gaps do you most want help with right now?
             </h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Pulled straight from your roadmap. Pick the two or three that feel heaviest — you can add your
-              own too.
+              Pulled straight from your roadmap. Pick the two or three that feel heaviest — you can
+              add your own too.
             </p>
             <div className="flex flex-wrap gap-2">
               {skillOptions.map((skill) => {
@@ -197,7 +205,9 @@ export function NeedsAssessment({
 
         {step === 3 && (
           <>
-            <h2 className="font-display text-2xl font-semibold">What kind of guidance helps you most?</h2>
+            <h2 className="font-display text-2xl font-semibold">
+              What kind of guidance helps you most?
+            </h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
               There's no wrong answer — mentors are good at different things.
             </p>
@@ -231,7 +241,9 @@ export function NeedsAssessment({
 
         {step === 4 && (
           <>
-            <h2 className="font-display text-2xl font-semibold">Language and how you'd like to meet</h2>
+            <h2 className="font-display text-2xl font-semibold">
+              Language and how you'd like to meet
+            </h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="na-language">Language you want to be mentored in</Label>
@@ -277,7 +289,8 @@ export function NeedsAssessment({
               />
               {inferred.location && (
                 <p className="text-xs text-muted-foreground">
-                  I'll use your saved location ({inferred.location}) to work out who's actually nearby.
+                  I'll use your saved location ({inferred.location}) to work out who's actually
+                  nearby.
                 </p>
               )}
             </div>
@@ -290,7 +303,8 @@ export function NeedsAssessment({
               And if you only got one hour with her — what would you want from it?
             </h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              This becomes the theme of your first session and shapes the questions I prepare for you.
+              This becomes the theme of your first session and shapes the questions I prepare for
+              you.
             </p>
             <Label htmlFor="na-focus" className="sr-only">
               Session focus
@@ -323,7 +337,12 @@ export function NeedsAssessment({
             Find my matches
           </Button>
         ) : (
-          <Button type="button" className="gap-2" disabled={!canAdvance()} onClick={() => setStep(step + 1)}>
+          <Button
+            type="button"
+            className="gap-2"
+            disabled={!canAdvance()}
+            onClick={() => setStep(step + 1)}
+          >
             Next
             <ArrowRight className="size-4" />
           </Button>
