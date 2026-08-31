@@ -64,7 +64,10 @@ function CvBody() {
       .filter((item) => item.item_type === "learn" && isItemComplete(item))
       .map((item) => ({ title: item.title, provider: item.provider }));
     const readySkills = skills
-      .filter((skill) => items.filter((i) => i.skill_id === skill.id).every(isItemComplete))
+      .filter((skill) => {
+        const own = items.filter((i) => i.skill_id === skill.id);
+        return own.length > 0 && own.every(isItemComplete);
+      })
       .map((skill) => skill.name);
     return { certifications, projects, courses, readySkills };
   }, [roadmap]);
