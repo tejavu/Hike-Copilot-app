@@ -1,24 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { AppShell } from "@/components/AppShell";
+import { AuthGate } from "@/components/AuthGate";
+import { ChatView } from "@/components/chat/ChatView";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "Ada — Your Career Coach for Women in Tech" },
+      {
+        name: "description",
+        content:
+          "Ada is a warm AI career coach for women in tech: find your skill gaps, close them with a real roadmap, and land the role.",
+      },
+      { property: "og:title", content: "Ada — Your Career Coach for Women in Tech" },
+      {
+        property: "og:description",
+        content: "Find your skill gaps, close them with a guided roadmap, and land the role. One step at a time.",
+      },
+    ],
+  }),
+  component: Home,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function Home() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <AuthGate>
+      <AppShell>
+        <ChatView />
+      </AppShell>
+    </AuthGate>
   );
 }

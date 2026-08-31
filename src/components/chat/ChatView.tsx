@@ -1,0 +1,604 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  ArrowRight,
+  FileUp,
+  Heart,
+  Loader2,
+  MessageSquareHeart,
+  PartyPopper,
+  Send,
+  Sparkles,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  useDocuments,
+  useJobs,
+  useMessages,
+  useProfile,
+  useRoadmap,
+  useUpdateJob,
+  useUpdateProfile,
+} from "@/hooks/useCoachData";
+import { askCoach } from "@/lib/coach-ai.functions";
+import { sweepJobs, skillGap } from "@/lib/job-sweep";
+import { generateRoadmap } from "@/lib/roadmap-builder";
+import {
+  PROMPTS,
+  firstName,
+  nextQuestionStage,
+  parseMonths,
+  splitList,
+  type Stage,
+} from "@/lib/coach-script";
+import { type ChatMessage, type Job, type Profile } from "@/lib/domain";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+export function ChatView() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const { data: profile } = useProfile();
+  const { data: messages, isLoading } = useMessages();
+  const { data: jobs } = useJobs();
+  const { data: docs } = useDocuments();
+  const { data: roadmap } = useRoadmap();
+  const updateProfile = useUpdateProfile();
+  const updateJob = useUpdateJob();
+  const callCoach = useServerFn(askCoach);
+
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const bottom = useRef<HTMLDivElement>(null);
+  const seeded = useRef(false);
+
+  const stage = (profile?.onboarding_stage ?? "welcome") as Stage;
+  const uploadedPath = (docs?.length ?? 0) > 0;
+
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ["messages", user?.id] });
+    void qc.invalidateQueries({ queryKey: ["profile", user?.id] });
+    void qc.invalidateQueries({ queryKey: ["jobs", user?.id] });
+    void qc.invalidateQueries({ queryKey: ["documents", user?.id] });
+    void qc.invalidateQueries({ queryKey: ["roadmap", user?.id] });
+  };
+
+  const say = async (
+    content: string,
+    kind: ChatMessage["kind"] = "text",
+    payload: Record<string, unknown> | null = null,
+    role: "assistant" | "user" = "assistant",
+  ) => {
+    const { error } = await supabase
+      .from("chat_messages")
+      .insert({ user_id: user!.id, role, content, kind, payload } as never);
+    if (error) throw error;
+  };
+
+  // First-ever greeting.
+  useEffect(() => {
+    if (isLoading || seeded.current || !user || !profile) return;
+    if ((messages?.length ?? 0) > 0) return;
+    seeded.current = true;
+    void (async () => {
+      await say(
+        `Hi ${firstName(profile)} — I'm Ada, and I'm so glad you're here. Before we do anything clever, I need to get to know you.\n\nWe can do this one of two ways, and neither is better than the other.`,
+        "path_choice",
+      );
+      refresh();
+    })();
+  }, [isLoading, messages, user, profile]);
+
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages?.length, busy]);
+
+  // The newest message of each interactive kind owns its widget, so a stray
+  // typed reply never hides the cards the user still has to act on.
+  const widgetIds = useMemo(() => {
+    const newest = new Map<string, string>();
+    for (const msg of messages ?? []) {
+      if (msg.role === "assistant" && msg.kind !== "text") newest.set(msg.kind, msg.id);
+    }
+    return new Set(newest.values());
+  }, [messages]);
+
+  const showWidget = (message: ChatMessage) => {
+    if (!widgetIds.has(message.id)) return false;
+    if (message.kind === "path_choice" || message.kind === "upload") {
+      return stage === "welcome" || stage === "upload";
+    }
+    return true;
+  };
+
+  const choosePath = async (path: "questions" | "upload") => {
+    setBusy(true);
+    try {
+      if (path === "questions") {
+        await say("I'll answer your questions.", "text", null, "user");
+        await say(PROMPTS["q_interests"] as string);
+        await updateProfile.mutateAsync({ onboarding_stage: "q_interests" });
+      } else {
+        await say("I'd rather share my documents.", "text", null, "user");
+        await say(
+          "Perfect — send over whatever you have. Resume, transcripts, certificates. I'll read them so you don't have to retype your whole life.",
+          "upload",
+        );
+        await updateProfile.mutateAsync({ onboarding_stage: "upload" });
+      }
+      refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const uploadFiles = async (files: FileList) => {
+    setBusy(true);
+    try {
+      const names: string[] = [];
+      for (const file of Array.from(files)) {
+        const path = `${user!.id}/docs/${Date.now()}-${file.name}`;
+        const { error } = await supabase.storage.from("user-files").upload(path, file);
+        if (error) throw error;
+        await supabase
+          .from("user_documents")
+          .insert({ user_id: user!.id, kind: "document", file_name: file.name, storage_path: path } as never);
+        names.push(file.name);
+      }
+      await say(`Uploaded: ${names.join(", ")}`, "text", null, "user");
+      await say(
+        "Got them, thank you — that's your paperwork handled. Two quick things I can't read off a document, though.\n\n" +
+          PROMPTS["q_interests"],
+      );
+      await updateProfile.mutateAsync({ onboarding_stage: "q_interests" });
+      refresh();
+      toast.success("Documents saved");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startJobSweep = async (currentProfile: Profile) => {
+    await supabase.from("jobs").delete().eq("user_id", currentProfile.id);
+    const generated = sweepJobs(currentProfile.interests, currentProfile.skills);
+    const { error } = await supabase
+      .from("jobs")
+      .insert(generated.map((job) => ({ ...job, user_id: currentProfile.id })) as never);
+    if (error) throw error;
+    await say(
+      `Right — I went looking. Here are ${generated.length} openings that fit the direction you're pointing in.\n\nKeep the ones that make you a little bit excited, even the ones that feel like a stretch. Especially those, honestly.`,
+      "jobs",
+    );
+    await updateProfile.mutateAsync({ onboarding_stage: "jobs" });
+  };
+
+  const answerQuestion = async (text: string) => {
+    if (!profile) return;
+    const patch: Partial<Profile> = {};
+    switch (stage) {
+      case "q_interests":
+        patch.interests = splitList(text);
+        break;
+      case "q_skills":
+        patch.skills = splitList(text);
+        break;
+      case "q_education":
+        patch.education = splitList(text).map((title) => ({ title }));
+        break;
+      case "q_quals":
+        patch.experience = splitList(text).map((title) => ({ title }));
+        break;
+      case "q_certs":
+        patch.certifications = splitList(text);
+        break;
+      default:
+        break;
+    }
+
+    const next = nextQuestionStage(stage, uploadedPath);
+    const merged: Profile = { ...profile, ...patch };
+    await updateProfile.mutateAsync({ ...patch, onboarding_stage: next });
+
+    if (next === "jobs") {
+      await startJobSweep(merged);
+    } else {
+      await say(PROMPTS[next] as string);
+    }
+  };
+
+  const decideJob = async (job: Job, liked: boolean) => {
+    await updateJob.mutateAsync({ id: job.id, patch: { liked } });
+    const remaining = (jobs ?? []).filter((j) => j.id !== job.id && j.liked === null);
+    if (remaining.length > 0) return;
+
+    const decided = (jobs ?? []).map((j) => (j.id === job.id ? { ...j, liked } : j));
+    const likedJobs = decided.filter((j) => j.liked);
+    const jobSkills = likedJobs.flatMap((j) => j.required_skills);
+    const { strengths, gaps } = skillGap(profile?.skills ?? [], jobSkills);
+
+    setBusy(true);
+    try {
+      if (likedJobs.length === 0) {
+        await say(
+          "None of those landed — that's useful information, not a failure. Tell me what was missing and I'll go again.",
+        );
+      } else {
+        await say(
+          `I compared you against those ${likedJobs.length} role${likedJobs.length > 1 ? "s" : ""}. Here's the honest picture — and it's a good one.`,
+          "gap",
+          { strengths, gaps },
+        );
+        await say(PROMPTS["q_timeline"] as string);
+        await updateProfile.mutateAsync({ onboarding_stage: "q_timeline" });
+      }
+      refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const finishOnboarding = async (goal: string) => {
+    if (!profile) return;
+    const jobSkills = (jobs ?? []).filter((j) => j.liked).flatMap((j) => j.required_skills);
+    const { gaps } = skillGap(profile.skills, jobSkills);
+    await generateRoadmap({
+      userId: profile.id,
+      gaps,
+      months: profile.timeline_months ?? 6,
+    });
+    await updateProfile.mutateAsync({
+      goal,
+      onboarding_stage: "done",
+      onboarding_complete: true,
+      roadmap_generated: true,
+    });
+    await say(
+      `"${goal}" — I'm writing that down, because that's what everything below is in service of.\n\nYour roadmap is ready. ${gaps.length} skill${gaps.length === 1 ? "" : "s"} to close, sequenced so you're never guessing what's next. Roadmap, Network and Mentor Match are unlocked now.\n\nYou don't have to feel ready. You just have to start.`,
+      "roadmap_ready",
+    );
+  };
+
+  const send = async () => {
+    const text = draft.trim();
+    if (!text || busy) return;
+    setDraft("");
+    setBusy(true);
+    try {
+      await say(text, "text", null, "user");
+
+      if (stage === "q_timeline") {
+        const months = parseMonths(text);
+        await updateProfile.mutateAsync({
+          timeline: text,
+          timeline_months: months,
+          onboarding_stage: "q_goal",
+        });
+        await say(
+          `${months} month${months === 1 ? "" : "s"} — that's workable, and I'll shape the phases around it.\n\n${PROMPTS["q_goal"]}`,
+        );
+      } else if (stage === "q_goal") {
+        await finishOnboarding(text);
+      } else if (stage === "jobs") {
+        await say("Swipe through the roles above first — like or pass on each one and I'll take it from there.");
+      } else if (stage.startsWith("q_")) {
+        await answerQuestion(text);
+      } else if (stage === "welcome" || stage === "upload") {
+        await say(
+          "Pick one of the two options above and we'll get going — questions or documents, whichever feels lighter today.",
+        );
+      } else {
+        const context = buildContext(profile, jobs, roadmap);
+        const history = (messages ?? [])
+          .slice(-8)
+          .filter((m) => m.kind === "text")
+          .map((m) => ({ role: m.role, content: m.content }));
+        const result = await callCoach({ data: { question: text, context, history } });
+        await say(result.reply);
+      }
+      refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Something went wrong");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mx-auto flex h-[calc(100vh-3.5rem)] w-full max-w-3xl flex-col px-4 md:h-screen md:px-8">
+      <div className="flex-1 space-y-5 overflow-y-auto py-8">
+        {(messages ?? []).map((message) => (
+          <div key={message.id} className="animate-rise space-y-3">
+            <Bubble message={message} />
+            {showWidget(message) && (
+              <Interactive
+                message={message}
+                jobs={jobs ?? []}
+                busy={busy}
+                onChoosePath={choosePath}
+                onUpload={uploadFiles}
+                onDecideJob={decideJob}
+              />
+            )}
+          </div>
+        ))}
+        {busy && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="size-3.5 animate-spin" /> Ada is thinking…
+          </div>
+        )}
+        <div ref={bottom} />
+      </div>
+
+      <div className="sticky bottom-0 border-t border-border bg-background/90 py-4 backdrop-blur">
+        <div className="flex items-end gap-2 rounded-2xl border border-border bg-card p-2 shadow-warm">
+          <Textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void send();
+              }
+            }}
+            placeholder={stage === "done" ? "Ask me anything…" : "Type your answer…"}
+            rows={1}
+            className="max-h-32 min-h-11 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0"
+          />
+          <Button size="icon" className="size-11 shrink-0 rounded-xl" onClick={() => void send()} disabled={busy}>
+            <Send className="size-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function buildContext(
+  profile: Profile | null | undefined,
+  jobs: Job[] | undefined,
+  roadmap: { items: { title: string; item_type: string }[] } | undefined,
+): string {
+  if (!profile) return "";
+  const done = (roadmap?.items ?? []).length;
+  return [
+    `Name: ${profile.full_name ?? "unknown"}`,
+    `Goal: ${profile.goal ?? "not set"}`,
+    `Timeline: ${profile.timeline ?? "not set"}`,
+    `Skills: ${profile.skills.join(", ") || "none listed"}`,
+    `Interests: ${profile.interests.join(", ") || "none listed"}`,
+    `Liked roles: ${(jobs ?? []).filter((j) => j.liked).map((j) => `${j.title} at ${j.company}`).join("; ") || "none"}`,
+    `Roadmap steps: ${done}`,
+  ].join("\n");
+}
+
+function Bubble({ message }: { message: ChatMessage }) {
+  const isUser = message.role === "user";
+  return (
+    <div className={cn("flex gap-3", isUser && "flex-row-reverse")}>
+      {!isUser && (
+        <span className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-warm-gradient text-primary-foreground">
+          <Sparkles className="size-4" />
+        </span>
+      )}
+      <div
+        className={cn(
+          "max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-line",
+          isUser
+            ? "rounded-br-md bg-primary text-primary-foreground"
+            : "rounded-bl-md border border-border bg-card text-card-foreground shadow-warm",
+        )}
+      >
+        {message.content}
+      </div>
+    </div>
+  );
+}
+
+function Interactive({
+  message,
+  jobs,
+  busy,
+  onChoosePath,
+  onUpload,
+  onDecideJob,
+}: {
+  message: ChatMessage;
+  jobs: Job[];
+  busy: boolean;
+  onChoosePath: (path: "questions" | "upload") => Promise<void>;
+  onUpload: (files: FileList) => Promise<void>;
+  onDecideJob: (job: Job, liked: boolean) => Promise<void>;
+}) {
+  if (message.kind === "path_choice") {
+    return (
+      <div className="ml-11 grid gap-3 sm:grid-cols-2">
+        <button
+          disabled={busy}
+          onClick={() => void onChoosePath("questions")}
+          className="group rounded-2xl border border-border bg-card p-4 text-left shadow-warm transition-all hover:-translate-y-0.5 hover:shadow-lift disabled:opacity-60"
+        >
+          <MessageSquareHeart className="size-5 text-primary" />
+          <p className="mt-2.5 font-semibold">Talk it through</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            One friendly question at a time — interests, skills, education, certificates.
+          </p>
+          <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+            Let's talk <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </button>
+        <label
+          className={cn(
+            "group cursor-pointer rounded-2xl border border-border bg-card p-4 text-left shadow-warm transition-all hover:-translate-y-0.5 hover:shadow-lift",
+            busy && "pointer-events-none opacity-60",
+          )}
+        >
+          <FileUp className="size-5 text-plum" />
+          <p className="mt-2.5 font-semibold">Send my documents</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Resume, transcripts, certificates. I'll build your profile from those.
+          </p>
+          <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-plum">
+            Choose files <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+          </span>
+          <input
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files?.length) void onChoosePath("upload").then(() => onUpload(e.target.files!));
+            }}
+          />
+        </label>
+      </div>
+    );
+  }
+
+  if (message.kind === "upload") {
+    return (
+      <div className="ml-11">
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold shadow-warm transition-all hover:-translate-y-0.5">
+          <FileUp className="size-4 text-plum" /> Choose files
+          <input
+            type="file"
+            multiple
+            className="hidden"
+            disabled={busy}
+            onChange={(e) => {
+              if (e.target.files?.length) void onUpload(e.target.files);
+            }}
+          />
+        </label>
+      </div>
+    );
+  }
+
+  if (message.kind === "jobs") {
+    const undecided = jobs.filter((j) => j.liked === null);
+    const current = undecided[0];
+    if (!current) {
+      return (
+        <p className="ml-11 text-xs font-medium text-muted-foreground">
+          {jobs.filter((j) => j.liked).length} role{jobs.filter((j) => j.liked).length === 1 ? "" : "s"} kept.
+        </p>
+      );
+    }
+    return (
+      <div className="ml-11 space-y-3">
+        <JobCard job={current} busy={busy} onDecide={onDecideJob} />
+        <p className="text-xs text-muted-foreground">
+          {undecided.length} of {jobs.length} still to look at
+        </p>
+      </div>
+    );
+  }
+
+  if (message.kind === "gap") {
+    const payload = (message.payload ?? {}) as { strengths?: string[]; gaps?: string[] };
+    return (
+      <div className="ml-11 grid gap-3 sm:grid-cols-2">
+        <div className="animate-pop rounded-2xl border border-success/30 bg-success/10 p-4">
+          <p className="text-xs font-semibold tracking-wide text-success uppercase">Already yours</p>
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {(payload.strengths ?? []).length ? (
+              payload.strengths!.map((skill) => (
+                <Badge key={skill} className="border-0 bg-success text-success-foreground">
+                  {skill}
+                </Badge>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                We're starting fresh here — and fresh is a perfectly good place to start.
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="animate-pop rounded-2xl border border-primary/30 bg-primary/10 p-4">
+          <p className="text-xs font-semibold tracking-wide text-primary uppercase">Next to grow</p>
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {(payload.gaps ?? []).map((skill) => (
+              <Badge key={skill} variant="outline" className="border-primary/40 bg-card text-foreground">
+                {skill}
+              </Badge>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Not deficits — just the next few things you haven't got to yet.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (message.kind === "roadmap_ready") {
+    return (
+      <div className="ml-11">
+        <Link
+          to="/roadmap"
+          className="animate-pop inline-flex items-center gap-2 rounded-xl bg-warm-gradient px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lift transition-transform hover:-translate-y-0.5"
+        >
+          <PartyPopper className="size-4" /> Open my roadmap
+        </Link>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function JobCard({
+  job,
+  busy,
+  onDecide,
+}: {
+  job: Job;
+  busy: boolean;
+  onDecide: (job: Job, liked: boolean) => Promise<void>;
+}) {
+  return (
+    <div className="animate-pop rounded-2xl border border-border bg-card p-5 shadow-lift">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-display text-lg leading-tight font-semibold">{job.title}</h3>
+          <p className="text-sm text-muted-foreground">
+            {job.company} · {job.location}
+          </p>
+        </div>
+        {job.seniority && (
+          <Badge variant="secondary" className="shrink-0">
+            {job.seniority}
+          </Badge>
+        )}
+      </div>
+      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{job.description}</p>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {job.required_skills.map((skill) => (
+          <Badge key={skill} variant="outline" className="bg-secondary/60">
+            {skill}
+          </Badge>
+        ))}
+      </div>
+      <div className="mt-5 flex gap-2">
+        <Button
+          variant="outline"
+          className="flex-1 gap-2"
+          disabled={busy}
+          onClick={() => void onDecide(job, false)}
+        >
+          <X className="size-4" /> Not for me
+        </Button>
+        <Button className="flex-1 gap-2" disabled={busy} onClick={() => void onDecide(job, true)}>
+          <Heart className="size-4" /> Keep it
+        </Button>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,474 @@
+import { useMemo, useState } from "react";
+import { Link } from "@tanstack/react-router";
+import {
+  BadgeCheck,
+  Check,
+  CheckCircle2,
+  ExternalLink,
+  Hammer,
+  Loader2,
+  Megaphone,
+  Minus,
+  Plus,
+  Send,
+  Sparkles,
+  Target,
+  Trophy,
+  Upload,
+} from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useJobs, useProfile, useRoadmap, useUpdateItem, useUpdateJob } from "@/hooks/useCoachData";
+import {
+  APPLICATION_STATUSES,
+  isItemComplete,
+  skillProgress,
+  type ApplicationStatus,
+  type Job,
+  type RoadmapItem,
+  type RoadmapPhase,
+  type RoadmapSkill,
+} from "@/lib/domain";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+
+export function RoadmapView() {
+  const { data: profile } = useProfile();
+  const { data: roadmap, isLoading } = useRoadmap();
+  const { data: jobs } = useJobs();
+
+  const phases = roadmap?.phases ?? [];
+  const skills = roadmap?.skills ?? [];
+  const items = roadmap?.items ?? [];
+
+  const overall = useMemo(() => skillProgress(items), [items]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="size-5 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (phases.length === 0) {
+    return (
+      <div className="mx-auto max-w-xl px-6 py-24 text-center">
+        <h1 className="font-display text-3xl font-semibold">Your roadmap isn't built yet</h1>
+        <p className="mt-3 text-muted-foreground">
+          Finish our chat and I'll turn everything you told me into a plan you can actually follow.
+        </p>
+        <Link
+          to="/"
+          className="mt-6 inline-flex rounded-xl bg-warm-gradient px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lift"
+        >
+          Back to chat
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-4xl px-4 pb-24 md:px-10">
+      <header className="pt-10 pb-8">
+        <p className="text-xs font-semibold tracking-[0.16em] text-primary uppercase">Your roadmap</p>
+        <h1 className="mt-2 font-display text-4xl leading-tight font-semibold tracking-tight">
+          {profile?.goal ? profile.goal : "One step at a time"}
+        </h1>
+        <p className="mt-3 max-w-2xl text-muted-foreground">
+          {profile?.timeline ? `${profile.timeline} — ` : ""}sequenced so you never have to wonder what's next. Every
+          box you tick here is proof, not busywork.
+        </p>
+
+        <div className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-warm">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold">Overall progress</p>
+              <p className="text-xs text-muted-foreground">
+                {overall.done} of {overall.total} steps complete
+              </p>
+            </div>
+            <p className="font-display text-3xl font-semibold text-primary">{overall.pct}%</p>
+          </div>
+          <Progress value={overall.pct} className="mt-3 h-2.5" />
+        </div>
+      </header>
+
+      <div className="relative space-y-10 border-l border-dashed border-border pl-6 md:pl-8">
+        {phases.map((phase, index) => (
+          <PhaseBlock
+            key={phase.id}
+            phase={phase}
+            index={index}
+            skills={skills.filter((skill) => skill.phase_id === phase.id)}
+            items={items}
+            jobs={(jobs ?? []).filter((job) => job.liked)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PhaseBlock({
+  phase,
+  index,
+  skills,
+  items,
+  jobs,
+}: {
+  phase: RoadmapPhase;
+  index: number;
+  skills: RoadmapSkill[];
+  items: RoadmapItem[];
+  jobs: Job[];
+}) {
+  const phaseItems = items.filter((item) => skills.some((skill) => skill.id === item.skill_id));
+  const isApplying = phase.kind === "applying";
+  const progress = isApplying
+    ? {
+        done: jobs.filter((job) => job.application_status !== "not_applied").length,
+        total: jobs.length,
+        pct: jobs.length
+          ? Math.round((jobs.filter((job) => job.application_status !== "not_applied").length / jobs.length) * 100)
+          : 0,
+      }
+    : skillProgress(phaseItems);
+  const complete = progress.total > 0 && progress.done === progress.total;
+
+  return (
+    <section className="relative">
+      <span
+        className={cn(
+          "absolute -left-[2.35rem] flex size-8 items-center justify-center rounded-full border-2 text-xs font-bold transition-colors md:-left-[3rem]",
+          complete
+            ? "border-success bg-success text-success-foreground"
+            : "border-border bg-card text-muted-foreground",
+        )}
+      >
+        {complete ? <Check className="size-4" /> : index + 1}
+      </span>
+
+      <div className="flex flex-wrap items-center gap-2.5">
+        <h2 className="font-display text-2xl font-semibold tracking-tight">{phase.name}</h2>
+        {complete && (
+          <Badge className="animate-pop gap-1 border-0 bg-success text-success-foreground">
+            <Trophy className="size-3" /> Phase complete
+          </Badge>
+        )}
+      </div>
+      {phase.blurb && <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">{phase.blurb}</p>}
+      {progress.total > 0 && (
+        <div className="mt-3 flex items-center gap-3">
+          <Progress value={progress.pct} className="h-1.5 max-w-56" />
+          <span className="text-xs font-medium text-muted-foreground">
+            {progress.done}/{progress.total}
+          </span>
+        </div>
+      )}
+
+      <div className="mt-5 space-y-4">
+        {isApplying ? (
+          <ApplyingBlock jobs={jobs} />
+        ) : (
+          skills.map((skill) => (
+            <SkillCard
+              key={skill.id}
+              skill={skill}
+              items={items.filter((item) => item.skill_id === skill.id)}
+            />
+          ))
+        )}
+      </div>
+    </section>
+  );
+}
+
+function SkillCard({ skill, items }: { skill: RoadmapSkill; items: RoadmapItem[] }) {
+  const progress = skillProgress(items);
+  const ready = progress.total > 0 && progress.done === progress.total;
+
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border bg-card p-5 shadow-warm transition-colors",
+        ready ? "border-success/40 bg-success/5" : "border-border",
+      )}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-display text-lg font-semibold">{skill.name}</h3>
+        {ready ? (
+          <Badge className="animate-pop gap-1 border-0 bg-success text-success-foreground">
+            <CheckCircle2 className="size-3" /> Ready
+          </Badge>
+        ) : (
+          <span className="text-xs font-medium text-muted-foreground">
+            {progress.done} of {progress.total} done
+          </span>
+        )}
+      </div>
+      <Progress value={progress.pct} className="mt-3 h-2" />
+
+      <div className="mt-4 space-y-3">
+        {items.map((item) => (
+          <ItemRow key={item.id} item={item} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const ITEM_META: Record<string, { label: string; icon: typeof Target }> = {
+  learn: { label: "Learn", icon: Sparkles },
+  practice: { label: "Practice", icon: Target },
+  certify: { label: "Certify", icon: BadgeCheck },
+  build: { label: "Build", icon: Hammer },
+  visibility: { label: "Be seen", icon: Megaphone },
+};
+
+function ItemRow({ item }: { item: RoadmapItem }) {
+  const { user } = useAuth();
+  const updateItem = useUpdateItem();
+  const [proof, setProof] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const done = isItemComplete(item);
+  const meta = ITEM_META[item.item_type] ?? ITEM_META["learn"]!;
+  const Icon = meta.icon;
+
+  const celebrate = (message: string) => toast.success(message);
+
+  const toggleLearn = async () => {
+    await updateItem.mutateAsync({ id: item.id, patch: { done: !item.done } });
+    if (!item.done) celebrate("One down. That counts.");
+  };
+
+  const step = async (delta: number) => {
+    const target = item.target_count ?? 1;
+    const next = Math.max(0, Math.min(target, item.progress_count + delta));
+    await updateItem.mutateAsync({ id: item.id, patch: { progress_count: next, done: next >= target } });
+    if (next >= target && item.progress_count < target) celebrate(`${target} solved — that's real practice.`);
+  };
+
+  const saveProof = async () => {
+    const url = proof.trim();
+    if (!url) return;
+    await updateItem.mutateAsync({ id: item.id, patch: { proof_url: url, done: true } });
+    setProof("");
+    celebrate("Proof saved. Nobody can argue with a link.");
+  };
+
+  const uploadProof = async (file: File) => {
+    setUploading(true);
+    try {
+      const path = `${user!.id}/proof/${Date.now()}-${file.name}`;
+      const { error } = await supabase.storage.from("user-files").upload(path, file);
+      if (error) throw error;
+      await supabase
+        .from("user_documents")
+        .insert({ user_id: user!.id, kind: "certificate", file_name: file.name, storage_path: path } as never);
+      await updateItem.mutateAsync({ id: item.id, patch: { proof_path: path, done: true } });
+      celebrate("Certificate uploaded. That's officially yours.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const needsProof = item.item_type === "certify" || item.item_type === "build" || item.item_type === "visibility";
+
+  return (
+    <div
+      className={cn(
+        "rounded-xl border p-4 transition-colors",
+        done ? "border-success/40 bg-success/10" : "border-border bg-secondary/40",
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className={cn(
+            "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg",
+            done ? "bg-success text-success-foreground" : "bg-card text-primary",
+          )}
+        >
+          {done ? <Check className="size-3.5" /> : <Icon className="size-3.5" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[0.65rem] font-bold tracking-[0.12em] text-muted-foreground uppercase">
+              {meta.label}
+            </span>
+            {item.difficulty && (
+              <Badge variant="outline" className="h-5 bg-card text-[0.65rem]">
+                {item.difficulty}
+              </Badge>
+            )}
+          </div>
+          <p className={cn("mt-0.5 font-medium", done && "text-success")}>{item.title}</p>
+          {item.provider && <p className="text-xs text-muted-foreground">{item.provider}</p>}
+          {item.detail && <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.detail}</p>}
+          {item.url && (
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+            >
+              Open resource <ExternalLink className="size-3" />
+            </a>
+          )}
+          {item.proof_url && (
+            <a
+              href={item.proof_url}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1.5 flex items-center gap-1 text-xs font-semibold text-success hover:underline"
+            >
+              Your proof <ExternalLink className="size-3" />
+            </a>
+          )}
+
+          <div className="mt-3">
+            {item.item_type === "learn" && (
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={item.done}
+                  onChange={() => void toggleLearn()}
+                  className="size-4 accent-[var(--primary)]"
+                />
+                I finished this
+              </label>
+            )}
+
+            {item.item_type === "practice" && (
+              <div className="flex items-center gap-3">
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="size-8 bg-card"
+                  onClick={() => void step(-1)}
+                  disabled={item.progress_count === 0}
+                  aria-label="Remove one"
+                >
+                  <Minus className="size-3.5" />
+                </Button>
+                <span className="text-sm font-semibold tabular-nums">
+                  {item.progress_count} of {item.target_count ?? 1} solved
+                </span>
+                <Button
+                  size="icon"
+                  className="size-8"
+                  onClick={() => void step(1)}
+                  disabled={item.progress_count >= (item.target_count ?? 1)}
+                  aria-label="Add one"
+                >
+                  <Plus className="size-3.5" />
+                </Button>
+              </div>
+            )}
+
+            {needsProof && !done && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  value={proof}
+                  onChange={(e) => setProof(e.target.value)}
+                  placeholder={
+                    item.item_type === "build" ? "Link to your repo or live demo" : "Credential or certificate link"
+                  }
+                  className="h-9 max-w-xs bg-card text-sm"
+                />
+                <Button size="sm" onClick={() => void saveProof()} disabled={!proof.trim() || updateItem.isPending}>
+                  Save proof
+                </Button>
+                {item.item_type === "certify" && (
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold">
+                    {uploading ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+                    Upload certificate
+                    <input
+                      type="file"
+                      className="hidden"
+                      disabled={uploading}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) void uploadProof(file);
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ApplyingBlock({ jobs }: { jobs: Job[] }) {
+  const updateJob = useUpdateJob();
+
+  if (jobs.length === 0) {
+    return (
+      <p className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground shadow-warm">
+        The roles you liked in chat will show up here to track.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {jobs.map((job) => (
+        <div key={job.id} className="rounded-2xl border border-border bg-card p-5 shadow-warm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="font-display text-lg font-semibold">{job.title}</p>
+              <p className="text-sm text-muted-foreground">
+                {job.company} · {job.location}
+              </p>
+            </div>
+            <Select
+              value={job.application_status}
+              onValueChange={(value) =>
+                void updateJob
+                  .mutateAsync({ id: job.id, patch: { application_status: value as ApplicationStatus } })
+                  .then(() => {
+                    if (value === "offer") toast.success("An offer. Look at what you built.");
+                    else if (value === "interviewing") toast.success("Interviewing — they want to meet you.");
+                    else if (value === "applied") toast.success("Applied. That took nerve.");
+                  })
+              }
+            >
+              <SelectTrigger className="w-48 bg-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {APPLICATION_STATUSES.map((status) => (
+                  <SelectItem key={status.value} value={status.value}>
+                    {status.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {job.application_status !== "not_applied" && (
+            <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-success">
+              <Send className="size-3" /> In motion
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
