@@ -44,6 +44,160 @@ export type Database = {
         }
         Relationships: []
       }
+      event_engagement: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          rsvp_status: string
+          saved: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          rsvp_status?: string
+          saved?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          rsvp_status?: string
+          saved?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_engagement_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_reflections: {
+        Row: {
+          attended: boolean
+          contacts: string[]
+          created_at: string
+          event_id: string
+          id: string
+          rating: number | null
+          takeaway: string | null
+          user_id: string
+        }
+        Insert: {
+          attended?: boolean
+          contacts?: string[]
+          created_at?: string
+          event_id: string
+          id?: string
+          rating?: number | null
+          takeaway?: string | null
+          user_id: string
+        }
+        Update: {
+          attended?: boolean
+          contacts?: string[]
+          created_at?: string
+          event_id?: string
+          id?: string
+          rating?: number | null
+          takeaway?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_reflections_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          city: string | null
+          cohort_going: number
+          cost: string
+          country: string | null
+          created_at: string
+          description: string | null
+          ends_at: string | null
+          event_type: string
+          external_id: string
+          format: string
+          id: string
+          last_seen_at: string
+          lat: number | null
+          lng: number | null
+          organizer: string
+          price_text: string | null
+          skill_tags: string[]
+          source: string
+          starts_at: string
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          city?: string | null
+          cohort_going?: number
+          cost?: string
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          event_type: string
+          external_id: string
+          format?: string
+          id?: string
+          last_seen_at?: string
+          lat?: number | null
+          lng?: number | null
+          organizer: string
+          price_text?: string | null
+          skill_tags?: string[]
+          source: string
+          starts_at: string
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          city?: string | null
+          cohort_going?: number
+          cost?: string
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          event_type?: string
+          external_id?: string
+          format?: string
+          id?: string
+          last_seen_at?: string
+          lat?: number | null
+          lng?: number | null
+          organizer?: string
+          price_text?: string | null
+          skill_tags?: string[]
+          source?: string
+          starts_at?: string
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           application_status: string
