@@ -343,7 +343,7 @@ export function MentorMatchView() {
           languages={facets.languages.length ? facets.languages : ["English"]}
           saving={savePreferences.isPending}
           onSubmit={(draft) => void submitAssessment(draft)}
-          onCancel={needsAssessment ? undefined : () => setAssessing(false)}
+          {...(needsAssessment ? {} : { onCancel: () => setAssessing(false) })}
         />
       ) : (
         <Tabs defaultValue="matches" onValueChange={(value) => value === "matches" && persistRun()}>
