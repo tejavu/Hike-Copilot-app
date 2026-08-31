@@ -243,6 +243,316 @@ export type Database = {
         }
         Relationships: []
       }
+      mentor_actions: {
+        Row: {
+          created_at: string
+          detail: string | null
+          done: boolean
+          due_date: string | null
+          id: string
+          mentor_id: string | null
+          roadmap_item_id: string | null
+          session_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          done?: boolean
+          due_date?: string | null
+          id?: string
+          mentor_id?: string | null
+          roadmap_item_id?: string | null
+          session_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          done?: boolean
+          due_date?: string | null
+          id?: string
+          mentor_id?: string | null
+          roadmap_item_id?: string | null
+          session_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentor_actions_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "mentors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mentor_actions_roadmap_item_id_fkey"
+            columns: ["roadmap_item_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mentor_actions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "mentor_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mentor_matches: {
+        Row: {
+          created_at: string
+          id: string
+          matched_attributes: string[]
+          mentor_id: string
+          reasons: string[]
+          score: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          matched_attributes?: string[]
+          mentor_id: string
+          reasons?: string[]
+          score?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          matched_attributes?: string[]
+          mentor_id?: string
+          reasons?: string[]
+          score?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentor_matches_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "mentors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mentor_preferences: {
+        Row: {
+          availability_notes: string | null
+          completed_at: string | null
+          created_at: string
+          goal: string | null
+          guidance_style: string | null
+          language: string | null
+          location_pref: string
+          next_check_in_at: string | null
+          priority_skills: string[]
+          reminder_cadence: string
+          reminder_pending: boolean
+          selected_mentor_id: string | null
+          session_focus: string | null
+          target_role: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          availability_notes?: string | null
+          completed_at?: string | null
+          created_at?: string
+          goal?: string | null
+          guidance_style?: string | null
+          language?: string | null
+          location_pref?: string
+          next_check_in_at?: string | null
+          priority_skills?: string[]
+          reminder_cadence?: string
+          reminder_pending?: boolean
+          selected_mentor_id?: string | null
+          session_focus?: string | null
+          target_role?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          availability_notes?: string | null
+          completed_at?: string | null
+          created_at?: string
+          goal?: string | null
+          guidance_style?: string | null
+          language?: string | null
+          location_pref?: string
+          next_check_in_at?: string | null
+          priority_skills?: string[]
+          reminder_cadence?: string
+          reminder_pending?: boolean
+          selected_mentor_id?: string | null
+          session_focus?: string | null
+          target_role?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentor_preferences_selected_mentor_id_fkey"
+            columns: ["selected_mentor_id"]
+            isOneToOne: false
+            referencedRelation: "mentors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mentor_sessions: {
+        Row: {
+          agenda: string | null
+          created_at: string
+          ends_at: string
+          id: string
+          key_advice: string | null
+          mentor_id: string
+          next_check_in_at: string | null
+          prep_questions: string[]
+          recap: string | null
+          recap_source: string
+          starts_at: string
+          status: string
+          theme: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agenda?: string | null
+          created_at?: string
+          ends_at: string
+          id?: string
+          key_advice?: string | null
+          mentor_id: string
+          next_check_in_at?: string | null
+          prep_questions?: string[]
+          recap?: string | null
+          recap_source?: string
+          starts_at: string
+          status?: string
+          theme?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agenda?: string | null
+          created_at?: string
+          ends_at?: string
+          id?: string
+          key_advice?: string | null
+          mentor_id?: string
+          next_check_in_at?: string | null
+          prep_questions?: string[]
+          recap?: string | null
+          recap_source?: string
+          starts_at?: string
+          status?: string
+          theme?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentor_sessions_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "mentors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mentors: {
+        Row: {
+          availability_summary: string
+          bio: string
+          city: string | null
+          community: string | null
+          company: string
+          country: string | null
+          created_at: string
+          expertise: string[]
+          external_id: string
+          full_name: string
+          id: string
+          is_demo: boolean
+          languages: string[]
+          lat: number | null
+          lng: number | null
+          meeting_pref: string
+          role_track: string
+          seniority: string
+          slots: Json
+          title: string
+          topics: string[]
+          years_experience: number
+        }
+        Insert: {
+          availability_summary?: string
+          bio: string
+          city?: string | null
+          community?: string | null
+          company: string
+          country?: string | null
+          created_at?: string
+          expertise?: string[]
+          external_id: string
+          full_name: string
+          id?: string
+          is_demo?: boolean
+          languages?: string[]
+          lat?: number | null
+          lng?: number | null
+          meeting_pref?: string
+          role_track: string
+          seniority: string
+          slots?: Json
+          title: string
+          topics?: string[]
+          years_experience?: number
+        }
+        Update: {
+          availability_summary?: string
+          bio?: string
+          city?: string | null
+          community?: string | null
+          company?: string
+          country?: string | null
+          created_at?: string
+          expertise?: string[]
+          external_id?: string
+          full_name?: string
+          id?: string
+          is_demo?: boolean
+          languages?: string[]
+          lat?: number | null
+          lng?: number | null
+          meeting_pref?: string
+          role_track?: string
+          seniority?: string
+          slots?: Json
+          title?: string
+          topics?: string[]
+          years_experience?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           certifications: Json

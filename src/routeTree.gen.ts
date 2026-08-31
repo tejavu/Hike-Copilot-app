@@ -14,6 +14,7 @@ import { Route as MentorMatchRouteImport } from './routes/mentor-match'
 import { Route as NetworkRouteImport } from './routes/network'
 import { Route as RoadmapRouteImport } from './routes/roadmap'
 import { Route as ApiPublicEventsRefreshRouteImport } from './routes/api/public/events/refresh'
+import { Route as ApiPublicMentorsRemindersRouteImport } from './routes/api/public/mentors/reminders'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +41,12 @@ const ApiPublicEventsRefreshRoute = ApiPublicEventsRefreshRouteImport.update({
   path: '/api/public/events/refresh',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMentorsRemindersRoute =
+  ApiPublicMentorsRemindersRouteImport.update({
+    id: '/api/public/mentors/reminders',
+    path: '/api/public/mentors/reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +54,7 @@ export interface FileRoutesByFullPath {
   '/network': typeof NetworkRoute
   '/roadmap': typeof RoadmapRoute
   '/api/public/events/refresh': typeof ApiPublicEventsRefreshRoute
+  '/api/public/mentors/reminders': typeof ApiPublicMentorsRemindersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +62,7 @@ export interface FileRoutesByTo {
   '/network': typeof NetworkRoute
   '/roadmap': typeof RoadmapRoute
   '/api/public/events/refresh': typeof ApiPublicEventsRefreshRoute
+  '/api/public/mentors/reminders': typeof ApiPublicMentorsRemindersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,6 +71,7 @@ export interface FileRoutesById {
   '/network': typeof NetworkRoute
   '/roadmap': typeof RoadmapRoute
   '/api/public/events/refresh': typeof ApiPublicEventsRefreshRoute
+  '/api/public/mentors/reminders': typeof ApiPublicMentorsRemindersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -71,6 +81,7 @@ export interface FileRouteTypes {
     | '/network'
     | '/roadmap'
     | '/api/public/events/refresh'
+    | '/api/public/mentors/reminders'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -78,6 +89,7 @@ export interface FileRouteTypes {
     | '/network'
     | '/roadmap'
     | '/api/public/events/refresh'
+    | '/api/public/mentors/reminders'
   id:
     | '__root__'
     | '/'
@@ -85,6 +97,7 @@ export interface FileRouteTypes {
     | '/network'
     | '/roadmap'
     | '/api/public/events/refresh'
+    | '/api/public/mentors/reminders'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -93,6 +106,7 @@ export interface RootRouteChildren {
   NetworkRoute: typeof NetworkRoute
   RoadmapRoute: typeof RoadmapRoute
   ApiPublicEventsRefreshRoute: typeof ApiPublicEventsRefreshRoute
+  ApiPublicMentorsRemindersRoute: typeof ApiPublicMentorsRemindersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -132,6 +146,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicEventsRefreshRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/mentors/reminders': {
+      id: '/api/public/mentors/reminders'
+      path: '/api/public/mentors/reminders'
+      fullPath: '/api/public/mentors/reminders'
+      preLoaderRoute: typeof ApiPublicMentorsRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -141,6 +162,7 @@ const rootRouteChildren: RootRouteChildren = {
   NetworkRoute: NetworkRoute,
   RoadmapRoute: RoadmapRoute,
   ApiPublicEventsRefreshRoute: ApiPublicEventsRefreshRoute,
+  ApiPublicMentorsRemindersRoute: ApiPublicMentorsRemindersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
