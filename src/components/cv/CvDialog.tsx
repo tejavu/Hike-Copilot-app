@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Download, Loader2, User } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useProfile, useRoadmap, useUpdateProfile } from "@/hooks/useCoachData";
-import { isItemComplete, type EducationEntry, type ExperienceEntry } from "@/lib/domain";
+import { isItemComplete } from "@/lib/domain";
 import { buildCvHtml } from "@/lib/cv-template";
 
 export function CvDialog({ children }: { children: ReactNode }) {
@@ -63,7 +63,10 @@ function CvBody() {
     const courses = items
       .filter((item) => item.item_type === "learn" && isItemComplete(item))
       .map((item) => ({ title: item.title, provider: item.provider }));
-    return { certifications, projects, courses };
+    const readySkills = skills
+      .filter((skill) => items.filter((i) => i.skill_id === skill.id).every(isItemComplete))
+      .map((skill) => skill.name);
+    return { certifications, projects, courses, readySkills };
   }, [roadmap]);
 
   if (isLoading || !profile) {
@@ -134,10 +137,14 @@ function CvBody() {
         </div>
       </div>
 
-      <CvPreview
-        profile={{ ...profile, nationality: form.nationality, date_of_birth: form.dob, location: form.location, phone: form.phone }}
-        earned={earned}
-      />
+      <div className="overflow-hidden rounded-2xl border border-border bg-white">
+        <iframe
+          title="CV preview"
+          srcDoc={html}
+          className="h-[900px] w-full border-0"
+          sandbox=""
+        />
+      </div>
     </div>
   );
 }
@@ -155,149 +162,6 @@ function Field({
     <div className="space-y-1.5">
       <Label className="text-xs">{label}</Label>
       <Input value={value} onChange={(e) => onChange(e.target.value)} className="bg-card" />
-    </div>
-  );
-}
-
-type Earned = {
-  certifications: { title: string; provider: string | null; url: string | null }[];
-  projects: { title: string; skill: string; url: string | null }[];
-  courses: { title: string; provider: string | null }[];
-};
-
-function CvPreview({
-  profile,
-  earned,
-}: {
-  profile: {
-    full_name: string | null;
-    email: string | null;
-    phone: string | null;
-    location: string | null;
-    nationality: string | null;
-    date_of_birth: string | null;
-    goal: string | null;
-    skills: string[];
-    education: EducationEntry[];
-    experience: ExperienceEntry[];
-    certifications: string[];
-  };
-  earned: Earned;
-}) {
-  const experience = [...(profile.experience ?? [])].reverse();
-  const education = [...(profile.education ?? [])].reverse();
-
-  return (
-    <div className="rounded-2xl border border-border bg-card p-8 font-sans text-[13px] leading-relaxed text-foreground">
-      <div className="flex gap-6 border-b border-border pb-6">
-        <div className="flex size-28 shrink-0 items-center justify-center rounded-md border border-dashed border-border bg-muted text-muted-foreground">
-          <User className="size-8" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h2 className="font-display text-2xl font-semibold tracking-tight">
-            {profile.full_name || "Your name"}
-          </h2>
-          {profile.goal && <p className="mt-1 text-muted-foreground">{profile.goal}</p>}
-          <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-muted-foreground">
-            <Detail label="Email" value={profile.email} />
-            <Detail label="Phone" value={profile.phone} />
-            <Detail label="Address" value={profile.location} />
-            <Detail label="Nationality" value={profile.nationality} />
-            <Detail label="Date of birth" value={profile.date_of_birth} />
-          </dl>
-        </div>
-      </div>
-
-      <Section title="Professional experience">
-        {experience.length ? (
-          experience.map((entry, i) => (
-            <Entry key={i} left={entry.period} title={entry.title} sub={entry.company} detail={entry.detail} />
-          ))
-        ) : (
-          <p className="text-muted-foreground">Add your roles in chat and they'll appear here.</p>
-        )}
-      </Section>
-
-      <Section title="Education">
-        {education.length ? (
-          education.map((entry, i) => (
-            <Entry key={i} left={entry.period} title={entry.title} sub={entry.institution} />
-          ))
-        ) : (
-          <p className="text-muted-foreground">Add your education in chat and it'll appear here.</p>
-        )}
-      </Section>
-
-      {(earned.projects.length > 0 || earned.courses.length > 0) && (
-        <Section title="Projects & further education">
-          {earned.projects.map((p, i) => (
-            <Entry key={`p${i}`} left={p.skill} title={p.title} sub={p.url ?? undefined} />
-          ))}
-          {earned.courses.map((c, i) => (
-            <Entry key={`c${i}`} left="Course" title={c.title} sub={c.provider ?? undefined} />
-          ))}
-        </Section>
-      )}
-
-      <Section title="Certifications">
-        {earned.certifications.length || profile.certifications?.length ? (
-          <>
-            {earned.certifications.map((c, i) => (
-              <Entry key={`e${i}`} left="Certified" title={c.title} sub={c.provider ?? undefined} />
-            ))}
-            {(profile.certifications ?? []).map((c, i) => (
-              <Entry key={`x${i}`} left="Certified" title={c} />
-            ))}
-          </>
-        ) : (
-          <p className="text-muted-foreground">Certifications you complete in your roadmap land here.</p>
-        )}
-      </Section>
-
-      <Section title="Skills">
-        <p>{(profile.skills ?? []).join(" · ") || "—"}</p>
-      </Section>
-    </div>
-  );
-}
-
-function Detail({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <div className="flex gap-1.5">
-      <dt className="font-semibold">{label}:</dt>
-      <dd className="truncate">{value || "—"}</dd>
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="border-b border-border py-5 last:border-0">
-      <h3 className="mb-3 font-display text-xs font-semibold tracking-[0.14em] uppercase">{title}</h3>
-      <div className="space-y-3">{children}</div>
-    </section>
-  );
-}
-
-function Entry({
-  left,
-  title,
-  sub,
-  detail,
-}: {
-  left?: string | undefined;
-  title: string;
-  sub?: string | undefined;
-  detail?: string | undefined;
-}) {
-  return (
-    <div className="grid gap-1 sm:grid-cols-[8rem_1fr]">
-      <p className="text-xs text-muted-foreground">{left || ""}</p>
-      <div>
-        <p className="font-semibold">{title}</p>
-        {sub && <p className="text-muted-foreground">{sub}</p>}
-        {detail && <p className="mt-0.5 text-muted-foreground">{detail}</p>}
-      </div>
     </div>
   );
 }
