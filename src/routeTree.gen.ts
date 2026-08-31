@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as MentorMatchRouteImport } from './routes/mentor-match'
 import { Route as NetworkRouteImport } from './routes/network'
 import { Route as RoadmapRouteImport } from './routes/roadmap'
+import { Route as ApiPublicEventsRefreshRouteImport } from './routes/api/public/events/refresh'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +35,25 @@ const RoadmapRoute = RoadmapRouteImport.update({
   path: '/roadmap',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicEventsRefreshRoute = ApiPublicEventsRefreshRouteImport.update({
+  id: '/api/public/events/refresh',
+  path: '/api/public/events/refresh',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/mentor-match': typeof MentorMatchRoute
   '/network': typeof NetworkRoute
   '/roadmap': typeof RoadmapRoute
+  '/api/public/events/refresh': typeof ApiPublicEventsRefreshRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/mentor-match': typeof MentorMatchRoute
   '/network': typeof NetworkRoute
   '/roadmap': typeof RoadmapRoute
+  '/api/public/events/refresh': typeof ApiPublicEventsRefreshRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,30 @@ export interface FileRoutesById {
   '/mentor-match': typeof MentorMatchRoute
   '/network': typeof NetworkRoute
   '/roadmap': typeof RoadmapRoute
+  '/api/public/events/refresh': typeof ApiPublicEventsRefreshRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/mentor-match' | '/network' | '/roadmap'
+  fullPaths:
+    | '/'
+    | '/mentor-match'
+    | '/network'
+    | '/roadmap'
+    | '/api/public/events/refresh'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/mentor-match' | '/network' | '/roadmap'
-  id: '__root__' | '/' | '/mentor-match' | '/network' | '/roadmap'
+  to:
+    | '/'
+    | '/mentor-match'
+    | '/network'
+    | '/roadmap'
+    | '/api/public/events/refresh'
+  id:
+    | '__root__'
+    | '/'
+    | '/mentor-match'
+    | '/network'
+    | '/roadmap'
+    | '/api/public/events/refresh'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +92,7 @@ export interface RootRouteChildren {
   MentorMatchRoute: typeof MentorMatchRoute
   NetworkRoute: typeof NetworkRoute
   RoadmapRoute: typeof RoadmapRoute
+  ApiPublicEventsRefreshRoute: typeof ApiPublicEventsRefreshRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoadmapRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/events/refresh': {
+      id: '/api/public/events/refresh'
+      path: '/api/public/events/refresh'
+      fullPath: '/api/public/events/refresh'
+      preLoaderRoute: typeof ApiPublicEventsRefreshRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +140,7 @@ const rootRouteChildren: RootRouteChildren = {
   MentorMatchRoute: MentorMatchRoute,
   NetworkRoute: NetworkRoute,
   RoadmapRoute: RoadmapRoute,
+  ApiPublicEventsRefreshRoute: ApiPublicEventsRefreshRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

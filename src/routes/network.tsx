@@ -1,22 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { AuthGate } from "@/components/AuthGate";
-import { ComingSoon } from "@/components/ComingSoon";
+import { NetworkView } from "@/components/network/NetworkView";
 
 export const Route = createFileRoute("/network")({
   head: () => ({
     meta: [
-      { title: "Network — Ada" },
+      { title: "Network — events worth your evening | Ada" },
       {
         name: "description",
-        content: "Soon: connect with other women in tech walking the same path, at the same stage, in your field.",
+        content:
+          "Hackathons, workshops, mixers and women-in-tech programs ranked against your roadmap and your city — save, RSVP, sync to your calendar and log what you learned.",
       },
-      { property: "og:title", content: "Network — Ada" },
+      { property: "og:title", content: "Network — events worth your evening | Ada" },
       {
         property: "og:description",
-        content: "Soon: connect with other women in tech walking the same path as you.",
+        content:
+          "Events ranked against your skill gaps and your city, with saves, RSVPs, calendar export and post-event reflections.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: NetworkPage,
@@ -26,12 +29,7 @@ function NetworkPage() {
   return (
     <AuthGate>
       <AppShell>
-        <ComingSoon
-          icon={Users}
-          title="Network"
-          tagline="Because nobody does this alone."
-          body="Soon you'll be able to find other women in tech who are working toward the same kind of role — swap notes, share what worked, and have people in your corner who genuinely get it."
-        />
+        <NetworkView />
       </AppShell>
     </AuthGate>
   );
