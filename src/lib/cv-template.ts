@@ -76,7 +76,7 @@ export function buildCvHtml({ profile, earned }: { profile: CvProfile; earned: E
   const certNames = [
     ...earned.certifications.map((cert) => [cert.title, cert.provider].filter(Boolean).join(" — ")),
     ...(profile.certifications ?? []),
-  ];
+  ].filter((name) => name && !/^(no|none|n\/a|nope|not yet|nothing)\.?$/i.test(name.trim()));
 
   const educationHtml =
     education.length > 0

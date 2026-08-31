@@ -144,7 +144,7 @@ function CvBody() {
         <iframe
           title="CV preview"
           srcDoc={html}
-          className="h-[900px] w-full border-0"
+          className="h-[640px] w-full border-0"
           sandbox=""
         />
       </div>
