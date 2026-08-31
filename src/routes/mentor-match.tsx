@@ -1,22 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Heart } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { AuthGate } from "@/components/AuthGate";
-import { ComingSoon } from "@/components/ComingSoon";
+import { MentorMatchView } from "@/components/mentor/MentorMatchView";
 
 export const Route = createFileRoute("/mentor-match")({
   head: () => ({
     meta: [
-      { title: "Mentor Match — Ada" },
+      { title: "Mentor Match — someone who's walked it | Ada" },
       {
         name: "description",
-        content: "Soon: get paired with a mentor already working in the field you're moving toward.",
+        content:
+          "Get matched with volunteer mentors in tech based on your goal, roadmap skill gaps, language and availability — then book sessions, prep good questions and track what you agreed to do.",
       },
-      { property: "og:title", content: "Mentor Match — Ada" },
+      { property: "og:title", content: "Mentor Match — someone who's walked it | Ada" },
       {
         property: "og:description",
-        content: "Soon: get paired with a mentor already doing the job you're working toward.",
+        content:
+          "Explainable mentor matching, session scheduling with calendar export, AI-prepped questions and a follow-up action plan wired into your roadmap.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: MentorMatchPage,
@@ -26,12 +29,7 @@ function MentorMatchPage() {
   return (
     <AuthGate>
       <AppShell>
-        <ComingSoon
-          icon={Heart}
-          title="Mentor Match"
-          tagline="Someone who's already walked it."
-          body="Soon we'll pair you with a mentor working in your target field — someone who can look at your roadmap, tell you what actually matters, and remind you that they felt this way once too."
-        />
+        <MentorMatchView />
       </AppShell>
     </AuthGate>
   );
