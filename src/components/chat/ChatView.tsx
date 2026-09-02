@@ -291,8 +291,9 @@ export function ChatView() {
     await supabase.from("jobs").delete().eq("user_id", currentProfile.id);
     const generated = sweepJobs(currentProfile.interests, currentProfile.skills, {
       setups: currentProfile.work_setup,
-      location: currentProfile.location_pref ?? "",
+      locations: (currentProfile.location_pref ?? "").split(" · ").map((l) => l.trim()).filter(Boolean),
     });
+
     const { error } = await supabase
       .from("jobs")
       .insert(generated.map((job) => ({ ...job, user_id: currentProfile.id })) as never);
