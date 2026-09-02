@@ -176,6 +176,8 @@ export function useResetCoach() {
       };
 
       await wipe("chat_messages");
+      // Extra chats go too — their messages cascade with the thread row.
+      await wipe("chat_threads");
       if (!full) return;
 
       // Mentor Match: matches, sessions, actions and preferences all go, so
