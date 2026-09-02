@@ -68,9 +68,136 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "remove_roadmap_item",
+      description:
+        "Remove a single step from the user's roadmap, found by (part of) its title. Only call after she confirms she wants it gone.",
+      parameters: {
+        type: "object",
+        properties: {
+          match_title: { type: "string" },
+          confirm_completed: {
+            type: "boolean",
+            description: "Pass true only after she has agreed to lose a completed step and its proof.",
+          },
+        },
+        required: ["match_title"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "remove_roadmap_skill",
+      description:
+        "Remove an entire skill and every step under it from the user's roadmap, e.g. when she says she doesn't want to learn it. Only call after she confirms.",
+      parameters: {
+        type: "object",
+        properties: {
+          skill: { type: "string" },
+          confirm_completed: {
+            type: "boolean",
+            description: "Pass true only after she has agreed to lose completed steps and their proof.",
+          },
+        },
+        required: ["skill"],
+      },
+    },
+  },
 ] as const;
 
 type Supa = { from: (table: string) => any };
+
+const normalise = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
+
+type ItemRow = { id: string; title: string; done: boolean; proof_url: string | null; proof_path: string | null };
+
+const hasProof = (row: ItemRow) => row.done || Boolean(row.proof_url) || Boolean(row.proof_path);
+
+async function removeItem(supabase: Supa, userId: string, args: Record<string, unknown>) {
+  const match = String(args["match_title"] ?? "").trim();
+  if (!match) return { ok: false, error: "match_title is required." };
+
+  const { data, error } = await supabase
+    .from("roadmap_items")
+    .select("id, title, done, proof_url, proof_path")
+    .eq("user_id", userId)
+    .ilike("title", `%${match}%`)
+    .limit(2);
+  if (error) return { ok: false, error: error.message };
+  const rows = (data ?? []) as ItemRow[];
+  if (rows.length === 0) return { ok: false, error: `No roadmap step matches "${match}".` };
+  if (rows.length > 1) return { ok: false, error: `"${match}" matches more than one step — be more specific.` };
+
+  const row = rows[0]!;
+  if (hasProof(row) && args["confirm_completed"] !== true) {
+    return {
+      ok: false,
+      needs_confirmation: true,
+      error: `"${row.title}" is already completed (with proof). Ask her to confirm losing it, then call again with confirm_completed: true.`,
+    };
+  }
+
+  const { error: deleteError } = await supabase.from("roadmap_items").delete().eq("id", row.id);
+  if (deleteError) return { ok: false, error: deleteError.message };
+  return { ok: true, removed: row.title };
+}
+
+async function removeSkill(supabase: Supa, userId: string, args: Record<string, unknown>) {
+  const skillName = String(args["skill"] ?? "").trim();
+  if (!skillName) return { ok: false, error: "skill is required." };
+
+  const { data: skills, error: skillError } = await supabase
+    .from("roadmap_skills")
+    .select("id, name")
+    .eq("user_id", userId);
+  if (skillError) return { ok: false, error: skillError.message };
+
+  const wanted = normalise(skillName);
+  const matches = ((skills ?? []) as { id: string; name: string }[]).filter(
+    (s) => normalise(s.name) === wanted,
+  );
+  if (matches.length === 0) return { ok: false, error: `"${skillName}" isn't on her roadmap.` };
+
+  const ids = matches.map((s) => s.id);
+  const { data: items, error: itemsError } = await supabase
+    .from("roadmap_items")
+    .select("id, title, done, proof_url, proof_path")
+    .eq("user_id", userId)
+    .in("skill_id", ids);
+  if (itemsError) return { ok: false, error: itemsError.message };
+  const itemRows = (items ?? []) as ItemRow[];
+  const completed = itemRows.filter(hasProof);
+
+  if (completed.length > 0 && args["confirm_completed"] !== true) {
+    return {
+      ok: false,
+      needs_confirmation: true,
+      error: `Removing "${matches[0]!.name}" would also delete ${completed.length} completed step(s) with proof: ${completed
+        .map((i) => i.title)
+        .join(", ")}. Ask her to confirm, then call again with confirm_completed: true.`,
+    };
+  }
+
+  const { error: deleteItemsError } = await supabase
+    .from("roadmap_items")
+    .delete()
+    .eq("user_id", userId)
+    .in("skill_id", ids);
+  if (deleteItemsError) return { ok: false, error: deleteItemsError.message };
+
+  const { error: deleteSkillError } = await supabase
+    .from("roadmap_skills")
+    .delete()
+    .eq("user_id", userId)
+    .in("id", ids);
+  if (deleteSkillError) return { ok: false, error: deleteSkillError.message };
+
+  return { ok: true, removed_skill: matches[0]!.name, removed_items: itemRows.length };
+}
+
 
 const PHASE_FOR: Record<string, string[]> = {
   learn: ["learning"],
