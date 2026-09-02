@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { refreshEvents } from "@/lib/events.functions";
 import {
   CalendarHeart,
   CalendarPlus,
@@ -93,6 +95,17 @@ export function NetworkView() {
         .sort((a, b) => new Date(b.event.starts_at).getTime() - new Date(a.event.starts_at).getTime()),
     [scored, now],
   );
+
+  // Self-healing catalog: if nothing upcoming is in the board (empty or every
+  // event has passed), pull the ingestion job once and refetch.
+  const ingest = useServerFn(refreshEvents);
+  const ingested = useRef(false);
+  useEffect(() => {
+    if (isLoading || ingested.current) return;
+    if (upcoming.length > 0) return;
+    ingested.current = true;
+    void ingest({}).then(() => refetch()).catch(() => undefined);
+  }, [isLoading, upcoming.length, ingest, refetch]);
 
   const visible = useMemo(() => applyFilters(upcoming, filters), [upcoming, filters]);
   const savedRows = useMemo(
