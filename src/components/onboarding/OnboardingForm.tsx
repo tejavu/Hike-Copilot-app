@@ -483,17 +483,60 @@ export function OnboardingForm() {
               </div>
             </div>
             <div>
-              <Label htmlFor="loc" className="text-xs font-semibold tracking-wide uppercase">
+              <Label className="text-xs font-semibold tracking-wide uppercase">
                 Where are you based / willing to work?
               </Label>
-              <Input
-                id="loc"
-                value={form.locationPref}
-                onChange={(e) => patch({ locationPref: e.target.value })}
-                placeholder="Zurich, or anywhere remote in Europe"
-                className="mt-2"
-              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Pick as many as you'd genuinely consider — I'll only show roles in those places.
+              </p>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="mt-2 w-full justify-between font-normal">
+                    <span className="truncate">
+                      {form.locations.length
+                        ? form.locations.join(" · ")
+                        : "Choose one or more locations"}
+                    </span>
+                    <ChevronDown className="size-4 shrink-0 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="max-h-72 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto">
+                  {LOCATION_OPTIONS.map((option) => (
+                    <DropdownMenuCheckboxItem
+                      key={option}
+                      checked={form.locations.includes(option)}
+                      onSelect={(event) => event.preventDefault()}
+                      onCheckedChange={(checked) =>
+                        patch({
+                          locations: checked
+                            ? [...form.locations, option]
+                            : form.locations.filter((l) => l !== option),
+                        })
+                      }
+                    >
+                      {option}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {form.locations.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {form.locations.map((loc) => (
+                    <Badge key={loc} variant="outline" className="gap-1 bg-secondary/60">
+                      {loc}
+                      <button
+                        type="button"
+                        aria-label={`Remove ${loc}`}
+                        onClick={() => patch({ locations: form.locations.filter((l) => l !== loc) })}
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
+
             <div>
               <Label htmlFor="auth" className="text-xs font-semibold tracking-wide uppercase">
                 Work authorisation, if it matters
