@@ -437,6 +437,29 @@ export function upcomingSlots(mentor: Mentor, weeks = 3, from = new Date()): Ses
   return slots.sort((a, b) => a.start.getTime() - b.start.getTime()).slice(0, 8);
 }
 
+function inTimeOfDay(slot: SessionSlot, timeOfDay: TimeOfDay): boolean {
+  const hour = slot.start.getHours();
+  if (timeOfDay === "morning") return hour < 12;
+  if (timeOfDay === "afternoon") return hour >= 12 && hour < 17;
+  if (timeOfDay === "evening") return hour >= 17;
+  return true;
+}
+
+/**
+ * Openings that fit the mentee's stated time-of-day preference. Falls back to
+ * every opening when nothing matches, so she is never left without a time.
+ */
+export function preferredSlots(
+  mentor: Mentor,
+  timeOfDay: TimeOfDay | null = "any",
+  from = new Date(),
+): SessionSlot[] {
+  const all = upcomingSlots(mentor, 3, from);
+  if (!timeOfDay || timeOfDay === "any") return all;
+  const filtered = all.filter((slot) => inTimeOfDay(slot, timeOfDay));
+  return filtered.length > 0 ? filtered : all;
+}
+
 /* -------------------------------- calendar -------------------------------- */
 
 function icsStamp(date: Date): string {
