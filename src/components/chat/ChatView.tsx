@@ -32,7 +32,8 @@ import { askCoach } from "@/lib/coach-ai.functions";
 import { parseCvDocuments } from "@/lib/cv-parse.functions";
 import { normaliseAnswer } from "@/lib/profile-parse.functions";
 import { writeRoadmapCopy } from "@/lib/roadmap-copy.functions";
-import { sweepJobs, skillGap } from "@/lib/job-sweep";
+import { skillGap } from "@/lib/job-sweep";
+import { searchJobs } from "@/lib/job-search.functions";
 import { generateRoadmap, phasePlanFor } from "@/lib/roadmap-builder";
 import {
   PROMPTS,
