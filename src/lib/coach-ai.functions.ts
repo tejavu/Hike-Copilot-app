@@ -512,6 +512,8 @@ export const askCoach = createServerFn({ method: "POST" })
                 ? await removeItem(supabase, userId, args)
                 : name === "remove_roadmap_skill"
                   ? await removeSkill(supabase, userId, args)
+                  : name === "find_job_recommendations"
+                    ? await findJobRecommendations(supabase, userId, args)
                   : { ok: false, error: `Unknown tool ${name}` };
         if (result.ok) roadmapChanged = true;
         messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
