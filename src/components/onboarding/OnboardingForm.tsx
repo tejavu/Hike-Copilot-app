@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  ChevronDown,
   FileUp,
   Heart,
   Loader2,
@@ -22,7 +23,7 @@ import { useJobs, useProfile, useUpdateJob, useUpdateProfile } from "@/hooks/use
 import { parseCvDocuments } from "@/lib/cv-parse.functions";
 import { normaliseAnswer } from "@/lib/profile-parse.functions";
 import { writeRoadmapCopy } from "@/lib/roadmap-copy.functions";
-import { skillGap, sweepJobs } from "@/lib/job-sweep";
+import { LOCATION_OPTIONS, skillGap, sweepJobs } from "@/lib/job-sweep";
 import { generateRoadmap, phasePlanFor } from "@/lib/roadmap-builder";
 import { confidentSkills, readDocumentFile, WEEKLY_OPTIONS, type WeeklyOption } from "@/lib/onboarding";
 import type { Job, Profile, SkillConfidence } from "@/lib/domain";
@@ -33,7 +34,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+
 
 type StepId =
   | "documents"
@@ -672,7 +680,7 @@ export function OnboardingForm() {
             <ReviewRow label="Drawn to" value={form.drawnTo} onEdit={() => setStep("drawn_to")} />
             <ReviewRow
               label="Location & setup"
-              value={[form.setups.join(", "), form.locationPref, form.workAuth].filter(Boolean).join(" · ")}
+              value={[form.setups.join(", "), form.locations.join(" · "), form.workAuth].filter(Boolean).join(" · ")}
               onEdit={() => setStep("constraints")}
             />
             <ReviewRow label="Experience" value={form.recentRole} onEdit={() => setStep("experience")} />
