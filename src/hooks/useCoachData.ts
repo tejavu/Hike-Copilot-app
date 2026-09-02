@@ -175,10 +175,17 @@ export function useResetCoach() {
         if (error) throw error;
       };
 
-      await wipe("chat_messages");
-      // Extra chats go too — their messages cascade with the thread row.
-      await wipe("chat_threads");
+      // Only the main coaching transcript; extra chats survive a plain clear.
+      const { error: mainError } = await supabase
+        .from("chat_messages")
+        .delete()
+        .eq("user_id", uid)
+        .is("thread_id", null);
+      if (mainError) throw mainError;
       if (!full) return;
+
+      // Start over also removes the extra chats (messages cascade with them).
+      await wipe("chat_threads");
 
       // Mentor Match: matches, sessions, actions and preferences all go, so
       // she is treated as unmatched rather than offered a reconnect.
