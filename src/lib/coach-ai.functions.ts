@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { runJobSearch } from "./job-search.server";
+import { normaliseSkill } from "./catalog";
 
 const schema = z.object({
   question: z.string().min(1).max(4000),
@@ -23,7 +25,12 @@ You CAN edit her roadmap, but only through the provided tools.
 - She is allowed to decline any skill. If she says she doesn't want to learn something, don't argue or quietly leave it there — offer to take it off ("Want me to drop Kubernetes from your roadmap?") and call remove_roadmap_skill (or remove_roadmap_item for a single step) once she says yes.
 - If she hasn't confirmed a removal, leave the roadmap untouched and just offer.
 - If a removal tool reports finished steps with proof, tell her exactly what would be lost and only re-call it with confirm_completed once she agrees.
-- Never claim you've updated, added to, removed from or changed her roadmap unless the matching tool call succeeded in this same turn. If a tool call fails or no roadmap exists yet, say so plainly and suggest she edit it from the Roadmap page instead.`;
+- Never claim you've updated, added to, removed from or changed her roadmap unless the matching tool call succeeded in this same turn. If a tool call fails or no roadmap exists yet, say so plainly and suggest she edit it from the Roadmap page instead.
+
+You can also look for jobs with find_job_recommendations.
+- Call it when she asks for job ideas or agrees to a search. It reads her skills, roadmap and preferences itself — don't pass a skill list.
+- Saved roles show up on her Roadmap automatically, so only say they're "on your roadmap" after the tool returns ok.
+- Name a few of the roles it returned (title at company, where it's from), flag any marked is_example as examples rather than live openings, and if it returns an error say plainly that nothing new was added.`;
 
 const ITEM_TYPES = ["learn", "practice", "certify", "build", "visibility"] as const;
 
@@ -103,6 +110,20 @@ const tools = [
           },
         },
         required: ["skill"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "find_job_recommendations",
+      description:
+        "Search live job boards for roles that fit her saved profile and roadmap skills, and save the new ones to her list (which feeds the Roadmap view). Only call when she asks for job suggestions or agrees to a search. Takes no skill input — the profile is read server-side.",
+      parameters: {
+        type: "object",
+        properties: {
+          count: { type: "number", description: "How many roles to look for (1-12). Defaults to 6." },
+        },
       },
     },
   },
@@ -287,6 +308,106 @@ async function addItem(supabase: Supa, userId: string, args: Record<string, unkn
   return { ok: true, added: title, under: skillName };
 }
 
+type ProfileRow = {
+  skill_confidence: { name: string; level: number }[] | null;
+  skills: string[] | null;
+  interests: string[] | null;
+  drawn_to: string | null;
+  location_pref: string | null;
+  work_setup: string[] | null;
+};
+
+/**
+ * Searches live boards using her saved profile plus her roadmap skills
+ * (aspirational, so weighted lower) and saves the genuinely new roles.
+ */
+async function findJobRecommendations(supabase: Supa, userId: string, args: Record<string, unknown>) {
+  const count = Math.min(12, Math.max(1, Number(args["count"] ?? 6) || 6));
+
+  const { data: profileData, error: profileError } = await supabase
+    .from("profiles")
+    .select("skill_confidence, skills, interests, drawn_to, location_pref, work_setup")
+    .eq("id", userId)
+    .maybeSingle();
+  if (profileError) return { ok: false, error: profileError.message };
+  const profile = profileData as ProfileRow | null;
+  if (!profile) return { ok: false, error: "She has no profile saved yet, so there's nothing to search against." };
+
+  const confirmed = profile.skill_confidence?.length
+    ? profile.skill_confidence
+    : (profile.skills ?? []).map((name) => ({ name, level: 3 }));
+
+  const { data: roadmapSkills, error: skillError } = await supabase
+    .from("roadmap_skills")
+    .select("name")
+    .eq("user_id", userId);
+  if (skillError) return { ok: false, error: skillError.message };
+
+  const seenSkill = new Set(confirmed.map((s) => normaliseSkill(s.name)));
+  const skills = [...confirmed];
+  for (const row of (roadmapSkills ?? []) as { name: string }[]) {
+    const key = normaliseSkill(row.name);
+    if (!key || seenSkill.has(key)) continue;
+    seenSkill.add(key);
+    skills.push({ name: row.name, level: 2 });
+  }
+
+  const result = await runJobSearch({
+    skills,
+    interests: profile.interests ?? [],
+    drawnTo: profile.drawn_to ?? "",
+    locations: (profile.location_pref ?? "").split(" · ").map((l) => l.trim()).filter(Boolean),
+    setups: profile.work_setup ?? [],
+    count,
+  });
+
+  if (result.jobs.length === 0) {
+    return { ok: false, error: `No roles came back this time. ${result.notes[0] ?? ""}`.trim() };
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from("jobs")
+    .select("title, company")
+    .eq("user_id", userId);
+  if (existingError) return { ok: false, error: existingError.message };
+
+  const keyOf = (title: string, company: string) =>
+    `${normaliseSkill(title)}|${normaliseSkill(company)}`;
+  const seen = new Set(
+    ((existing ?? []) as { title: string; company: string }[]).map((j) => keyOf(j.title, j.company)),
+  );
+
+  const fresh = result.jobs.filter((job) => {
+    const key = keyOf(job.title, job.company);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  if (fresh.length === 0) {
+    return { ok: false, error: "Everything I found is already on her list — nothing new was added." };
+  }
+
+  const { error: insertError } = await supabase
+    .from("jobs")
+    .insert(fresh.map((job) => ({ ...job, user_id: userId, liked: true })) as never);
+  if (insertError) return { ok: false, error: insertError.message };
+
+  return {
+    ok: true,
+    added: fresh.map((job) => ({
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      source: job.source,
+      is_example: job.is_example,
+      url: job.url,
+    })),
+    skipped_duplicates: result.jobs.length - fresh.length,
+    examples_only: fresh.every((job) => job.is_example),
+  };
+}
+
 async function updateItem(supabase: Supa, userId: string, args: Record<string, unknown>) {
   const match = String(args["match_title"] ?? "").trim();
   if (!match) return { ok: false, error: "match_title is required." };
@@ -396,6 +517,8 @@ export const askCoach = createServerFn({ method: "POST" })
                 ? await removeItem(supabase, userId, args)
                 : name === "remove_roadmap_skill"
                   ? await removeSkill(supabase, userId, args)
+                  : name === "find_job_recommendations"
+                    ? await findJobRecommendations(supabase, userId, args)
                   : { ok: false, error: `Unknown tool ${name}` };
         if (result.ok) roadmapChanged = true;
         messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
