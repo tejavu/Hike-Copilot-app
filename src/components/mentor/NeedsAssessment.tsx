@@ -380,7 +380,7 @@ export function NeedsAssessment({
         {last ? (
           <Button type="button" className="gap-2" disabled={saving} onClick={() => onSubmit(draft)}>
             {saving ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-            Find my matches
+            Find my mentor
           </Button>
         ) : (
           <Button
