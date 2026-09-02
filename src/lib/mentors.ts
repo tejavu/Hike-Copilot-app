@@ -309,7 +309,7 @@ export function rankMentors(mentors: Mentor[], input: MatchInput): MatchResult[]
 }
 
 /**
- * Ada picks the single best-fit mentor rather than asking the mentee to choose.
+ * Hike Copilot picks the single best-fit mentor rather than asking the mentee to choose.
  * Mentors already declined via a rematch are skipped; mentors with no upcoming
  * openings are only used as a last resort so bookable time is the default.
  */
@@ -478,7 +478,7 @@ export function buildSessionIcs(session: MentorSession, mentor: Mentor): string 
     session.theme ? `Focus: ${session.theme}` : "",
     session.agenda ?? "",
     session.prep_questions.length ? `Questions:\n- ${session.prep_questions.join("\n- ")}` : "",
-    "Booked through Ada. Add the meeting link once your mentor confirms it.",
+    "Booked through Hike Copilot. Add the meeting link once your mentor confirms it.",
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -486,7 +486,7 @@ export function buildSessionIcs(session: MentorSession, mentor: Mentor): string 
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Ada//MentorMatch//EN",
+    "PRODID:-//Hike Copilot//MentorMatch//EN",
     "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
     `UID:${session.id}@ada-mentor`,

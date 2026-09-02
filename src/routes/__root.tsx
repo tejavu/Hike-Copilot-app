@@ -79,7 +79,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Ada — Career Coach for Women in Tech" },
+      { title: "Hike Copilot — Career Coach for Women in Tech" },
       {
         name: "description",
         content: "Find your skill gaps, close them with a guided roadmap, and land the role.",

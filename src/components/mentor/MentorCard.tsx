@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { initialsOf } from "@/lib/mentors";
 
 /**
- * Mentor initials badge. Ada selects one best-fit mentor rather than showing a
+ * Mentor initials badge. Hike Copilot selects one best-fit mentor rather than showing a
  * browsable grid, so there is no longer a selectable mentor card.
  */
 export function MentorAvatar({ name, className }: { name: string; className?: string }) {

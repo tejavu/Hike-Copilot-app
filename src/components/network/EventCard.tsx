@@ -170,7 +170,7 @@ export function EventCard({
           </div>
           <p className="text-xs text-secondary-foreground">
             <Users className="mr-1 inline size-3.5" />
-            {event.cohort_going} in the Ada cohort are interested
+            {event.cohort_going} in the Hike Copilot cohort are interested
             <span className="text-muted-foreground"> · demo cohort activity</span>
           </p>
         </div>

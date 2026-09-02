@@ -231,7 +231,7 @@ export function eventLocationLine(event: NetworkEvent): string {
 }
 
 export function buildIcs(events: NetworkEvent[]): string {
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Ada//Network//EN", "CALSCALE:GREGORIAN"];
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Hike Copilot//Network//EN", "CALSCALE:GREGORIAN"];
   for (const event of events) {
     const start = new Date(event.starts_at);
     const end = event.ends_at ? new Date(event.ends_at) : new Date(start.getTime() + 7_200_000);

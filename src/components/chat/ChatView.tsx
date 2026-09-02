@@ -89,7 +89,7 @@ export function ChatView() {
     seeded.current = true;
     void (async () => {
       await say(
-        `Hi ${firstName(profile)} — I'm Ada, and I'm so glad you're here. Before we do anything clever, I need to get to know you.\n\nWe can do this one of two ways, and neither is better than the other.`,
+        `Hi ${firstName(profile)} — I'm Hike Copilot, and I'm so glad you're here. Before we do anything clever, I need to get to know you.\n\nWe can do this one of two ways, and neither is better than the other.`,
         "path_choice",
       );
       refresh();
@@ -332,7 +332,7 @@ export function ChatView() {
         ))}
         {busy && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-3.5 animate-spin" /> Ada is thinking…
+            <Loader2 className="size-3.5 animate-spin" /> Hike Copilot is thinking…
           </div>
         )}
         <div ref={bottom} />

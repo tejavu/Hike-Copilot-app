@@ -195,7 +195,7 @@ export const SEED_EVENTS: SeedEvent[] = [
   {
     external_id: "partner:sponsor-office-hours",
     title: "Sponsor office hours: portfolio reviews with hiring engineers",
-    organizer: "Ada Partner Network",
+    organizer: "Hike Copilot Partner Network",
     source: "Sponsor & Partner Calendar",
     event_type: "women_program",
     day_offset: 5,
@@ -346,7 +346,7 @@ export const SEED_EVENTS: SeedEvent[] = [
   {
     external_id: "partner:cv-and-linkedin-lab",
     title: "Swiss CV & LinkedIn lab",
-    organizer: "Ada Partner Network",
+    organizer: "Hike Copilot Partner Network",
     source: "Sponsor & Partner Calendar",
     event_type: "women_program",
     day_offset: 10,
@@ -512,7 +512,7 @@ export const SEED_EVENTS: SeedEvent[] = [
   {
     external_id: "partner:mock-interview-marathon",
     title: "Mock interview marathon (women-only cohort)",
-    organizer: "Ada Partner Network",
+    organizer: "Hike Copilot Partner Network",
     source: "Sponsor & Partner Calendar",
     event_type: "women_program",
     day_offset: 26,

@@ -54,7 +54,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <SidebarBody onNavigate={() => setOpen(false)} />
             </SheetContent>
           </Sheet>
-          <span className="font-display text-lg font-semibold">Ada</span>
+          <span className="font-display text-lg font-semibold">Hike Copilot</span>
         </header>
         <main className="min-w-0 flex-1">{children}</main>
       </div>
@@ -76,7 +76,7 @@ function SidebarBody({ onNavigate }: { onNavigate: () => void }) {
             <Sparkles className="size-4.5" />
           </span>
           <div className="leading-tight">
-            <p className="font-display text-lg font-semibold text-sidebar-foreground">Ada</p>
+            <p className="font-display text-lg font-semibold text-sidebar-foreground">Hike Copilot</p>
             <p className="text-xs text-muted-foreground">your career coach</p>
           </div>
         </div>

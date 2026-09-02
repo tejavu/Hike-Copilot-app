@@ -12,7 +12,7 @@ import {
 } from "@/lib/mentors";
 
 /**
- * The mentee doesn't shop around: Ada picks one best-fit mentor and explains
+ * The mentee doesn't shop around: Hike Copilot picks one best-fit mentor and explains
  * why. She either confirms, or asks for a different match.
  */
 export function MatchConfirmation({

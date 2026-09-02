@@ -148,7 +148,7 @@ export function ScheduleDialog({
                 Microsoft Teams
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-accent-foreground">
-                Ada can't create a Teams meeting for you yet — that needs you to authorise Microsoft
+                Hike Copilot can't create a Teams meeting for you yet — that needs you to authorise Microsoft
                 365 so a meeting can be booked in your calendar on your behalf. Until you connect
                 it, I'll give you a calendar file (.ics) to add the session anywhere, and your
                 mentor can drop the Teams link into it.

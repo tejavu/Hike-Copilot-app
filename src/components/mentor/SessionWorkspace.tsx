@@ -473,7 +473,7 @@ export function FollowUpCard({
             <p className="rounded-2xl bg-accent/40 p-3 text-xs leading-relaxed text-accent-foreground">
               Teams Premium's Intelligent Recap can generate a summary and action items — but only
               when the meeting organiser's Microsoft 365 tenant has it enabled, and only inside
-              Teams. Ada can't join, record or read your calls. If you have a recap, copy it from
+              Teams. Hike Copilot can't join, record or read your calls. If you have a recap, copy it from
               Teams and paste it below.
             </p>
           )}
