@@ -116,8 +116,17 @@ function pick<T>(arr: T[], seed: number): T {
   return arr[Math.abs(seed) % arr.length] as T;
 }
 
-export function sweepJobs(interests: string[], skills: string[], count = 6): GeneratedJob[] {
+export function sweepJobs(
+  interests: string[],
+  skills: string[],
+  opts: { count?: number; setups?: string[]; location?: string } = {},
+): GeneratedJob[] {
+  const { count = 6, setups = [], location = "" } = opts;
   const signal = [...interests, ...skills].map(normaliseSkill).filter(Boolean);
+  const wantsRemote = setups.some((s) => /remote/i.test(s));
+  const wantsHybrid = setups.some((s) => /hybrid/i.test(s));
+  const wantsOnsite = setups.some((s) => /on-?site/i.test(s));
+  const locationNorm = normaliseSkill(location);
 
   const scored = SEEDS.map((seed, index) => {
     let score = 0;
@@ -129,7 +138,24 @@ export function sweepJobs(interests: string[], skills: string[], count = 6): Gen
     return { seed, score, index };
   }).sort((a, b) => b.score - a.score || a.index - b.index);
 
-  const chosen = scored.slice(0, Math.max(count, 4));
+  const filtered = scored.filter(({ seed }) => {
+    if (setups.length === 0 && !location) return true;
+    const seedLocations = seed.locations.map((l) => normaliseSkill(l));
+    const hasRemote = seedLocations.some((l) => l.includes("remote"));
+    const hasHybrid = seedLocations.some((l) => l.includes("hybrid"));
+    const hasOnsite = seedLocations.some((l) => l.includes("on-site") || l.includes("onsite"));
+    const setupMatch =
+      setups.length === 0 ||
+      (wantsRemote && hasRemote) ||
+      (wantsHybrid && hasHybrid) ||
+      (wantsOnsite && hasOnsite);
+    const locationMatch =
+      !location ||
+      seedLocations.some((l) => l.includes(locationNorm) || locationNorm.includes(l.replace(/\s+/g, " ").trim()));
+    return setupMatch || locationMatch;
+  });
+
+  const chosen = (filtered.length >= count ? filtered : scored).slice(0, Math.max(count, 4));
 
   return chosen.map(({ seed, index }, i) => {
     const stretch = signal.length ? titleCase(signal[i % signal.length] ?? "") : "";

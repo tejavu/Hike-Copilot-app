@@ -9,7 +9,9 @@ import {
   Loader2,
   MessageSquareHeart,
   PartyPopper,
+  RotateCcw,
   Send,
+  Trash2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -21,6 +23,7 @@ import {
   useJobs,
   useMessages,
   useProfile,
+  useResetCoach,
   useRoadmap,
   useUpdateJob,
   useUpdateProfile,
@@ -78,6 +81,7 @@ export function ChatView() {
   const readDocuments = useServerFn(parseCvDocuments);
   const cleanAnswer = useServerFn(normaliseAnswer);
   const roadmapCopy = useServerFn(writeRoadmapCopy);
+  const resetCoach = useResetCoach();
 
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -93,6 +97,36 @@ export function ChatView() {
     void qc.invalidateQueries({ queryKey: ["jobs", user?.id] });
     void qc.invalidateQueries({ queryKey: ["documents", user?.id] });
     void qc.invalidateQueries({ queryKey: ["roadmap", user?.id] });
+  };
+
+  const clearChat = async () => {
+    if (!user) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.from("chat_messages").delete().eq("user_id", user.id);
+      if (error) throw error;
+      seeded.current = false;
+      refresh();
+      toast.success("Chat cleared");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't clear chat");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startOver = async () => {
+    if (!user || !confirm("This clears your chat, roadmap and matches and restarts onboarding. Are you sure?")) return;
+    setBusy(true);
+    try {
+      await resetCoach.mutateAsync({ full: true });
+      seeded.current = false;
+      toast.success("Starting fresh");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't restart");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const say = async (
@@ -255,7 +289,10 @@ export function ChatView() {
 
   const startJobSweep = async (currentProfile: Profile) => {
     await supabase.from("jobs").delete().eq("user_id", currentProfile.id);
-    const generated = sweepJobs(currentProfile.interests, currentProfile.skills);
+    const generated = sweepJobs(currentProfile.interests, currentProfile.skills, {
+      setups: currentProfile.work_setup,
+      location: currentProfile.location_pref ?? "",
+    });
     const { error } = await supabase
       .from("jobs")
       .insert(generated.map((job) => ({ ...job, user_id: currentProfile.id })) as never);
@@ -436,6 +473,30 @@ export function ChatView() {
 
   return (
     <div className="mx-auto flex h-[calc(100vh-3.5rem)] w-full max-w-3xl flex-col px-4 md:h-screen md:px-8">
+      <div className="flex items-center justify-between gap-3 border-b border-border py-4">
+        <div>
+          <h1 className="font-display text-lg font-semibold">Chat with Hike Copilot</h1>
+          <p className="text-xs text-muted-foreground">Ask anything about your career, roadmap or job search.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void clearChat()}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+          >
+            <Trash2 className="size-3.5" /> Clear chat
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void startOver()}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+          >
+            <RotateCcw className="size-3.5" /> Start over
+          </button>
+        </div>
+      </div>
       <div className="flex-1 space-y-5 overflow-y-auto py-8">
         {(messages ?? []).map((message) => (
           <div key={message.id} className="animate-rise space-y-3">
