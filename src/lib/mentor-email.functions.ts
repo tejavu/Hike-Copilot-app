@@ -6,6 +6,8 @@ import { buildSessionEmails, type BuiltEmail } from "@/lib/mentor-email";
 const schema = z.object({
   sessionId: z.string().uuid(),
   timezone: z.string().max(80).default("UTC"),
+  /** "mentor" = booking notice, "mentee" = mentor-confirmed notice. */
+  audience: z.enum(["both", "mentee", "mentor"]).default("both"),
 });
 
 type SendResult = {
@@ -15,7 +17,7 @@ type SendResult = {
 };
 
 /**
- * Sends the booking confirmation to mentee and mentor.
+ * Sends the booking confirmation to mentee and/or mentor.
  *
  * Outgoing email needs a verified sending domain plus an API key. When those
  * aren't configured we still build the full email, persist a clear
@@ -26,6 +28,7 @@ export const sendSessionConfirmation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => schema.parse(data))
   .handler(async ({ data, context }): Promise<SendResult> => {
+
     const { data: session, error } = await context.supabase
       .from("mentor_sessions")
       .select("id, mentor_id, starts_at, ends_at, theme, meeting_format")
