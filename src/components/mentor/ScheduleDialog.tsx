@@ -22,11 +22,13 @@ import {
 import { cn } from "@/lib/utils";
 import {
   formatSlot,
+  MIN_BOOKING_LEAD_DAYS,
   preferredSlots,
   type Mentor,
   type SessionSlot,
   type TimeOfDay,
 } from "@/lib/mentors";
+
 
 export function ScheduleDialog({
   mentor,
@@ -77,8 +79,10 @@ export function ScheduleDialog({
           <DialogDescription>
             These are the windows she keeps open for mentoring:{" "}
             {mentor.availability_summary.toLowerCase()}
-            {timezone ? `. Times shown in ${timezone}` : ""}.
+            {timezone ? `. Times shown in ${timezone}` : ""}. Sessions are booked at least{" "}
+            {MIN_BOOKING_LEAD_DAYS} days ahead so she has time to prepare.
           </DialogDescription>
+
         </DialogHeader>
 
         {slots.length === 0 ? (
