@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   FileText,
   Heart,
@@ -8,12 +8,16 @@ import {
   Map as MapIcon,
   Menu,
   MessageCircleHeart,
+  MessageSquare,
+  Plus,
   Users,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useProfile } from "@/hooks/useCoachData";
+import { useCreateThread, useThreads } from "@/hooks/useChatThreads";
 import { useAuth } from "@/hooks/useAuth";
 import { CvDialog } from "@/components/cv/CvDialog";
 import copilotLogo from "@/assets/copilot-logo.png";
