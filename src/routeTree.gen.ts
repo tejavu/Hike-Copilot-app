@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as MentorMatchRouteImport } from './routes/mentor-match'
 import { Route as NetworkRouteImport } from './routes/network'
 import { Route as RoadmapRouteImport } from './routes/roadmap'
+import { Route as ChatThreadIdRouteImport } from './routes/chat.$threadId'
 import { Route as ApiPublicEventsRefreshRouteImport } from './routes/api/public/events/refresh'
 import { Route as ApiPublicMentorsRemindersRouteImport } from './routes/api/public/mentors/reminders'
 
@@ -36,6 +37,11 @@ const RoadmapRoute = RoadmapRouteImport.update({
   path: '/roadmap',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChatThreadIdRoute = ChatThreadIdRouteImport.update({
+  id: '/chat/$threadId',
+  path: '/chat/$threadId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicEventsRefreshRoute = ApiPublicEventsRefreshRouteImport.update({
   id: '/api/public/events/refresh',
   path: '/api/public/events/refresh',
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/mentor-match': typeof MentorMatchRoute
   '/network': typeof NetworkRoute
   '/roadmap': typeof RoadmapRoute
+  '/chat/$threadId': typeof ChatThreadIdRoute
   '/api/public/events/refresh': typeof ApiPublicEventsRefreshRoute
   '/api/public/mentors/reminders': typeof ApiPublicMentorsRemindersRoute
 }
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/mentor-match': typeof MentorMatchRoute
   '/network': typeof NetworkRoute
   '/roadmap': typeof RoadmapRoute
+  '/chat/$threadId': typeof ChatThreadIdRoute
   '/api/public/events/refresh': typeof ApiPublicEventsRefreshRoute
   '/api/public/mentors/reminders': typeof ApiPublicMentorsRemindersRoute
 }
@@ -70,6 +78,7 @@ export interface FileRoutesById {
   '/mentor-match': typeof MentorMatchRoute
   '/network': typeof NetworkRoute
   '/roadmap': typeof RoadmapRoute
+  '/chat/$threadId': typeof ChatThreadIdRoute
   '/api/public/events/refresh': typeof ApiPublicEventsRefreshRoute
   '/api/public/mentors/reminders': typeof ApiPublicMentorsRemindersRoute
 }
@@ -80,6 +89,7 @@ export interface FileRouteTypes {
     | '/mentor-match'
     | '/network'
     | '/roadmap'
+    | '/chat/$threadId'
     | '/api/public/events/refresh'
     | '/api/public/mentors/reminders'
   fileRoutesByTo: FileRoutesByTo
@@ -88,6 +98,7 @@ export interface FileRouteTypes {
     | '/mentor-match'
     | '/network'
     | '/roadmap'
+    | '/chat/$threadId'
     | '/api/public/events/refresh'
     | '/api/public/mentors/reminders'
   id:
@@ -96,6 +107,7 @@ export interface FileRouteTypes {
     | '/mentor-match'
     | '/network'
     | '/roadmap'
+    | '/chat/$threadId'
     | '/api/public/events/refresh'
     | '/api/public/mentors/reminders'
   fileRoutesById: FileRoutesById
@@ -105,6 +117,7 @@ export interface RootRouteChildren {
   MentorMatchRoute: typeof MentorMatchRoute
   NetworkRoute: typeof NetworkRoute
   RoadmapRoute: typeof RoadmapRoute
+  ChatThreadIdRoute: typeof ChatThreadIdRoute
   ApiPublicEventsRefreshRoute: typeof ApiPublicEventsRefreshRoute
   ApiPublicMentorsRemindersRoute: typeof ApiPublicMentorsRemindersRoute
 }
@@ -139,6 +152,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoadmapRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/chat/$threadId': {
+      id: '/chat/$threadId'
+      path: '/chat/$threadId'
+      fullPath: '/chat/$threadId'
+      preLoaderRoute: typeof ChatThreadIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/events/refresh': {
       id: '/api/public/events/refresh'
       path: '/api/public/events/refresh'
@@ -161,6 +181,7 @@ const rootRouteChildren: RootRouteChildren = {
   MentorMatchRoute: MentorMatchRoute,
   NetworkRoute: NetworkRoute,
   RoadmapRoute: RoadmapRoute,
+  ChatThreadIdRoute: ChatThreadIdRoute,
   ApiPublicEventsRefreshRoute: ApiPublicEventsRefreshRoute,
   ApiPublicMentorsRemindersRoute: ApiPublicMentorsRemindersRoute,
 }
