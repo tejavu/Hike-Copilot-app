@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
 const schema = z.object({
@@ -14,51 +15,248 @@ const SYSTEM = `You are Hike Copilot, a warm, encouraging career coach for women
 You talk like a trusted mentor who has been in the industry: direct, specific, generous with belief in her.
 Never sound like corporate HR or a clinical assessment tool. No bullet-point lectures unless she asks for a list.
 Keep answers under 130 words. Reference her profile and roadmap when it's relevant.
-When she doubts herself, name the evidence of her progress instead of empty cheerleading.`;
+When she doubts herself, name the evidence of her progress instead of empty cheerleading.
+
+You CAN edit her roadmap, but only through the provided tools.
+- Propose the change first and wait for her to confirm, unless she already asked for it outright.
+- When she confirms, call add_roadmap_item (or update_roadmap_item) and only then say it's done.
+- Never claim you've updated, added to or changed her roadmap unless the matching tool call succeeded in this same turn. If a tool call fails or no roadmap exists yet, say so plainly and suggest she add it from the Roadmap page instead.`;
+
+const ITEM_TYPES = ["learn", "practice", "certify", "build", "visibility"] as const;
+
+const tools = [
+  {
+    type: "function",
+    function: {
+      name: "add_roadmap_item",
+      description:
+        "Add one concrete step to the user's roadmap under a named skill. Creates the skill if it doesn't exist yet. Only call after the user confirms.",
+      parameters: {
+        type: "object",
+        properties: {
+          skill: { type: "string", description: "Skill heading the step belongs under, e.g. 'SQL'." },
+          item_type: { type: "string", enum: ITEM_TYPES },
+          title: { type: "string" },
+          provider: { type: "string" },
+          url: { type: "string" },
+          detail: { type: "string" },
+          target_count: { type: "number", description: "Only for practice items: how many reps." },
+        },
+        required: ["skill", "item_type", "title"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_roadmap_item",
+      description: "Update an existing roadmap step, found by (part of) its current title.",
+      parameters: {
+        type: "object",
+        properties: {
+          match_title: { type: "string" },
+          title: { type: "string" },
+          url: { type: "string" },
+          provider: { type: "string" },
+          detail: { type: "string" },
+          target_count: { type: "number" },
+        },
+        required: ["match_title"],
+      },
+    },
+  },
+] as const;
+
+type Supa = { from: (table: string) => any };
+
+const PHASE_FOR: Record<string, string[]> = {
+  learn: ["learning"],
+  practice: ["learning"],
+  certify: ["learning"],
+  build: ["building", "learning"],
+  visibility: ["visibility", "building", "learning"],
+};
+
+async function addItem(supabase: Supa, userId: string, args: Record<string, unknown>) {
+  const skillName = String(args["skill"] ?? "").trim();
+  const itemType = String(args["item_type"] ?? "learn");
+  const title = String(args["title"] ?? "").trim();
+  if (!skillName || !title || !(ITEM_TYPES as readonly string[]).includes(itemType)) {
+    return { ok: false, error: "Missing or invalid skill/title/item_type." };
+  }
+
+  const { data: phases, error: phaseError } = await supabase
+    .from("roadmap_phases")
+    .select("id, kind, order_index")
+    .eq("user_id", userId)
+    .order("order_index", { ascending: true });
+  if (phaseError) return { ok: false, error: phaseError.message };
+  const phaseRows = (phases ?? []) as { id: string; kind: string }[];
+  if (phaseRows.length === 0) {
+    return { ok: false, error: "She has no roadmap yet, so nothing can be added." };
+  }
+
+  const preferred = PHASE_FOR[itemType] ?? ["learning"];
+  const phase =
+    preferred.map((kind) => phaseRows.find((p) => p.kind === kind)).find(Boolean) ?? phaseRows[0]!;
+
+  const { data: existing, error: skillError } = await supabase
+    .from("roadmap_skills")
+    .select("id, name, order_index")
+    .eq("user_id", userId)
+    .eq("phase_id", phase.id);
+  if (skillError) return { ok: false, error: skillError.message };
+  const skillRows = (existing ?? []) as { id: string; name: string; order_index: number }[];
+
+  let skillId = skillRows.find((s) => s.name.toLowerCase() === skillName.toLowerCase())?.id;
+  if (!skillId) {
+    const nextIndex = skillRows.reduce((max, s) => Math.max(max, s.order_index + 1), 0);
+    const { data: created, error: createError } = await supabase
+      .from("roadmap_skills")
+      .insert({ user_id: userId, phase_id: phase.id, name: skillName, order_index: nextIndex } as never)
+      .select("id")
+      .single();
+    if (createError) return { ok: false, error: createError.message };
+    skillId = (created as { id: string }).id;
+  }
+
+  const { data: siblings } = await supabase
+    .from("roadmap_items")
+    .select("order_index")
+    .eq("user_id", userId)
+    .eq("skill_id", skillId);
+  const orderIndex = ((siblings ?? []) as { order_index: number }[]).reduce(
+    (max, i) => Math.max(max, i.order_index + 1),
+    0,
+  );
+
+  const { error: itemError } = await supabase.from("roadmap_items").insert({
+    user_id: userId,
+    skill_id: skillId,
+    item_type: itemType,
+    title,
+    provider: args["provider"] ? String(args["provider"]) : null,
+    url: args["url"] ? String(args["url"]) : null,
+    detail: args["detail"] ? String(args["detail"]) : null,
+    target_count: itemType === "practice" ? Number(args["target_count"] ?? 3) : null,
+    order_index: orderIndex,
+  } as never);
+  if (itemError) return { ok: false, error: itemError.message };
+  return { ok: true, added: title, under: skillName };
+}
+
+async function updateItem(supabase: Supa, userId: string, args: Record<string, unknown>) {
+  const match = String(args["match_title"] ?? "").trim();
+  if (!match) return { ok: false, error: "match_title is required." };
+  const { data, error } = await supabase
+    .from("roadmap_items")
+    .select("id, title")
+    .eq("user_id", userId)
+    .ilike("title", `%${match}%`)
+    .limit(2);
+  if (error) return { ok: false, error: error.message };
+  const rows = (data ?? []) as { id: string; title: string }[];
+  if (rows.length === 0) return { ok: false, error: `No roadmap step matches "${match}".` };
+  if (rows.length > 1) return { ok: false, error: `"${match}" matches more than one step — be more specific.` };
+
+  const patch: Record<string, unknown> = {};
+  for (const key of ["title", "url", "provider", "detail"]) {
+    if (args[key]) patch[key] = String(args[key]);
+  }
+  if (args["target_count"] != null) patch["target_count"] = Number(args["target_count"]);
+  if (Object.keys(patch).length === 0) return { ok: false, error: "Nothing to change." };
+
+  const { error: updateError } = await supabase
+    .from("roadmap_items")
+    .update(patch as never)
+    .eq("id", rows[0]!.id);
+  if (updateError) return { ok: false, error: updateError.message };
+  return { ok: true, updated: rows[0]!.title };
+}
 
 export const askCoach = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => schema.parse(data))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) {
-      return { reply: "I can't reach my brain right now, but I'm still here. Try again in a moment?" };
+      return { reply: "I can't reach my brain right now, but I'm still here. Try again in a moment?", roadmapChanged: false };
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: "google/gemini-3.5-flash",
-        messages: [
-          { role: "system", content: SYSTEM },
-          ...(data.context ? [{ role: "system", content: `Her profile & progress:\n${data.context}` }] : []),
-          ...data.history,
-          { role: "user", content: data.question },
-        ],
-      }),
-    });
+    const { supabase, userId } = context as unknown as { supabase: Supa; userId: string };
 
-    if (!response.ok) {
-      const body = await response.text();
-      console.error("AI gateway error", response.status, body);
-      if (response.status === 429) {
-        return { reply: "Lots of people are talking to me at once — give me a few seconds and ask again?" };
+    const messages: Record<string, unknown>[] = [
+      { role: "system", content: SYSTEM },
+      ...(data.context ? [{ role: "system", content: `Her profile & progress:\n${data.context}` }] : []),
+      ...data.history,
+      { role: "user", content: data.question },
+    ];
+
+    let roadmapChanged = false;
+
+    for (let round = 0; round < 4; round += 1) {
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: "google/gemini-3.5-flash", messages, tools }),
+      });
+
+      if (!response.ok) {
+        const body = await response.text();
+        console.error("AI gateway error", response.status, body);
+        if (response.status === 429) {
+          return { reply: "Lots of people are talking to me at once — give me a few seconds and ask again?", roadmapChanged };
+        }
+        if (response.status === 402 || response.status === 403) {
+          return {
+            reply:
+              "My chat credits have run out for now, so I can't answer freely — but your roadmap and progress are all still here.",
+            roadmapChanged,
+          };
+        }
+        return { reply: "Something went sideways on my end. Ask me again?", roadmapChanged };
       }
-      if (response.status === 402 || response.status === 403) {
+
+      const payload = (await response.json()) as {
+        choices?: {
+          message?: {
+            content?: string;
+            tool_calls?: { id: string; function: { name: string; arguments: string } }[];
+          };
+        }[];
+      };
+      const message = payload.choices?.[0]?.message;
+      const calls = message?.tool_calls ?? [];
+
+      if (calls.length === 0) {
         return {
-          reply:
-            "My chat credits have run out for now, so I can't answer freely — but your roadmap and progress are all still here.",
+          reply: message?.content?.trim() ?? "I lost my train of thought there — say that again?",
+          roadmapChanged,
         };
       }
-      return { reply: "Something went sideways on my end. Ask me again?" };
+
+      messages.push({ role: "assistant", content: message?.content ?? "", tool_calls: calls });
+
+      for (const call of calls) {
+        let args: Record<string, unknown> = {};
+        try {
+          args = JSON.parse(call.function.arguments || "{}") as Record<string, unknown>;
+        } catch {
+          args = {};
+        }
+        const result =
+          call.function.name === "add_roadmap_item"
+            ? await addItem(supabase, userId, args)
+            : call.function.name === "update_roadmap_item"
+              ? await updateItem(supabase, userId, args)
+              : { ok: false, error: `Unknown tool ${call.function.name}` };
+        if (result.ok) roadmapChanged = true;
+        messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
+      }
     }
 
-    const payload = (await response.json()) as {
-      choices?: { message?: { content?: string } }[];
-    };
     return {
-      reply:
-        payload.choices?.[0]?.message?.content?.trim() ??
-        "I lost my train of thought there — say that again?",
+      reply: "I got tangled trying to make that change — can you tell me again exactly what you'd like added?",
+      roadmapChanged,
     };
   });
