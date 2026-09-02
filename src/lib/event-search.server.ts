@@ -33,28 +33,29 @@ export type SourcedEvent = {
 /** Curated, verifiable sources. Each one publishes a public events page. */
 const SOURCES: { name: string; organizer: string; url: string }[] = [
   {
-    name: "Women In Digital Switzerland",
-    organizer: "Women In Digital Switzerland",
-    url: "https://www.womenindigital.ch/events",
+    name: "Women in Digital Switzerland",
+    organizer: "Women in Digital Switzerland",
+    url: "https://www.womenindigitalswitzerland.com/events",
   },
   {
     name: "Women in Tech Switzerland",
     organizer: "Women in Tech Switzerland",
-    url: "https://www.womenintech.ch/events",
+    url: "https://www.womenintechswitzerland.com/events",
   },
   {
     name: "WomenTech Network",
     organizer: "WomenTech Network",
     url: "https://www.womentech.net/events",
   },
-  { name: "LauzHack", organizer: "LauzHack", url: "https://lauzhack.com/" },
+  { name: "LauzHack", organizer: "LauzHack (EPFL)", url: "https://lauzhack.com/" },
   { name: "SwissHacks", organizer: "SwissHacks", url: "https://www.swisshacks.com/" },
   {
     name: "SwissDevJobs",
     organizer: "Swiss tech community",
-    url: "https://swissdevjobs.ch/swiss-tech-events",
+    url: "https://swissdevjobs.ch/events",
   },
 ];
+
 
 const GATEWAY = "https://connector-gateway.lovable.dev/firecrawl/v2";
 
