@@ -103,7 +103,7 @@ function SidebarBody({ onNavigate }: { onNavigate: () => void }) {
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3">
+      <nav className="space-y-1 px-3">
         {NAV.map((item) => {
           const locked = item.gated && !unlocked;
           const active = pathname === item.to;
