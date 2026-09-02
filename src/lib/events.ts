@@ -24,6 +24,8 @@ export type NetworkEvent = {
   url: string;
   description: string | null;
   cohort_going: number;
+  /** True for illustrative examples — never presented as a real, live listing. */
+  is_example?: boolean | null;
 };
 
 export type EventEngagement = {
