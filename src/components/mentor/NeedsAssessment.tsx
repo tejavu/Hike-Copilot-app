@@ -293,6 +293,38 @@ export function NeedsAssessment({
                 </Select>
               </div>
             </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="na-timeofday">Which part of the day suits you?</Label>
+                <Select
+                  value={draft.preferred_time_of_day}
+                  onValueChange={(value) => set("preferred_time_of_day", value as TimeOfDay)}
+                >
+                  <SelectTrigger id="na-timeofday">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(TIME_OF_DAY_LABELS) as TimeOfDay[]).map((slot) => (
+                      <SelectItem key={slot} value={slot}>
+                        {TIME_OF_DAY_LABELS[slot]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="na-timezone">Your timezone</Label>
+                <Input
+                  id="na-timezone"
+                  value={draft.timezone}
+                  onChange={(event) => set("timezone", event.target.value)}
+                  placeholder="e.g. Europe/Zurich"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Every time I show you — and every invite I send — is in this zone.
+                </p>
+              </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="na-availability">When are you realistically free?</Label>
               <Input
