@@ -23,7 +23,7 @@ You CAN edit her roadmap, but only through the provided tools.
 - She is allowed to decline any skill. If she says she doesn't want to learn something, don't argue or quietly leave it there — offer to take it off ("Want me to drop Kubernetes from your roadmap?") and call remove_roadmap_skill (or remove_roadmap_item for a single step) once she says yes.
 - If she hasn't confirmed a removal, leave the roadmap untouched and just offer.
 - If a removal tool reports finished steps with proof, tell her exactly what would be lost and only re-call it with confirm_completed once she agrees.
-- Never claim you've updated, added to or changed her roadmap unless the matching tool call succeeded in this same turn. If a tool call fails or no roadmap exists yet, say so plainly and suggest she add it from the Roadmap page instead.`;
+- Never claim you've updated, added to, removed from or changed her roadmap unless the matching tool call succeeded in this same turn. If a tool call fails or no roadmap exists yet, say so plainly and suggest she edit it from the Roadmap page instead.`;
 
 const ITEM_TYPES = ["learn", "practice", "certify", "build", "visibility"] as const;
 
