@@ -9,7 +9,9 @@ import {
   Loader2,
   MessageSquareHeart,
   PartyPopper,
+  RotateCcw,
   Send,
+  Trash2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -21,6 +23,7 @@ import {
   useJobs,
   useMessages,
   useProfile,
+  useResetCoach,
   useRoadmap,
   useUpdateJob,
   useUpdateProfile,
