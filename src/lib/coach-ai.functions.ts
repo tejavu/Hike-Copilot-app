@@ -386,12 +386,17 @@ export const askCoach = createServerFn({ method: "POST" })
         } catch {
           args = {};
         }
-        const result =
-          call.function.name === "add_roadmap_item"
+        const name = call.function.name as string;
+        const result: { ok: boolean; [key: string]: unknown } =
+          name === "add_roadmap_item"
             ? await addItem(supabase, userId, args)
-            : call.function.name === "update_roadmap_item"
+            : name === "update_roadmap_item"
               ? await updateItem(supabase, userId, args)
-              : { ok: false, error: `Unknown tool ${call.function.name}` };
+              : name === "remove_roadmap_item"
+                ? await removeItem(supabase, userId, args)
+                : name === "remove_roadmap_skill"
+                  ? await removeSkill(supabase, userId, args)
+                  : { ok: false, error: `Unknown tool ${name}` };
         if (result.ok) roadmapChanged = true;
         messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
       }
