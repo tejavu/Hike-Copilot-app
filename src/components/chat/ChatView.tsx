@@ -473,6 +473,30 @@ export function ChatView() {
 
   return (
     <div className="mx-auto flex h-[calc(100vh-3.5rem)] w-full max-w-3xl flex-col px-4 md:h-screen md:px-8">
+      <div className="flex items-center justify-between gap-3 border-b border-border py-4">
+        <div>
+          <h1 className="font-display text-lg font-semibold">Chat with Hike Copilot</h1>
+          <p className="text-xs text-muted-foreground">Ask anything about your career, roadmap or job search.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void clearChat()}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+          >
+            <Trash2 className="size-3.5" /> Clear chat
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void startOver()}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+          >
+            <RotateCcw className="size-3.5" /> Start over
+          </button>
+        </div>
+      </div>
       <div className="flex-1 space-y-5 overflow-y-auto py-8">
         {(messages ?? []).map((message) => (
           <div key={message.id} className="animate-rise space-y-3">
