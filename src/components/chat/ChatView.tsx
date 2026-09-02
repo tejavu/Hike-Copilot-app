@@ -534,12 +534,15 @@ function Interactive({
           <input
             type="file"
             multiple
+            accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md"
             className="hidden"
             onChange={(e) => {
-              if (e.target.files?.length) const picked = Array.from(e.target.files);
-                void onChoosePath("upload").then(() => onUpload(picked));
+              if (!e.target.files?.length) return;
+              const picked = Array.from(e.target.files);
+              void onChoosePath("upload").then(() => onUpload(picked));
             }}
           />
+
         </label>
       </div>
     );
