@@ -154,8 +154,9 @@ async function searchAdzuna(
         notes.push("Adzuna could not be reached.");
         return [];
       }
-    }),
-  );
+      })(),
+    );
+  }
 
   return results.flat();
 }
