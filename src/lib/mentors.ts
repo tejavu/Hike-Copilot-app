@@ -308,6 +308,25 @@ export function rankMentors(mentors: Mentor[], input: MatchInput): MatchResult[]
     .sort((a, b) => b.score - a.score || a.mentor.full_name.localeCompare(b.mentor.full_name));
 }
 
+/**
+ * Ada picks the single best-fit mentor rather than asking the mentee to choose.
+ * Mentors already declined via a rematch are skipped; mentors with no upcoming
+ * openings are only used as a last resort so bookable time is the default.
+ */
+export function pickBestMentor(
+  mentors: Mentor[],
+  input: MatchInput,
+  options: { exclude?: string[]; timeOfDay?: TimeOfDay | null } = {},
+): MatchResult | null {
+  const exclude = new Set(options.exclude ?? []);
+  const ranked = rankMentors(mentors, input).filter((row) => !exclude.has(row.mentor.id));
+  if (ranked.length === 0) return null;
+  const bookable = ranked.find(
+    (row) => preferredSlots(row.mentor, options.timeOfDay ?? "any").length > 0,
+  );
+  return bookable ?? ranked[0]!;
+}
+
 /* ------------------------------- directory -------------------------------- */
 
 export type DirectoryFilters = {
