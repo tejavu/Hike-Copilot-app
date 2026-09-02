@@ -28,9 +28,19 @@ export type Mentor = {
   years_experience: number;
   slots: MentorSlotSpec[];
   is_demo: boolean;
+  contact_email: string | null;
 };
 
 export type ReminderCadence = "monthly" | "six_weeks" | "off";
+
+export type TimeOfDay = "any" | "morning" | "afternoon" | "evening";
+
+export const TIME_OF_DAY_LABELS: Record<TimeOfDay, string> = {
+  any: "Any time that's open",
+  morning: "Mornings (before 12:00)",
+  afternoon: "Afternoons (12:00–17:00)",
+  evening: "Evenings (after 17:00)",
+};
 
 export type MentorPreferences = {
   user_id: string;
@@ -47,6 +57,8 @@ export type MentorPreferences = {
   reminder_pending: boolean;
   selected_mentor_id: string | null;
   completed_at: string | null;
+  preferred_time_of_day: TimeOfDay | null;
+  timezone: string | null;
 };
 
 export type MatchStatus = "suggested" | "shortlisted" | "selected" | "passed";
