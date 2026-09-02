@@ -81,6 +81,7 @@ export function ChatView() {
   const readDocuments = useServerFn(parseCvDocuments);
   const cleanAnswer = useServerFn(normaliseAnswer);
   const roadmapCopy = useServerFn(writeRoadmapCopy);
+  const resetCoach = useResetCoach();
 
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -96,6 +97,36 @@ export function ChatView() {
     void qc.invalidateQueries({ queryKey: ["jobs", user?.id] });
     void qc.invalidateQueries({ queryKey: ["documents", user?.id] });
     void qc.invalidateQueries({ queryKey: ["roadmap", user?.id] });
+  };
+
+  const clearChat = async () => {
+    if (!user) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.from("chat_messages").delete().eq("user_id", user.id);
+      if (error) throw error;
+      seeded.current = false;
+      refresh();
+      toast.success("Chat cleared");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't clear chat");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startOver = async () => {
+    if (!user || !confirm("This clears your chat, roadmap and matches and restarts onboarding. Are you sure?")) return;
+    setBusy(true);
+    try {
+      await resetCoach.mutateAsync({ full: true });
+      seeded.current = false;
+      toast.success("Starting fresh");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't restart");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const say = async (
