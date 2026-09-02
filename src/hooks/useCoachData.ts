@@ -54,6 +54,7 @@ export function useMessages() {
         .from("chat_messages")
         .select("*")
         .eq("user_id", user!.id)
+        .is("thread_id", null)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as ChatMessage[];
