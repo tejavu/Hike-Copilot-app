@@ -396,10 +396,10 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
       data.drawnTo,
       data.locations,
       data.setups,
-      data.count - ranked.jobs.length,
+      data.count - shortlist.length,
       notes,
     );
-    const jobs = [...ranked.jobs, ...examples].slice(0, data.count);
+    const jobs = [...shortlist, ...examples].slice(0, data.count);
     return {
       jobs,
       sources: Array.from(new Set(jobs.map((j) => j.source))),
