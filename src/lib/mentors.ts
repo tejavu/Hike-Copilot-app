@@ -460,7 +460,7 @@ export function preferredSlots(
   timeOfDay: TimeOfDay | null = "any",
   from = new Date(),
 ): SessionSlot[] {
-  const all = upcomingSlots(mentor, 3, from);
+  const all = upcomingSlots(mentor, 5, from);
   if (!timeOfDay || timeOfDay === "any") return all;
   const filtered = all.filter((slot) => inTimeOfDay(slot, timeOfDay));
   return filtered.length > 0 ? filtered : all;
