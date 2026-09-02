@@ -59,6 +59,8 @@ const SOURCES: { name: string; organizer: string; url: string }[] = [
 
 const GATEWAY = "https://connector-gateway.lovable.dev/firecrawl/v2";
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function scrapeSource(
   source: { name: string; organizer: string; url: string },
   gatewayKey: string,
@@ -66,26 +68,33 @@ async function scrapeSource(
   notes: string[],
 ): Promise<{ source: typeof SOURCES[number]; markdown: string } | null> {
   try {
-    const response = await fetch(`${GATEWAY}/scrape`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${gatewayKey}`,
-        "X-Connection-Api-Key": connectionKey,
-      },
-      body: JSON.stringify({
-        url: source.url,
-        formats: ["markdown"],
-        onlyMainContent: true,
-        waitFor: 2500,
-      }),
-    });
-    if (!response.ok) {
-      const detail = await response.text();
-      console.error(`firecrawl scrape failed [${response.status}] ${source.url}: ${detail}`);
-      notes.push(`${source.name} returned ${response.status}.`);
+    let response: Response | null = null;
+    // The connector gateway rate-limits bursts, so back off once on 429/5xx.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      response = await fetch(`${GATEWAY}/scrape`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${gatewayKey}`,
+          "X-Connection-Api-Key": connectionKey,
+        },
+        body: JSON.stringify({
+          url: source.url,
+          formats: ["markdown"],
+          onlyMainContent: true,
+          waitFor: 2500,
+        }),
+      });
+      if (response.status !== 429 && response.status < 500) break;
+      await sleep(4000);
+    }
+    if (!response || !response.ok) {
+      const detail = response ? await response.text() : "no response";
+      console.error(`firecrawl scrape failed [${response?.status}] ${source.url}: ${detail}`);
+      notes.push(`${source.name} returned ${response?.status ?? "no response"}.`);
       return null;
     }
+
     const body = (await response.json()) as {
       markdown?: string;
       data?: { markdown?: string };
