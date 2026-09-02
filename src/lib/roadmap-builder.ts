@@ -66,14 +66,23 @@ export async function generateRoadmap(opts: {
   userId: string;
   gaps: string[];
   months: number;
+  /** AI-written headings/blurbs. Falls back to the built-in copy when absent. */
+  copy?: { phases: { kind: string; name: string; blurb: string }[]; skills: Record<string, string> } | null;
 }): Promise<void> {
-  const { userId, gaps, months } = opts;
+  const { userId, gaps, months, copy } = opts;
 
   // Clear any previous roadmap so regenerating never doubles up.
   await supabase.from("roadmap_phases").delete().eq("user_id", userId);
 
-  const specs = phasePlanFor(months);
+  const specs = phasePlanFor(months).map((spec, index) => {
+    const written = copy?.phases?.[index];
+    if (written && written.kind === spec.kind && written.name.trim()) {
+      return { ...spec, name: written.name.trim(), blurb: written.blurb?.trim() || spec.blurb };
+    }
+    return spec;
+  });
   const focus = (gaps.length ? gaps : ["Interview confidence"]).slice(0, 6);
+  const headingFor = (gap: string) => copy?.skills?.[gap]?.trim() || titleCase(gap);
 
   const { data: phases, error: phaseError } = await supabase
     .from("roadmap_phases")
@@ -92,14 +101,18 @@ export async function generateRoadmap(opts: {
   type Row = { id: string; kind: string };
   const rows = (phases ?? []) as unknown as Row[];
 
+  // Display heading -> original gap, so resource lookup still works after AI rewording.
+  const gapByHeading = new Map<string, string>();
   const skillRows: { user_id: string; phase_id: string; name: string; order_index: number }[] = [];
   for (const phase of rows) {
     if (phase.kind === "learning" || phase.kind === "building") {
       focus.forEach((skill, index) => {
+        const heading = headingFor(skill);
+        gapByHeading.set(heading, skill);
         skillRows.push({
           user_id: userId,
           phase_id: phase.id,
-          name: titleCase(skill),
+          name: heading,
           order_index: index,
         });
       });
@@ -132,7 +145,7 @@ export async function generateRoadmap(opts: {
   }[]) {
     const kind = phaseKindById.get(skill.phase_id);
     if (kind === "learning") {
-      const plan = planForSkill(skill.name);
+      const plan = planForSkill(gapByHeading.get(skill.name) ?? skill.name);
       items.push({
         user_id: userId,
         skill_id: skill.id,
@@ -147,6 +160,7 @@ export async function generateRoadmap(opts: {
         skill_id: skill.id,
         item_type: "practice",
         title: plan.practice.title,
+        url: plan.practice.url,
         difficulty: plan.practice.difficulty,
         detail: plan.practice.detail,
         target_count: plan.practice.target,
@@ -164,7 +178,7 @@ export async function generateRoadmap(opts: {
       });
     }
     if (kind === "building") {
-      const plan = planForSkill(skill.name);
+      const plan = planForSkill(gapByHeading.get(skill.name) ?? skill.name);
       items.push({
         user_id: userId,
         skill_id: skill.id,

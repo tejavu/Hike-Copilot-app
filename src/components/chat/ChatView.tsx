@@ -10,10 +10,10 @@ import {
   MessageSquareHeart,
   PartyPopper,
   Send,
-  Sparkles,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import copilotLogo from "@/assets/copilot-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -27,8 +27,10 @@ import {
 } from "@/hooks/useCoachData";
 import { askCoach } from "@/lib/coach-ai.functions";
 import { parseCvDocuments } from "@/lib/cv-parse.functions";
+import { normaliseAnswer } from "@/lib/profile-parse.functions";
+import { writeRoadmapCopy } from "@/lib/roadmap-copy.functions";
 import { sweepJobs, skillGap } from "@/lib/job-sweep";
-import { generateRoadmap } from "@/lib/roadmap-builder";
+import { generateRoadmap, phasePlanFor } from "@/lib/roadmap-builder";
 import {
   PROMPTS,
   firstName,
@@ -74,6 +76,8 @@ export function ChatView() {
   const updateJob = useUpdateJob();
   const callCoach = useServerFn(askCoach);
   const readDocuments = useServerFn(parseCvDocuments);
+  const cleanAnswer = useServerFn(normaliseAnswer);
+  const roadmapCopy = useServerFn(writeRoadmapCopy);
 
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -263,24 +267,37 @@ export function ChatView() {
     await updateProfile.mutateAsync({ onboarding_stage: "jobs" });
   };
 
+  const cleanList = async (
+    field: "interests" | "skills" | "education" | "experience" | "certifications",
+    text: string,
+  ): Promise<string[]> => {
+    try {
+      const { items } = await cleanAnswer({ data: { field, text } });
+      if (items) return items;
+    } catch (error) {
+      console.error("normalise failed", error);
+    }
+    return splitList(text);
+  };
+
   const answerQuestion = async (text: string) => {
     if (!profile) return;
     const patch: Partial<Profile> = {};
     switch (stage) {
       case "q_interests":
-        patch.interests = splitList(text);
+        patch.interests = await cleanList("interests", text);
         break;
       case "q_skills":
-        patch.skills = splitList(text);
+        patch.skills = await cleanList("skills", text);
         break;
       case "q_education":
-        patch.education = splitList(text).map((title) => ({ title }));
+        patch.education = (await cleanList("education", text)).map((title) => ({ title }));
         break;
       case "q_quals":
-        patch.experience = splitList(text).map((title) => ({ title }));
+        patch.experience = (await cleanList("experience", text)).map((title) => ({ title }));
         break;
       case "q_certs":
-        patch.certifications = splitList(text);
+        patch.certifications = await cleanList("certifications", text);
         break;
       default:
         break;
@@ -332,10 +349,33 @@ export function ChatView() {
     if (!profile) return;
     const jobSkills = (jobs ?? []).filter((j) => j.liked).flatMap((j) => j.required_skills);
     const { gaps } = skillGap(profile.skills, jobSkills);
+    const months = profile.timeline_months ?? 6;
+    const likedRoles = (jobs ?? [])
+      .filter((j) => j.liked)
+      .map((j) => `${j.title} at ${j.company}`)
+      .slice(0, 8);
+
+    let copy = null;
+    try {
+      const result = await roadmapCopy({
+        data: {
+          goal,
+          months,
+          gaps: gaps.slice(0, 6),
+          roles: likedRoles,
+          phases: phasePlanFor(months).map((p) => ({ kind: p.kind, name: p.name, blurb: p.blurb })),
+        },
+      });
+      copy = result.copy;
+    } catch (error) {
+      console.error("roadmap copy failed", error);
+    }
+
     await generateRoadmap({
       userId: profile.id,
       gaps,
-      months: profile.timeline_months ?? 6,
+      months,
+      copy,
     });
     await updateProfile.mutateAsync({
       goal,
@@ -467,9 +507,14 @@ function Bubble({ message }: { message: ChatMessage }) {
   return (
     <div className={cn("flex gap-3", isUser && "flex-row-reverse")}>
       {!isUser && (
-        <span className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-warm-gradient text-primary-foreground">
-          <Sparkles className="size-4" />
-        </span>
+        <img
+          src={copilotLogo}
+          alt=""
+          loading="lazy"
+          width={816}
+          height={816}
+          className="mt-1 size-8 shrink-0 object-contain"
+        />
       )}
       <div
         className={cn(

@@ -8,7 +8,6 @@ import {
   Map as MapIcon,
   Menu,
   MessageCircleHeart,
-  Sparkles,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,6 +16,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import { useProfile } from "@/hooks/useCoachData";
 import { useAuth } from "@/hooks/useAuth";
 import { CvDialog } from "@/components/cv/CvDialog";
+import copilotLogo from "@/assets/copilot-logo.png";
 
 type NavItem = {
   to: "/" | "/roadmap" | "/network" | "/mentor-match";
@@ -72,9 +72,13 @@ function SidebarBody({ onNavigate }: { onNavigate: () => void }) {
     <div className="flex h-full flex-col">
       <div className="px-5 pt-6 pb-5">
         <div className="flex items-center gap-2.5">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-warm-gradient text-primary-foreground">
-            <Sparkles className="size-4.5" />
-          </span>
+          <img
+            src={copilotLogo}
+            alt="Hike Copilot logo"
+            width={816}
+            height={816}
+            className="size-9 shrink-0 object-contain"
+          />
           <div className="leading-tight">
             <p className="font-display text-lg font-semibold text-sidebar-foreground">Hike Copilot</p>
             <p className="text-xs text-muted-foreground">your career coach</p>
