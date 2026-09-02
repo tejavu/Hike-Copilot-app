@@ -26,6 +26,7 @@ import {
   useUpdateProfile,
 } from "@/hooks/useCoachData";
 import { askCoach } from "@/lib/coach-ai.functions";
+import { parseCvDocuments } from "@/lib/cv-parse.functions";
 import { sweepJobs, skillGap } from "@/lib/job-sweep";
 import { generateRoadmap } from "@/lib/roadmap-builder";
 import {
@@ -42,6 +43,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+function guessMime(name: string): string {
+  const ext = name.split(".").pop()?.toLowerCase();
+  if (ext === "pdf") return "application/pdf";
+  if (ext === "png") return "image/png";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "webp") return "image/webp";
+  if (ext === "txt" || ext === "md") return "text/plain";
+  return "application/octet-stream";
+}
+
+function toDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error(`Couldn't read ${file.name}`));
+    reader.readAsDataURL(file);
+  });
+}
+
 export function ChatView() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -53,6 +73,7 @@ export function ChatView() {
   const updateProfile = useUpdateProfile();
   const updateJob = useUpdateJob();
   const callCoach = useServerFn(askCoach);
+  const readDocuments = useServerFn(parseCvDocuments);
 
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -198,10 +219,10 @@ export function ChatView() {
         parsed.skills.length ? `**Skills:** ${parsed.skills.join(", ")}` : null,
         parsed.interests.length ? `**Leaning toward:** ${parsed.interests.join(", ")}` : null,
         parsed.education.length
-          ? `**Education:** ${parsed.education.map((e) => e.title).join(" · ")}`
+          ? `**Education:** ${parsed.education.map((e: { title: string }) => e.title).join(" · ")}`
           : null,
         parsed.experience.length
-          ? `**Experience:** ${parsed.experience.map((e) => e.title).join(" · ")}`
+          ? `**Experience:** ${parsed.experience.map((e: { title: string }) => e.title).join(" · ")}`
           : null,
         parsed.certifications.length ? `**Certifications:** ${parsed.certifications.join(", ")}` : null,
       ].filter(Boolean) as string[];
@@ -476,7 +497,7 @@ function Interactive({
   jobs: Job[];
   busy: boolean;
   onChoosePath: (path: "questions" | "upload") => Promise<void>;
-  onUpload: (files: FileList) => Promise<void>;
+  onUpload: (files: File[]) => Promise<void>;
   onDecideJob: (job: Job, liked: boolean) => Promise<void>;
 }) {
   if (message.kind === "path_choice") {
@@ -515,7 +536,8 @@ function Interactive({
             multiple
             className="hidden"
             onChange={(e) => {
-              if (e.target.files?.length) void onChoosePath("upload").then(() => onUpload(e.target.files!));
+              if (e.target.files?.length) const picked = Array.from(e.target.files);
+                void onChoosePath("upload").then(() => onUpload(picked));
             }}
           />
         </label>
@@ -534,7 +556,7 @@ function Interactive({
             className="hidden"
             disabled={busy}
             onChange={(e) => {
-              if (e.target.files?.length) void onUpload(e.target.files);
+              if (e.target.files?.length) void onUpload(Array.from(e.target.files));
             }}
           />
         </label>
