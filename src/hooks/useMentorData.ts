@@ -9,6 +9,7 @@ import type {
   MentorPreferences,
   MentorSession,
   ReminderCadence,
+  SessionFeedback,
   SessionStatus,
 } from "@/lib/mentors";
 
