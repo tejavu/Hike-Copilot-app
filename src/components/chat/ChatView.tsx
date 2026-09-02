@@ -556,6 +556,7 @@ function Interactive({
           <input
             type="file"
             multiple
+            accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md"
             className="hidden"
             disabled={busy}
             onChange={(e) => {
