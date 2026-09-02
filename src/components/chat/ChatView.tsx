@@ -139,11 +139,19 @@ export function ChatView() {
     }
   };
 
-  const uploadFiles = async (files: FileList) => {
+  const uploadFiles = async (files: File[]) => {
+    if (!profile || files.length === 0) return;
     setBusy(true);
     try {
       const names: string[] = [];
-      for (const file of Array.from(files)) {
+      const payload: {
+        fileName: string;
+        mimeType: string;
+        dataUrl?: string;
+        text?: string;
+      }[] = [];
+
+      for (const file of files.slice(0, 5)) {
         const path = `${user!.id}/docs/${Date.now()}-${file.name}`;
         const { error } = await supabase.storage.from("user-files").upload(path, file);
         if (error) throw error;
@@ -151,21 +159,74 @@ export function ChatView() {
           .from("user_documents")
           .insert({ user_id: user!.id, kind: "document", file_name: file.name, storage_path: path } as never);
         names.push(file.name);
+
+        const mimeType = file.type || guessMime(file.name);
+        if (mimeType.startsWith("text/") || /\.(txt|md|csv|json)$/i.test(file.name)) {
+          payload.push({ fileName: file.name, mimeType, text: await file.text() });
+        } else if (mimeType === "application/pdf" || mimeType.startsWith("image/")) {
+          payload.push({ fileName: file.name, mimeType, dataUrl: await toDataUrl(file) });
+        } else {
+          payload.push({ fileName: file.name, mimeType });
+        }
       }
+
       await say(`Uploaded: ${names.join(", ")}`, "text", null, "user");
-      await say(
-        "Got them, thank you — that's your paperwork handled. Two quick things I can't read off a document, though.\n\n" +
-          PROMPTS["q_interests"],
-      );
-      await updateProfile.mutateAsync({ onboarding_stage: "q_interests" });
-      refresh();
       toast.success("Documents saved");
+
+      const { parsed, error } = await readDocuments({ data: { files: payload } });
+
+      if (error) {
+        await say(
+          `${error}\n\nYour files are saved either way. Let's do this the quick way instead.\n\n${PROMPTS["q_interests"]}`,
+        );
+        await updateProfile.mutateAsync({ onboarding_stage: "q_interests" });
+        refresh();
+        return;
+      }
+
+      const patch: Partial<Profile> = {};
+      if (parsed.full_name && !profile.full_name) patch.full_name = parsed.full_name;
+      if (parsed.skills.length) patch.skills = parsed.skills;
+      if (parsed.interests.length) patch.interests = parsed.interests;
+      if (parsed.education.length) patch.education = parsed.education;
+      if (parsed.experience.length) patch.experience = parsed.experience;
+      if (parsed.certifications.length) patch.certifications = parsed.certifications;
+
+      const lines = [
+        parsed.summary ?? "Read it — here's what I picked up.",
+        "",
+        parsed.skills.length ? `**Skills:** ${parsed.skills.join(", ")}` : null,
+        parsed.interests.length ? `**Leaning toward:** ${parsed.interests.join(", ")}` : null,
+        parsed.education.length
+          ? `**Education:** ${parsed.education.map((e) => e.title).join(" · ")}`
+          : null,
+        parsed.experience.length
+          ? `**Experience:** ${parsed.experience.map((e) => e.title).join(" · ")}`
+          : null,
+        parsed.certifications.length ? `**Certifications:** ${parsed.certifications.join(", ")}` : null,
+      ].filter(Boolean) as string[];
+
+      const haveEnough = parsed.skills.length > 0 && parsed.interests.length > 0;
+      const merged: Profile = { ...profile, ...patch };
+
+      if (haveEnough) {
+        await say(
+          `${lines.join("\n")}\n\nIf anything's off, just tell me and I'll correct it. Otherwise — let's go looking for roles.`,
+        );
+        await updateProfile.mutateAsync({ ...patch, onboarding_stage: "jobs" });
+        await startJobSweep(merged);
+      } else {
+        await say(`${lines.join("\n")}\n\nOne thing I couldn't read off the page.\n\n${PROMPTS["q_interests"]}`);
+        await updateProfile.mutateAsync({ ...patch, onboarding_stage: "q_interests" });
+      }
+      refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Upload failed");
     } finally {
       setBusy(false);
     }
   };
+
 
   const startJobSweep = async (currentProfile: Profile) => {
     await supabase.from("jobs").delete().eq("user_id", currentProfile.id);
