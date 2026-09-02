@@ -24,15 +24,11 @@ export function MentorDetailDialog({
   status,
   open,
   onOpenChange,
-  onShortlist,
-  onSelect,
 }: {
   result: MatchResult | null;
   status: MatchStatus | undefined;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onShortlist: () => void;
-  onSelect: () => void;
 }) {
   if (!result) return null;
   const { mentor, score, reasons, matchedAttributes } = result;
