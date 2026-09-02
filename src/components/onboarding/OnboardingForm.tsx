@@ -244,7 +244,7 @@ export function OnboardingForm() {
       const nextPatch: Partial<Profile> = {
         drawn_to: form.drawnTo,
         interests,
-        location_pref: form.locationPref,
+        location_pref: form.locations.join(" · "),
         work_setup: form.setups,
         work_auth: form.workAuth,
         recent_role: form.recentRole,
@@ -259,10 +259,16 @@ export function OnboardingForm() {
 
       const merged: Profile = { ...profile, ...nextPatch } as Profile;
       await supabase.from("jobs").delete().eq("user_id", profile.id);
-      const generated = sweepJobs([form.drawnTo, ...interests], confidentSkills(form.skills, 3), {
+      // Match on the skills she actually listed (confident ones weighted first),
+      // never on a generic profile.
+      const generated = sweepJobs([form.drawnTo, ...interests], [
+        ...confidentSkills(form.skills, 3),
+        ...form.skills.map((s) => s.name),
+      ], {
         setups: form.setups,
-        location: form.locationPref,
+        locations: form.locations,
       });
+
       const { error } = await supabase
         .from("jobs")
         .insert(generated.map((job) => ({ ...job, user_id: merged.id })) as never);
