@@ -969,6 +969,25 @@ function JobCard({
           </Badge>
         ))}
       </div>
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+        {job.is_example ? (
+          <Badge variant="outline" className="border-dashed">
+            Example role — not a live posting
+          </Badge>
+        ) : (
+          job.source && <span>Found on {job.source}</span>
+        )}
+        {job.url && (
+          <a
+            href={job.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary underline underline-offset-2"
+          >
+            View the original posting
+          </a>
+        )}
+      </div>
       <div className="mt-5 flex gap-2">
         <Button variant="outline" className="flex-1 gap-2" disabled={busy} onClick={() => void onDecide(job, false)}>
           <X className="size-4" /> Not for me
