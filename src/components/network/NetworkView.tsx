@@ -96,6 +96,17 @@ export function NetworkView() {
     [scored, now],
   );
 
+  // Self-healing catalog: if nothing upcoming is in the board (empty or every
+  // event has passed), pull the ingestion job once and refetch.
+  const ingest = useServerFn(refreshEvents);
+  const ingested = useRef(false);
+  useEffect(() => {
+    if (isLoading || ingested.current) return;
+    if (upcoming.length > 0) return;
+    ingested.current = true;
+    void ingest({}).then(() => refetch()).catch(() => undefined);
+  }, [isLoading, upcoming.length, ingest, refetch]);
+
   const visible = useMemo(() => applyFilters(upcoming, filters), [upcoming, filters]);
   const savedRows = useMemo(
     () =>
