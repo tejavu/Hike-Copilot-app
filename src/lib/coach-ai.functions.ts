@@ -303,6 +303,106 @@ async function addItem(supabase: Supa, userId: string, args: Record<string, unkn
   return { ok: true, added: title, under: skillName };
 }
 
+type ProfileRow = {
+  skill_confidence: { name: string; level: number }[] | null;
+  skills: string[] | null;
+  interests: string[] | null;
+  drawn_to: string | null;
+  location_pref: string | null;
+  work_setup: string[] | null;
+};
+
+/**
+ * Searches live boards using her saved profile plus her roadmap skills
+ * (aspirational, so weighted lower) and saves the genuinely new roles.
+ */
+async function findJobRecommendations(supabase: Supa, userId: string, args: Record<string, unknown>) {
+  const count = Math.min(12, Math.max(1, Number(args["count"] ?? 6) || 6));
+
+  const { data: profileData, error: profileError } = await supabase
+    .from("profiles")
+    .select("skill_confidence, skills, interests, drawn_to, location_pref, work_setup")
+    .eq("id", userId)
+    .maybeSingle();
+  if (profileError) return { ok: false, error: profileError.message };
+  const profile = profileData as ProfileRow | null;
+  if (!profile) return { ok: false, error: "She has no profile saved yet, so there's nothing to search against." };
+
+  const confirmed = profile.skill_confidence?.length
+    ? profile.skill_confidence
+    : (profile.skills ?? []).map((name) => ({ name, level: 3 }));
+
+  const { data: roadmapSkills, error: skillError } = await supabase
+    .from("roadmap_skills")
+    .select("name")
+    .eq("user_id", userId);
+  if (skillError) return { ok: false, error: skillError.message };
+
+  const seenSkill = new Set(confirmed.map((s) => normaliseSkill(s.name)));
+  const skills = [...confirmed];
+  for (const row of (roadmapSkills ?? []) as { name: string }[]) {
+    const key = normaliseSkill(row.name);
+    if (!key || seenSkill.has(key)) continue;
+    seenSkill.add(key);
+    skills.push({ name: row.name, level: 2 });
+  }
+
+  const result = await runJobSearch({
+    skills,
+    interests: profile.interests ?? [],
+    drawnTo: profile.drawn_to ?? "",
+    locations: (profile.location_pref ?? "").split(" · ").map((l) => l.trim()).filter(Boolean),
+    setups: profile.work_setup ?? [],
+    count,
+  });
+
+  if (result.jobs.length === 0) {
+    return { ok: false, error: `No roles came back this time. ${result.notes[0] ?? ""}`.trim() };
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from("jobs")
+    .select("title, company")
+    .eq("user_id", userId);
+  if (existingError) return { ok: false, error: existingError.message };
+
+  const keyOf = (title: string, company: string) =>
+    `${normaliseSkill(title)}|${normaliseSkill(company)}`;
+  const seen = new Set(
+    ((existing ?? []) as { title: string; company: string }[]).map((j) => keyOf(j.title, j.company)),
+  );
+
+  const fresh = result.jobs.filter((job) => {
+    const key = keyOf(job.title, job.company);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  if (fresh.length === 0) {
+    return { ok: false, error: "Everything I found is already on her list — nothing new was added." };
+  }
+
+  const { error: insertError } = await supabase
+    .from("jobs")
+    .insert(fresh.map((job) => ({ ...job, user_id: userId, liked: true })) as never);
+  if (insertError) return { ok: false, error: insertError.message };
+
+  return {
+    ok: true,
+    added: fresh.map((job) => ({
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      source: job.source,
+      is_example: job.is_example,
+      url: job.url,
+    })),
+    skipped_duplicates: result.jobs.length - fresh.length,
+    examples_only: fresh.every((job) => job.is_example),
+  };
+}
+
 async function updateItem(supabase: Supa, userId: string, args: Record<string, unknown>) {
   const match = String(args["match_title"] ?? "").trim();
   if (!match) return { ok: false, error: "match_title is required." };
