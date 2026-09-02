@@ -112,6 +112,46 @@ export type GeneratedJob = {
   seniority: string;
 };
 
+/** Cities/regions the seeded roles are actually posted in. */
+export const LOCATION_OPTIONS = [
+  "Zurich, CH",
+  "Basel, CH",
+  "Bern, CH",
+  "Geneva, CH",
+  "Lausanne, CH",
+  "Berlin, DE",
+  "Munich, DE",
+  "Vienna, AT",
+  "Amsterdam, NL",
+  "Paris, FR",
+  "Copenhagen, DK",
+  "Stockholm, SE",
+  "Lisbon, PT",
+  "Warsaw, PL",
+  "Remote, EU",
+];
+
+type Setup = "remote" | "hybrid" | "onsite";
+
+function setupOf(location: string): Setup {
+  const value = location.toLowerCase();
+  if (value.includes("hybrid")) return "hybrid";
+  if (value.includes("remote")) return "remote";
+  return "onsite";
+}
+
+function normaliseSetup(value: string): Setup | null {
+  const v = value.toLowerCase();
+  if (v.includes("remote")) return "remote";
+  if (v.includes("hybrid")) return "hybrid";
+  if (v.includes("site") || v.includes("office")) return "onsite";
+  return null;
+}
+
+function cityOf(location: string): string {
+  return (location.split("(")[0] ?? location).trim().toLowerCase();
+}
+
 function pick<T>(arr: T[], seed: number): T {
   return arr[Math.abs(seed) % arr.length] as T;
 }
@@ -119,51 +159,62 @@ function pick<T>(arr: T[], seed: number): T {
 export function sweepJobs(
   interests: string[],
   skills: string[],
-  opts: { count?: number; setups?: string[]; location?: string } = {},
+  opts: { count?: number; setups?: string[]; locations?: string[] } = {},
 ): GeneratedJob[] {
-  const { count = 6, setups = [], location = "" } = opts;
-  const signal = [...interests, ...skills].map(normaliseSkill).filter(Boolean);
-  const wantsRemote = setups.some((s) => /remote/i.test(s));
-  const wantsHybrid = setups.some((s) => /hybrid/i.test(s));
-  const wantsOnsite = setups.some((s) => /on-?site/i.test(s));
-  const locationNorm = normaliseSkill(location);
+  const { count = 6, setups = [], locations = [] } = opts;
 
+  const skillTerms = skills.map(normaliseSkill).filter(Boolean);
+  const interestTerms = interests.map(normaliseSkill).filter(Boolean);
+  const hasSignal = skillTerms.length > 0 || interestTerms.length > 0;
+
+  const allowedSetups = new Set(
+    setups.map(normaliseSetup).filter((s): s is Setup => Boolean(s)),
+  );
+  const wantedCities = locations.map(cityOf).filter(Boolean);
+
+  // Score every seed against the user's *own* skills first, interests second.
   const scored = SEEDS.map((seed, index) => {
     let score = 0;
-    for (const term of signal) {
-      if (seed.tags.some((tag) => tag.includes(term) || term.includes(tag))) score += 3;
-      if (seed.skills.some((s) => normaliseSkill(s) === term)) score += 2;
-      if (normaliseSkill(seed.title).includes(term)) score += 2;
-    }
+    const match = (term: string, weight: number) => {
+      if (seed.skills.some((s) => normaliseSkill(s) === term)) score += weight * 2;
+      if (seed.tags.some((tag) => tag === term || tag.includes(term) || term.includes(tag))) score += weight;
+      if (normaliseSkill(seed.title).includes(term)) score += weight;
+    };
+    for (const term of skillTerms) match(term, 4);
+    for (const term of interestTerms) match(term, 2);
     return { seed, score, index };
   }).sort((a, b) => b.score - a.score || a.index - b.index);
 
-  const filtered = scored.filter(({ seed }) => {
-    if (setups.length === 0 && !location) return true;
-    const seedLocations = seed.locations.map((l) => normaliseSkill(l));
-    const hasRemote = seedLocations.some((l) => l.includes("remote"));
-    const hasHybrid = seedLocations.some((l) => l.includes("hybrid"));
-    const hasOnsite = seedLocations.some((l) => l.includes("on-site") || l.includes("onsite"));
-    const setupMatch =
-      setups.length === 0 ||
-      (wantsRemote && hasRemote) ||
-      (wantsHybrid && hasHybrid) ||
-      (wantsOnsite && hasOnsite);
-    const locationMatch =
-      !location ||
-      seedLocations.some((l) => l.includes(locationNorm) || locationNorm.includes(l.replace(/\s+/g, " ").trim()));
-    return setupMatch || locationMatch;
-  });
+  // Never fall back to a generic computer-science shortlist: if we know
+  // something about her, only roles that actually touch it are eligible.
+  const relevant = hasSignal ? scored.filter((row) => row.score > 0) : scored;
 
-  const chosen = (filtered.length >= count ? filtered : scored).slice(0, Math.max(count, 4));
+  const viableLocations = (seedLocations: string[], applyCityFilter: boolean) =>
+    seedLocations.filter((location) => {
+      if (allowedSetups.size > 0 && !allowedSetups.has(setupOf(location))) return false;
+      if (applyCityFilter && wantedCities.length > 0) {
+        const value = location.toLowerCase();
+        return wantedCities.some((city) => value.includes(city) || city.includes(cityOf(location)));
+      }
+      return true;
+    });
 
-  return chosen.map(({ seed, index }, i) => {
-    const stretch = signal.length ? titleCase(signal[i % signal.length] ?? "") : "";
+  const build = (applyCityFilter: boolean) =>
+    relevant
+      .map((row) => ({ ...row, viable: viableLocations(row.seed.locations, applyCityFilter) }))
+      .filter((row) => row.viable.length > 0);
+
+  // Setup is a hard constraint; the city list relaxes first if it's too narrow.
+  let pool = build(true);
+  if (pool.length < Math.min(count, 3)) pool = build(false);
+
+  return pool.slice(0, Math.max(count, 4)).map(({ seed, index, viable }, i) => {
+    const stretch = skillTerms.length ? titleCase(skillTerms[i % skillTerms.length] ?? "") : "";
     const extra = stretch && !seed.skills.some((s) => normaliseSkill(s) === normaliseSkill(stretch)) ? [stretch] : [];
     return {
       title: seed.title,
       company: pick(seed.companies, index + i),
-      location: pick(seed.locations, index + i * 2),
+      location: pick(viable, index + i * 2),
       description: seed.blurb,
       required_skills: [...seed.skills, ...extra],
       seniority: seed.seniority,
@@ -171,10 +222,64 @@ export function sweepJobs(
   });
 }
 
-export function skillGap(profileSkills: string[], jobSkills: string[]) {
+function tokens(skill: string): string[] {
+  return normaliseSkill(skill)
+    .split(/[^a-z0-9+#]+/)
+    .filter((t) => t.length > 2);
+}
+
+/** How closely a missing skill builds on something she can already do. */
+function relatedness(gap: string, existing: string[]): number {
+  const gapTokens = new Set(tokens(gap));
+  let best = 0;
+  for (const skill of existing) {
+    const shared = tokens(skill).filter((t) => gapTokens.has(t)).length;
+    if (shared > 0) best = Math.max(best, 2 + shared);
+    else if (ADJACENT[normaliseSkill(skill)]?.includes(normaliseSkill(gap))) best = Math.max(best, 2);
+  }
+  return best;
+}
+
+/** Skill families — a gap next to something she has is far easier to close. */
+const ADJACENT: Record<string, string[]> = {
+  sql: ["python", "data visualisation", "machine learning", "stakeholder communication"],
+  python: ["sql", "machine learning", "docker", "system design"],
+  react: ["typescript", "testing", "accessibility", "design systems"],
+  typescript: ["react", "testing", "accessibility", "docker"],
+  docker: ["kubernetes", "ci/cd", "aws", "system design"],
+  aws: ["docker", "kubernetes", "ci/cd"],
+  testing: ["ci/cd", "typescript", "attention to detail"],
+  "machine learning": ["python", "sql", "aws"],
+  "product thinking": ["stakeholder communication", "roadmapping", "sql"],
+};
+
+/**
+ * Splits the skills the liked roles ask for into what she already has and the
+ * few most worthwhile gaps — the ones that build on her existing skills come
+ * first, and the list stays short enough to actually finish.
+ */
+export function skillGap(profileSkills: string[], jobSkills: string[], maxGaps = 5) {
   const have = new Set(profileSkills.map(normaliseSkill));
   const needed = Array.from(new Set(jobSkills.map((s) => s.trim()).filter(Boolean)));
   const strengths = needed.filter((s) => have.has(normaliseSkill(s)));
-  const gaps = needed.filter((s) => !have.has(normaliseSkill(s)));
+
+  const demand = new Map<string, number>();
+  for (const skill of jobSkills) {
+    const key = normaliseSkill(skill);
+    demand.set(key, (demand.get(key) ?? 0) + 1);
+  }
+
+  const gaps = needed
+    .filter((s) => !have.has(normaliseSkill(s)))
+    .map((skill) => ({
+      skill,
+      related: relatedness(skill, profileSkills),
+      demand: demand.get(normaliseSkill(skill)) ?? 1,
+    }))
+    .sort((a, b) => b.related - a.related || b.demand - a.demand || a.skill.localeCompare(b.skill))
+    .slice(0, maxGaps)
+    .map((row) => row.skill);
+
   return { strengths, gaps };
 }
+
