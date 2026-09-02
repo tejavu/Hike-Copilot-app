@@ -88,6 +88,33 @@ export type MentorSession = {
   recap_source: string;
   next_check_in_at: string | null;
   created_at: string;
+  email_status: EmailStatus;
+  email_detail: string | null;
+  email_sent_at: string | null;
+  meeting_format: string;
+};
+
+/** Delivery state of the booking confirmation email for a session. */
+export type EmailStatus = "pending" | "sent" | "not_configured" | "failed";
+
+export const EMAIL_STATUS_LABELS: Record<EmailStatus, string> = {
+  pending: "Not sent yet",
+  sent: "Confirmation email sent",
+  not_configured: "Email sending not configured",
+  failed: "Email couldn't be sent",
+};
+
+export type SessionFeedback = {
+  id: string;
+  session_id: string;
+  mentor_id: string | null;
+  attended: boolean;
+  rating: number | null;
+  helpful: string | null;
+  comments: string | null;
+  continue_with_mentor: boolean;
+  followup_request: string | null;
+  created_at: string;
 };
 
 export type MentorAction = {
