@@ -82,6 +82,7 @@ export function ChatView() {
   const readDocuments = useServerFn(parseCvDocuments);
   const cleanAnswer = useServerFn(normaliseAnswer);
   const roadmapCopy = useServerFn(writeRoadmapCopy);
+  const findJobs = useServerFn(searchJobs);
   const resetCoach = useResetCoach();
 
   const [draft, setDraft] = useState("");
@@ -290,17 +291,35 @@ export function ChatView() {
 
   const startJobSweep = async (currentProfile: Profile) => {
     await supabase.from("jobs").delete().eq("user_id", currentProfile.id);
-    const generated = sweepJobs(currentProfile.interests, currentProfile.skills, {
-      setups: currentProfile.work_setup,
-      locations: (currentProfile.location_pref ?? "").split(" · ").map((l) => l.trim()).filter(Boolean),
+    const result = await findJobs({
+      data: {
+        skills:
+          currentProfile.skill_confidence?.length
+            ? currentProfile.skill_confidence
+            : currentProfile.skills.map((name) => ({ name, level: 3 })),
+        interests: currentProfile.interests,
+        drawnTo: currentProfile.drawn_to ?? "",
+        locations: (currentProfile.location_pref ?? "").split(" · ").map((l) => l.trim()).filter(Boolean),
+        setups: currentProfile.work_setup,
+        count: 6,
+      },
     });
+
+    if (result.jobs.length === 0) {
+      await say(
+        `I went looking and came back empty-handed this time — that happens with very specific profiles.\n\n${result.notes[0] ?? "Add another skill or a second location and I'll search again."}`,
+      );
+      return;
+    }
 
     const { error } = await supabase
       .from("jobs")
-      .insert(generated.map((job) => ({ ...job, user_id: currentProfile.id })) as never);
+      .insert(result.jobs.map((job) => ({ ...job, user_id: currentProfile.id })) as never);
     if (error) throw error;
     await say(
-      `Right — I went looking. Here are ${generated.length} openings that fit the direction you're pointing in.\n\nKeep the ones that make you a little bit excited, even the ones that feel like a stretch. Especially those, honestly.`,
+      result.examplesOnly
+        ? `No live postings matched yet, so here are ${result.jobs.length} example roles that show the shape of what fits you.\n\nKeep the ones that spark something — I'll use them to build your roadmap while I keep looking for live openings.`
+        : `Right — I went looking. Here are ${result.jobs.length} openings that fit the direction you're pointing in.\n\nKeep the ones that make you a little bit excited, even the ones that feel like a stretch. Especially those, honestly.`,
       "jobs",
     );
     await updateProfile.mutateAsync({ onboarding_stage: "jobs" });
