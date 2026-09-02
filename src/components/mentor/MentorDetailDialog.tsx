@@ -155,15 +155,16 @@ export function MentorDetailDialog({
         </div>
 
         <DialogFooter className="gap-2 sm:justify-start">
-          <Button className="gap-2" onClick={onSelect}>
-            <Heart className="size-4" />
-            {status === "selected" ? "Your mentor" : "Choose her as my mentor"}
-          </Button>
-          <Button variant="outline" onClick={onShortlist}>
-            {status === "shortlisted" || status === "selected"
-              ? "Shortlisted"
-              : "Shortlist for later"}
-          </Button>
+          {status === "selected" ? (
+            <Button className="gap-2" onClick={() => onOpenChange(false)}>
+              <Heart className="size-4" />
+              Your mentor
+            </Button>
+          ) : (
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
