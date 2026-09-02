@@ -69,8 +69,21 @@ export function AppShell({ children }: { children: ReactNode }) {
 function SidebarBody({ onNavigate }: { onNavigate: () => void }) {
   const { data: profile } = useProfile();
   const { signOut } = useAuth();
+  const navigate = useNavigate();
+  const { data: threads } = useThreads();
+  const createThread = useCreateThread();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const unlocked = Boolean(profile?.onboarding_complete && profile?.roadmap_generated);
+
+  const newChat = async () => {
+    try {
+      const thread = await createThread.mutateAsync("New chat");
+      onNavigate();
+      void navigate({ to: "/chat/$threadId", params: { threadId: thread.id } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't start a new chat");
+    }
+  };
 
   return (
     <div className="flex h-full flex-col">
