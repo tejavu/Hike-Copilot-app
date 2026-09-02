@@ -98,8 +98,12 @@ async function searchAdzuna(
   // Remote-friendly sweep so people open to remote aren't limited to one city.
   queries.set("gb|", null);
 
-  const results = await Promise.all(
-    Array.from(queries.entries()).map(async ([key, where]) => {
+  // Sequential with a short pause — Adzuna rate-limits burst requests.
+  const results: SourcedJob[][] = [];
+  for (const [key, where] of queries.entries()) {
+    if (results.length > 0) await new Promise((r) => setTimeout(r, 400));
+    results.push(
+      await (async () => {
       const country = key.split("|")[0]!;
       const url = new URL(`https://api.adzuna.com/v1/api/jobs/${country}/search/1`);
       url.searchParams.set("app_id", appId);
