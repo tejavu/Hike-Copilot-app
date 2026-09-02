@@ -115,6 +115,7 @@ export function OnboardingForm() {
   const readDocuments = useServerFn(parseCvDocuments);
   const cleanAnswer = useServerFn(normaliseAnswer);
   const roadmapCopy = useServerFn(writeRoadmapCopy);
+  const findJobs = useServerFn(searchJobs);
 
   const [step, setStep] = useState<StepId>("documents");
   const [draft, setDraft] = useState<Draft | null>(null);
