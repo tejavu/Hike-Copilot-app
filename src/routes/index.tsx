@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { AuthGate } from "@/components/AuthGate";
 import { ChatView } from "@/components/chat/ChatView";
+import { OnboardingForm } from "@/components/onboarding/OnboardingForm";
+import { useProfile } from "@/hooks/useCoachData";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -23,11 +25,10 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
+  const { data: profile, isLoading } = useProfile();
   return (
     <AuthGate>
-      <AppShell>
-        <ChatView />
-      </AppShell>
+      <AppShell>{isLoading || profile?.onboarding_complete ? <ChatView /> : <OnboardingForm />}</AppShell>
     </AuthGate>
   );
 }
