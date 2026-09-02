@@ -1,146 +1,62 @@
-import { normaliseSkill, titleCase } from "./catalog";
+import { normaliseSkill } from "./catalog";
+import type { SkillConfidence } from "./domain";
 
-type JobSeed = {
-  title: string;
-  seniority: string;
-  companies: string[];
-  locations: string[];
-  skills: string[];
-  blurb: string;
-  tags: string[];
-};
-
-const SEEDS: JobSeed[] = [
-  {
-    title: "Frontend Engineer",
-    seniority: "Mid-level",
-    companies: ["Lumen Health", "Northwind Labs", "Verdea", "Kite & Co"],
-    locations: ["Zurich, CH (hybrid)", "Berlin, DE (remote)", "Remote, EU"],
-    skills: ["React", "TypeScript", "Testing", "Accessibility"],
-    blurb:
-      "Join a small product team building the interface thousands of clinicians use daily. You'll own features end to end with a designer beside you.",
-    tags: ["frontend", "web", "react", "ui", "design", "javascript", "typescript"],
-  },
-  {
-    title: "Full-Stack Developer",
-    seniority: "Mid-level",
-    companies: ["Ovato", "Halden Digital", "Brightloom"],
-    locations: ["Basel, CH (hybrid)", "Remote, EU", "Amsterdam, NL"],
-    skills: ["TypeScript", "React", "SQL", "Docker"],
-    blurb:
-      "A product-led team that ships weekly. You'll move between API work and interface work, with real ownership of what you build.",
-    tags: ["fullstack", "web", "backend", "react", "node", "typescript", "sql"],
-  },
-  {
-    title: "Data Analyst",
-    seniority: "Junior → Mid",
-    companies: ["Meridian Retail", "Alpine Insurance", "Cassia Group"],
-    locations: ["Zurich, CH (hybrid)", "Remote, CH", "Munich, DE"],
-    skills: ["SQL", "Python", "Data Visualisation", "Stakeholder communication"],
-    blurb:
-      "Turn messy operational data into decisions leadership actually makes. Strong mentoring culture and a analytics lead who teaches.",
-    tags: ["data", "analytics", "sql", "python", "visualisation", "bi", "statistics"],
-  },
-  {
-    title: "Machine Learning Engineer",
-    seniority: "Mid-level",
-    companies: ["Nimbus AI", "Foldwise", "Terra Signal"],
-    locations: ["Remote, EU", "Lausanne, CH (hybrid)", "Copenhagen, DK"],
-    skills: ["Python", "Machine Learning", "SQL", "AWS"],
-    blurb:
-      "Take models from notebook to production alongside a research team. Real users, real feedback loops, no ivory tower.",
-    tags: ["ml", "ai", "machine learning", "python", "data", "deep learning"],
-  },
-  {
-    title: "Cloud / DevOps Engineer",
-    seniority: "Mid-level",
-    companies: ["Steelpath", "Corvi Systems", "Arbor Cloud"],
-    locations: ["Remote, EU", "Geneva, CH (hybrid)", "Vienna, AT"],
-    skills: ["AWS", "Docker", "Kubernetes", "CI/CD"],
-    blurb:
-      "Make deploys boring. You'll own the platform that a 40-person engineering org ships on, with budget for certifications.",
-    tags: ["devops", "cloud", "aws", "infrastructure", "docker", "kubernetes", "sre", "platform"],
-  },
-  {
-    title: "Backend Engineer",
-    seniority: "Mid-level",
-    companies: ["Fjordline", "Solera Pay", "Mistral Freight"],
-    locations: ["Remote, EU", "Zurich, CH (hybrid)", "Lisbon, PT"],
-    skills: ["Python", "SQL", "System Design", "Docker"],
-    blurb:
-      "Design services that handle real transaction volume. Thoughtful code review culture and no on-call heroics expected.",
-    tags: ["backend", "api", "python", "sql", "system design", "java", "go"],
-  },
-  {
-    title: "Product Manager, Technical",
-    seniority: "Mid-level",
-    companies: ["Havenly Software", "Beacon Tools", "Palo Studio"],
-    locations: ["Zurich, CH (hybrid)", "Remote, EU", "Stockholm, SE"],
-    skills: ["Product Thinking", "SQL", "Stakeholder communication", "Roadmapping"],
-    blurb:
-      "Sit between engineering and customers and decide what's worth building. You'll be trusted with a real problem space from week one.",
-    tags: ["product", "pm", "product management", "strategy", "ux"],
-  },
-  {
-    title: "QA / Test Automation Engineer",
-    seniority: "Junior → Mid",
-    companies: ["Corvi Systems", "Lumen Health", "Rho Mobility"],
-    locations: ["Remote, EU", "Bern, CH (hybrid)", "Warsaw, PL"],
-    skills: ["TypeScript", "Testing", "CI/CD", "Attention to detail"],
-    blurb:
-      "Own the safety net. You'll build the automated suites that let the team ship on a Friday without flinching.",
-    tags: ["qa", "testing", "automation", "quality", "typescript"],
-  },
-  {
-    title: "UX Engineer",
-    seniority: "Mid-level",
-    companies: ["Palo Studio", "Verdea", "Ateliér Nine"],
-    locations: ["Remote, EU", "Zurich, CH (hybrid)", "Paris, FR"],
-    skills: ["React", "Accessibility", "Design systems", "TypeScript"],
-    blurb:
-      "The bridge between design and code. You'll grow the design system every product team builds on.",
-    tags: ["ux", "design", "frontend", "design systems", "accessibility", "ui"],
-  },
-];
-
-export type GeneratedJob = {
+/** A role as it comes back from a live source (or the labelled AI fallback). */
+export type SourcedJob = {
   title: string;
   company: string;
   location: string;
   description: string;
   required_skills: string[];
   seniority: string;
+  url: string | null;
+  source: string;
+  is_example: boolean;
 };
 
-/** Cities/regions the seeded roles are actually posted in. */
+export type GeneratedJob = SourcedJob;
+
+/** Cities/regions we can search against. */
 export const LOCATION_OPTIONS = [
   "Zurich, CH",
   "Basel, CH",
   "Bern, CH",
   "Geneva, CH",
   "Lausanne, CH",
+  "Lugano, CH",
+  "St. Gallen, CH",
+  "Winterthur, CH",
+  "Zug, CH",
   "Berlin, DE",
   "Munich, DE",
+  "Hamburg, DE",
   "Vienna, AT",
   "Amsterdam, NL",
   "Paris, FR",
+  "Brussels, BE",
   "Copenhagen, DK",
   "Stockholm, SE",
+  "Dublin, IE",
+  "London, UK",
+  "Madrid, ES",
+  "Barcelona, ES",
+  "Milan, IT",
   "Lisbon, PT",
   "Warsaw, PL",
+  "Prague, CZ",
   "Remote, EU",
 ];
 
-type Setup = "remote" | "hybrid" | "onsite";
+export type Setup = "remote" | "hybrid" | "onsite";
 
-function setupOf(location: string): Setup {
-  const value = location.toLowerCase();
+export function setupOf(location: string, description = ""): Setup {
+  const value = `${location} ${description}`.toLowerCase();
   if (value.includes("hybrid")) return "hybrid";
-  if (value.includes("remote")) return "remote";
+  if (value.includes("remote") || value.includes("work from home")) return "remote";
   return "onsite";
 }
 
-function normaliseSetup(value: string): Setup | null {
+export function normaliseSetup(value: string): Setup | null {
   const v = value.toLowerCase();
   if (v.includes("remote")) return "remote";
   if (v.includes("hybrid")) return "hybrid";
@@ -148,96 +64,177 @@ function normaliseSetup(value: string): Setup | null {
   return null;
 }
 
-function cityOf(location: string): string {
-  return (location.split("(")[0] ?? location).trim().toLowerCase();
+export function cityOf(location: string): string {
+  return (location.split(/[(,]/)[0] ?? location).trim().toLowerCase();
 }
 
-function pick<T>(arr: T[], seed: number): T {
-  return arr[Math.abs(seed) % arr.length] as T;
+// ---------------------------------------------------------------- matching
+
+/**
+ * Words that carry no signal on their own. Without this list a skill such as
+ * "FSM Design" matches every posting that mentions design.
+ */
+const STOP_TOKENS = new Set([
+  "design",
+  "engineer",
+  "engineering",
+  "developer",
+  "development",
+  "systems",
+  "system",
+  "software",
+  "technical",
+  "senior",
+  "junior",
+  "management",
+  "analysis",
+  "data",
+  "science",
+  "computer",
+  "and",
+  "the",
+  "with",
+  "for",
+]);
+
+/** Names that mean the same thing but are written differently. */
+const ALIASES: Record<string, string> = {
+  "c++": "c/c++",
+  c: "c/c++",
+  cpp: "c/c++",
+  js: "javascript",
+  ts: "typescript",
+  "node.js": "node",
+  nodejs: "node",
+  py: "python",
+  postgres: "sql",
+  postgresql: "sql",
+  mysql: "sql",
+  ml: "machine learning",
+  ai: "machine learning",
+  dl: "deep learning",
+  k8s: "kubernetes",
+  gcp: "google cloud",
+  "amazon web services": "aws",
+  "embedded c": "embedded systems",
+  firmware: "embedded systems",
+  rtl: "fpga",
+  hdl: "fpga",
+  vhdl: "vhdl",
+  "digital design": "fpga",
+  dsp: "signal processing",
+  ux: "user experience",
+  ui: "user interface",
+};
+
+function canonical(skill: string): string {
+  const key = normaliseSkill(skill);
+  return ALIASES[key] ?? key;
 }
 
-export function sweepJobs(
-  interests: string[],
-  skills: string[],
-  opts: { count?: number; setups?: string[]; locations?: string[] } = {},
-): GeneratedJob[] {
-  const { count = 6, setups = [], locations = [] } = opts;
+function tokensOf(value: string): string[] {
+  return normaliseSkill(value)
+    .split(/[^a-z0-9+#./]+/)
+    .map((t) => t.replace(/[.]+$/, ""))
+    .filter((t) => t.length > 2 && !STOP_TOKENS.has(t));
+}
 
-  const skillTerms = skills.map(normaliseSkill).filter(Boolean);
-  const interestTerms = interests.map(normaliseSkill).filter(Boolean);
-  const hasSignal = skillTerms.length > 0 || interestTerms.length > 0;
+export type MatchProfile = {
+  /** Skills with confidence levels — level drives the weight. */
+  skills: SkillConfidence[];
+  interests: string[];
+  setups?: string[];
+  locations?: string[];
+  count?: number;
+};
 
+function weightFor(level: number): number {
+  if (level >= 5) return 6;
+  if (level === 4) return 5;
+  if (level === 3) return 4;
+  return 2;
+}
+
+/** How strongly one posting speaks to this person's skills and interests. */
+export function scoreJob(job: SourcedJob, profile: MatchProfile): number {
+  const haystackExact = new Set(job.required_skills.map(canonical));
+  const text = `${job.title} ${job.required_skills.join(" ")} ${job.description}`;
+  const haystackTokens = new Set(tokensOf(text));
+  const titleTokens = new Set(tokensOf(job.title));
+
+  let score = 0;
+  const credit = (term: string, weight: number) => {
+    const key = canonical(term);
+    if (!key) return;
+    if (haystackExact.has(key)) {
+      score += weight * 2;
+      return;
+    }
+    const terms = tokensOf(key);
+    if (terms.length === 0) return;
+    const hits = terms.filter((t) => haystackTokens.has(t));
+    if (hits.length === terms.length) score += weight;
+    else if (hits.length > 0) score += weight * 0.4;
+    if (terms.some((t) => titleTokens.has(t))) score += weight * 0.5;
+  };
+
+  for (const skill of profile.skills) credit(skill.name, weightFor(skill.level));
+  for (const interest of profile.interests) credit(interest, 3);
+  return score;
+}
+
+/**
+ * Filters live postings down to the ones that actually fit: setup is a hard
+ * constraint, city relaxes only if nothing survives, and a posting has to
+ * clear a real relevance bar rather than being the least-bad of a fixed list.
+ */
+export function rankJobs(
+  jobs: SourcedJob[],
+  profile: MatchProfile,
+): { jobs: SourcedJob[]; widened: boolean } {
+  const { count = 6 } = profile;
   const allowedSetups = new Set(
-    setups.map(normaliseSetup).filter((s): s is Setup => Boolean(s)),
+    (profile.setups ?? []).map(normaliseSetup).filter((s): s is Setup => Boolean(s)),
   );
-  const wantedCities = locations.map(cityOf).filter(Boolean);
+  const wantedCities = (profile.locations ?? []).map(cityOf).filter(Boolean);
 
-  // Score every seed against the user's *own* skills first, interests second.
-  const scored = SEEDS.map((seed, index) => {
-    let score = 0;
-    const match = (term: string, weight: number) => {
-      if (seed.skills.some((s) => normaliseSkill(s) === term)) score += weight * 2;
-      if (seed.tags.some((tag) => tag === term || tag.includes(term) || term.includes(tag))) score += weight;
-      if (normaliseSkill(seed.title).includes(term)) score += weight;
-    };
-    for (const term of skillTerms) match(term, 4);
-    for (const term of interestTerms) match(term, 2);
-    return { seed, score, index };
-  }).sort((a, b) => b.score - a.score || a.index - b.index);
-
-  // Never fall back to a generic computer-science shortlist: if we know
-  // something about her, only roles that actually touch it are eligible.
-  const relevant = hasSignal ? scored.filter((row) => row.score > 0) : scored;
-
-  const viableLocations = (seedLocations: string[], applyCityFilter: boolean) =>
-    seedLocations.filter((location) => {
-      if (allowedSetups.size > 0 && !allowedSetups.has(setupOf(location))) return false;
-      if (applyCityFilter && wantedCities.length > 0) {
-        const value = location.toLowerCase();
-        return wantedCities.some((city) => value.includes(city) || city.includes(cityOf(location)));
-      }
-      return true;
-    });
-
-  const build = (applyCityFilter: boolean) =>
-    relevant
-      .map((row) => ({ ...row, viable: viableLocations(row.seed.locations, applyCityFilter) }))
-      .filter((row) => row.viable.length > 0);
-
-  // Setup is a hard constraint; the city list relaxes first if it's too narrow.
-  let pool = build(true);
-  if (pool.length < Math.min(count, 3)) pool = build(false);
-
-  return pool.slice(0, Math.max(count, 4)).map(({ seed, index, viable }, i) => {
-    const stretch = skillTerms.length ? titleCase(skillTerms[i % skillTerms.length] ?? "") : "";
-    const extra = stretch && !seed.skills.some((s) => normaliseSkill(s) === normaliseSkill(stretch)) ? [stretch] : [];
-    return {
-      title: seed.title,
-      company: pick(seed.companies, index + i),
-      location: pick(viable, index + i * 2),
-      description: seed.blurb,
-      required_skills: [...seed.skills, ...extra],
-      seniority: seed.seniority,
-    };
+  const seen = new Set<string>();
+  const unique = jobs.filter((job) => {
+    const key = `${normaliseSkill(job.title)}|${normaliseSkill(job.company)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
+
+  const hasSignal = profile.skills.length > 0 || profile.interests.length > 0;
+  const scored = unique
+    .map((job) => ({ job, score: scoreJob(job, profile) }))
+    .filter((row) => !hasSignal || row.score >= 4)
+    .sort((a, b) => b.score - a.score);
+
+  const bySetup = scored.filter((row) => {
+    if (allowedSetups.size === 0) return true;
+    return allowedSetups.has(setupOf(row.job.location, row.job.description));
+  });
+
+  const byCity = bySetup.filter((row) => {
+    if (wantedCities.length === 0) return true;
+    const value = row.job.location.toLowerCase();
+    if (setupOf(row.job.location, row.job.description) === "remote") return true;
+    return wantedCities.some((city) => value.includes(city));
+  });
+
+  const widened = byCity.length === 0 && bySetup.length > 0;
+  const pool = widened ? bySetup : byCity;
+  return { jobs: pool.slice(0, count).map((row) => row.job), widened };
 }
 
-function tokens(skill: string): string[] {
+// ---------------------------------------------------------------- skill gap
+
+function gapTokens(skill: string): string[] {
   return normaliseSkill(skill)
     .split(/[^a-z0-9+#]+/)
     .filter((t) => t.length > 2);
-}
-
-/** How closely a missing skill builds on something she can already do. */
-function relatedness(gap: string, existing: string[]): number {
-  const gapTokens = new Set(tokens(gap));
-  let best = 0;
-  for (const skill of existing) {
-    const shared = tokens(skill).filter((t) => gapTokens.has(t)).length;
-    if (shared > 0) best = Math.max(best, 2 + shared);
-    else if (ADJACENT[normaliseSkill(skill)]?.includes(normaliseSkill(gap))) best = Math.max(best, 2);
-  }
-  return best;
 }
 
 /** Skill families — a gap next to something she has is far easier to close. */
@@ -249,9 +246,25 @@ const ADJACENT: Record<string, string[]> = {
   docker: ["kubernetes", "ci/cd", "aws", "system design"],
   aws: ["docker", "kubernetes", "ci/cd"],
   testing: ["ci/cd", "typescript", "attention to detail"],
-  "machine learning": ["python", "sql", "aws"],
+  "machine learning": ["python", "sql", "aws", "deep learning"],
+  "c/c++": ["embedded systems", "rtos", "linux", "python"],
+  "embedded systems": ["c/c++", "rtos", "linux", "signal processing"],
+  fpga: ["vhdl", "verilog", "system verilog", "signal processing"],
+  "signal processing": ["python", "machine learning", "matlab"],
   "product thinking": ["stakeholder communication", "roadmapping", "sql"],
 };
+
+/** How closely a missing skill builds on something she can already do. */
+function relatedness(gap: string, existing: string[]): number {
+  const wanted = new Set(gapTokens(gap));
+  let best = 0;
+  for (const skill of existing) {
+    const shared = gapTokens(skill).filter((t) => wanted.has(t)).length;
+    if (shared > 0) best = Math.max(best, 2 + shared);
+    else if (ADJACENT[canonical(skill)]?.includes(canonical(gap))) best = Math.max(best, 2);
+  }
+  return best;
+}
 
 /**
  * Splits the skills the liked roles ask for into what she already has and the
@@ -259,22 +272,22 @@ const ADJACENT: Record<string, string[]> = {
  * first, and the list stays short enough to actually finish.
  */
 export function skillGap(profileSkills: string[], jobSkills: string[], maxGaps = 5) {
-  const have = new Set(profileSkills.map(normaliseSkill));
+  const have = new Set(profileSkills.map(canonical));
   const needed = Array.from(new Set(jobSkills.map((s) => s.trim()).filter(Boolean)));
-  const strengths = needed.filter((s) => have.has(normaliseSkill(s)));
+  const strengths = needed.filter((s) => have.has(canonical(s)));
 
   const demand = new Map<string, number>();
   for (const skill of jobSkills) {
-    const key = normaliseSkill(skill);
+    const key = canonical(skill);
     demand.set(key, (demand.get(key) ?? 0) + 1);
   }
 
   const gaps = needed
-    .filter((s) => !have.has(normaliseSkill(s)))
+    .filter((s) => !have.has(canonical(s)))
     .map((skill) => ({
       skill,
       related: relatedness(skill, profileSkills),
-      demand: demand.get(normaliseSkill(skill)) ?? 1,
+      demand: demand.get(canonical(skill)) ?? 1,
     }))
     .sort((a, b) => b.related - a.related || b.demand - a.demand || a.skill.localeCompare(b.skill))
     .slice(0, maxGaps)
@@ -282,4 +295,3 @@ export function skillGap(profileSkills: string[], jobSkills: string[], maxGaps =
 
   return { strengths, gaps };
 }
-
