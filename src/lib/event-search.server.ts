@@ -247,13 +247,18 @@ export async function sourceEvents(): Promise<EventSourcingResult> {
     return { events: [], sources: [], notes };
   }
 
-  const pages = (
-    await Promise.all(SOURCES.map((s) => scrapeSource(s, gatewayKey, connectionKey, notes)))
-  ).filter((p): p is { source: typeof SOURCES[number]; markdown: string } => p !== null);
+  // Sequential: the connector gateway rate-limits parallel scrapes.
+  const pages: { source: typeof SOURCES[number]; markdown: string }[] = [];
+  for (const source of SOURCES) {
+    const page = await scrapeSource(source, gatewayKey, connectionKey, notes);
+    if (page) pages.push(page);
+    await sleep(1200);
+  }
 
   const extracted = (
     await Promise.all(pages.map((page) => extractEvents(page, gatewayKey, notes)))
   ).flat();
+
 
   const byId = new Map<string, SourcedEvent>();
   for (const event of extracted) {
