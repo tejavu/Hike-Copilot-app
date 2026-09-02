@@ -205,12 +205,15 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_example: boolean
           liked: boolean | null
           location: string | null
           required_skills: string[]
           seniority: string | null
+          source: string
           title: string
           updated_at: string
+          url: string | null
           user_id: string
         }
         Insert: {
@@ -219,12 +222,15 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_example?: boolean
           liked?: boolean | null
           location?: string | null
           required_skills?: string[]
           seniority?: string | null
+          source?: string
           title: string
           updated_at?: string
+          url?: string | null
           user_id: string
         }
         Update: {
@@ -233,12 +239,15 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_example?: boolean
           liked?: boolean | null
           location?: string | null
           required_skills?: string[]
           seniority?: string | null
+          source?: string
           title?: string
           updated_at?: string
+          url?: string | null
           user_id?: string
         }
         Relationships: []
