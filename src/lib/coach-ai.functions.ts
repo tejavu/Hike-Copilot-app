@@ -108,6 +108,20 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "find_job_recommendations",
+      description:
+        "Search live job boards for roles that fit her saved profile and roadmap skills, and save the new ones to her list (which feeds the Roadmap view). Only call when she asks for job suggestions or agrees to a search. Takes no skill input — the profile is read server-side.",
+      parameters: {
+        type: "object",
+        properties: {
+          count: { type: "number", description: "How many roles to look for (1-12). Defaults to 6." },
+        },
+      },
+    },
+  },
 ] as const;
 
 type Supa = { from: (table: string) => any };
