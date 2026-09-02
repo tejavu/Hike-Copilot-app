@@ -249,7 +249,7 @@ export function MentorMatchView() {
     toast.success(`No problem — looking past ${skipped}.`);
   };
 
-  /** Books the session, then attempts the confirmation email honestly. */
+  /** Books the session, notifies the mentor, then confirms back to the mentee. */
   const book = async (input: { slot: { start: Date; end: Date }; theme: string; format: string }) => {
     const mentor = scheduleFor;
     if (!mentor) return;
@@ -264,11 +264,16 @@ export function MentorMatchView() {
       setScheduleFor(null);
       toast.success(`Booked for ${formatSlot(input.slot.start)}. I'll help you prep.`);
 
+      // The mentor is notified first; the slot she published counts as her
+      // confirmation, which triggers the mentee's confirmation email.
+      await sendSessionConfirmation({
+        data: { sessionId: session.id, timezone: timezone ?? "UTC", audience: "mentor" },
+      });
       const result = await sendSessionConfirmation({
-        data: { sessionId: session.id, timezone: timezone ?? "UTC" },
+        data: { sessionId: session.id, timezone: timezone ?? "UTC", audience: "mentee" },
       });
       if (result.status === "sent") {
-        toast.success("Confirmation emailed to you and your mentor.");
+        toast.success(`${mentor.full_name.split(" ")[0]} confirmed — the details are in your inbox.`);
       } else if (result.status === "not_configured") {
         toast.info("Confirmation email is ready but not sent", { description: result.detail });
       } else {
@@ -278,6 +283,7 @@ export function MentorMatchView() {
       toast.error("That didn't save. Try again?");
     }
   };
+
 
   const setCadence = (cadence: ReminderCadence) => {
     const next = cadence === "off" ? null : nextCheckInFrom(new Date(), cadence);
