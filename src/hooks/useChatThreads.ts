@@ -51,7 +51,7 @@ export function useCreateThread() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (title = "New chat"): Promise<ChatThread> => {
+    mutationFn: async (title: string = "New chat"): Promise<ChatThread> => {
       const { data, error } = await supabase
         .from("chat_threads")
         .insert({ user_id: user!.id, title } as never)
