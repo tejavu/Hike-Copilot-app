@@ -3,7 +3,7 @@
 
 export type SkillPlan = {
   course: { title: string; provider: string; url: string };
-  practice: { title: string; difficulty: string; target: number; detail: string };
+  practice: { title: string; difficulty: string; target: number; detail: string; url: string };
   certify: { title: string; provider: string; url: string };
   project: { title: string; detail: string };
 };
@@ -19,7 +19,9 @@ const CATALOG: Record<string, SkillPlan> = {
       title: "Component & hooks katas",
       difficulty: "Medium",
       target: 20,
-      detail: "Small UI challenges: forms, lists, custom hooks, state machines.",
+      detail:
+        "Small UI challenges: forms, lists, custom hooks, state machines. Repo: https://github.com/alexgurr/react-coding-challenges · Frontend drills: https://www.frontendmentor.io/challenges",
+      url: "https://github.com/alexgurr/react-coding-challenges",
     },
     certify: {
       title: "Meta Front-End Developer Certificate",
@@ -41,7 +43,9 @@ const CATALOG: Record<string, SkillPlan> = {
       title: "Type-challenges (easy → medium)",
       difficulty: "Medium",
       target: 15,
-      detail: "Generics, unions, narrowing. Two per sitting is plenty.",
+      detail:
+        "Generics, unions, narrowing. Two per sitting is plenty. Repo: https://github.com/type-challenges/type-challenges · Exercism track: https://exercism.org/tracks/typescript",
+      url: "https://github.com/type-challenges/type-challenges",
     },
     certify: {
       title: "JavaScript Algorithms & Data Structures",
@@ -63,7 +67,9 @@ const CATALOG: Record<string, SkillPlan> = {
       title: "LeetCode & Exercism Python set",
       difficulty: "Easy → Medium",
       target: 25,
-      detail: "Strings, dicts, iteration patterns, then a few medium problems.",
+      detail:
+        "Strings, dicts, iteration patterns, then a few medium problems. LeetCode: https://leetcode.com/problemset/ · Exercism: https://exercism.org/tracks/python · Repo of solutions to fork: https://github.com/donnemartin/interactive-coding-challenges",
+      url: "https://leetcode.com/problemset/?difficulty=EASY",
     },
     certify: {
       title: "PCEP — Certified Entry-Level Python Programmer",
@@ -85,7 +91,9 @@ const CATALOG: Record<string, SkillPlan> = {
       title: "Query drills on real datasets",
       difficulty: "Easy → Medium",
       target: 20,
-      detail: "Joins, window functions, aggregates. StrataScratch or DataLemur.",
+      detail:
+        "Joins, window functions, aggregates. DataLemur: https://datalemur.com/questions · LeetCode DB: https://leetcode.com/problemset/database/ · StrataScratch: https://www.stratascratch.com/",
+      url: "https://datalemur.com/questions",
     },
     certify: {
       title: "Databases and SQL for Data Science",
@@ -107,7 +115,9 @@ const CATALOG: Record<string, SkillPlan> = {
       title: "Hands-on console labs",
       difficulty: "Medium",
       target: 12,
-      detail: "S3, IAM, Lambda, RDS — one small lab at a time.",
+      detail:
+        "S3, IAM, Lambda, RDS — one small lab at a time. Workshops: https://workshops.aws/ · Guide repo: https://github.com/open-guides/og-aws",
+      url: "https://github.com/open-guides/og-aws",
     },
     certify: {
       title: "AWS Certified Cloud Practitioner",
@@ -129,7 +139,9 @@ const CATALOG: Record<string, SkillPlan> = {
       title: "Containerise 10 small apps",
       difficulty: "Medium",
       target: 10,
-      detail: "Multi-stage builds, compose files, slim images.",
+      detail:
+        "Multi-stage builds, compose files, slim images. Play with Docker: https://labs.play-with-docker.com/ · Sample apps repo: https://github.com/docker/awesome-compose",
+      url: "https://labs.play-with-docker.com/",
     },
     certify: {
       title: "Docker Certified Associate path",
@@ -151,7 +163,9 @@ const CATALOG: Record<string, SkillPlan> = {
       title: "KillerCoda scenarios",
       difficulty: "Hard",
       target: 12,
-      detail: "Deployments, services, configmaps, troubleshooting.",
+      detail:
+        "Deployments, services, configmaps, troubleshooting. KillerCoda: https://killercoda.com/killer-shell-cka · Exercises repo: https://github.com/dgkanatsios/CKAD-exercises",
+      url: "https://killercoda.com/killer-shell-cka",
     },
     certify: {
       title: "Certified Kubernetes Administrator (CKA)",
@@ -173,7 +187,9 @@ const CATALOG: Record<string, SkillPlan> = {
       title: "Kaggle notebooks & mini-comps",
       difficulty: "Medium → Hard",
       target: 8,
-      detail: "Baseline first, then one improvement you can explain out loud.",
+      detail:
+        "Baseline first, then one improvement you can explain out loud. Kaggle: https://www.kaggle.com/competitions · ML from scratch repo: https://github.com/eriklindernoren/ML-From-Scratch",
+      url: "https://www.kaggle.com/competitions",
     },
     certify: {
       title: "TensorFlow Developer Certificate",
@@ -195,7 +211,9 @@ const CATALOG: Record<string, SkillPlan> = {
       title: "Chart-a-day challenge",
       difficulty: "Easy",
       target: 15,
-      detail: "One chart, one insight, one sentence of interpretation.",
+      detail:
+        "One chart, one insight, one sentence of interpretation. Datasets: https://www.kaggle.com/datasets · Chart recipes repo: https://github.com/plotly/plotly.py",
+      url: "https://www.kaggle.com/datasets",
     },
     certify: {
       title: "Tableau Desktop Specialist",
@@ -217,7 +235,9 @@ const CATALOG: Record<string, SkillPlan> = {
       title: "Design one system per week, out loud",
       difficulty: "Hard",
       target: 10,
-      detail: "Whiteboard it, record yourself, note what you'd tighten.",
+      detail:
+        "Whiteboard it, record yourself, note what you'd tighten. Primer: https://github.com/donnemartin/system-design-primer · Case studies: https://github.com/ByteByteGoHq/system-design-101",
+      url: "https://github.com/donnemartin/system-design-primer",
     },
     certify: {
       title: "Software Architecture Foundations",
@@ -239,7 +259,9 @@ const CATALOG: Record<string, SkillPlan> = {
       title: "Teardown a product a week",
       difficulty: "Easy",
       target: 10,
-      detail: "One problem, one hypothesis, one metric you'd move.",
+      detail:
+        "One problem, one hypothesis, one metric you'd move. Teardown library: https://www.productteardowns.com/ · Resources repo: https://github.com/dcvillar/product-management-resources",
+      url: "https://github.com/dcvillar/product-management-resources",
     },
     certify: {
       title: "Professional Scrum Product Owner I",
@@ -299,7 +321,8 @@ export function planForSkill(skill: string): SkillPlan {
       title: `${pretty} practice set`,
       difficulty: "Easy → Medium",
       target: 15,
-      detail: `Short, repeatable ${pretty} exercises. Little and often beats one heroic weekend.`,
+      detail: `Short, repeatable ${pretty} exercises. Little and often beats one heroic weekend. LeetCode: https://leetcode.com/problemset/ · Exercism: https://exercism.org/tracks · GitHub repos to fork: https://github.com/search?q=${encodeURIComponent(skill + " exercises")}`,
+      url: `https://github.com/search?q=${encodeURIComponent(skill + " practice exercises")}`,
     },
     certify: {
       title: `${pretty} certificate`,

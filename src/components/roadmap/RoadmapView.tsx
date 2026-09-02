@@ -317,7 +317,9 @@ function ItemRow({ item }: { item: RoadmapItem }) {
           </div>
           <p className={cn("mt-0.5 font-medium", done && "text-success")}>{item.title}</p>
           {item.provider && <p className="text-xs text-muted-foreground">{item.provider}</p>}
-          {item.detail && <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.detail}</p>}
+          {item.detail && (
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{linkify(item.detail)}</p>
+          )}
           {item.url && (
             <a
               href={item.url}
@@ -413,6 +415,24 @@ function ItemRow({ item }: { item: RoadmapItem }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function linkify(text: string) {
+  return text.split(/(https?:\/\/[^\s·]+)/g).map((part, index) =>
+    /^https?:\/\//.test(part) ? (
+      <a
+        key={index}
+        href={part}
+        target="_blank"
+        rel="noreferrer"
+        className="font-semibold text-primary hover:underline"
+      >
+        {part.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
+      </a>
+    ) : (
+      part
+    ),
   );
 }
 
