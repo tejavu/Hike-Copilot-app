@@ -143,6 +143,49 @@ function SidebarBody({ onNavigate }: { onNavigate: () => void }) {
         })}
       </nav>
 
+      <div className="mt-5 flex min-h-0 flex-1 flex-col px-3">
+        <div className="flex items-center justify-between px-3 pb-1.5">
+          <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">Your chats</p>
+          <button
+            type="button"
+            onClick={() => void newChat()}
+            disabled={createThread.isPending}
+            aria-label="New chat"
+            title="New chat"
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60 disabled:opacity-50"
+          >
+            <Plus className="size-3.5" /> New
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
+          {(threads ?? []).map((thread) => {
+            const active = pathname === `/chat/${thread.id}`;
+            return (
+              <Link
+                key={thread.id}
+                to="/chat/$threadId"
+                params={{ threadId: thread.id }}
+                onClick={onNavigate}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors",
+                  active
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/60",
+                )}
+              >
+                <MessageSquare className="size-4 shrink-0 opacity-70" />
+                <span className="truncate">{thread.title}</span>
+              </Link>
+            );
+          })}
+          {(threads?.length ?? 0) === 0 && (
+            <p className="px-3 py-1 text-xs text-muted-foreground">
+              Start a new chat for a question that doesn't belong in your coaching thread.
+            </p>
+          )}
+        </div>
+      </div>
+
       {!unlocked && (
         <p className="mx-3 mb-3 rounded-xl bg-sidebar-accent/50 px-3 py-2.5 text-xs leading-relaxed text-sidebar-accent-foreground">
           Roadmap, Network and Mentor Match open up as soon as we've built your plan together in chat.
