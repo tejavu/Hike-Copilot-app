@@ -20,7 +20,10 @@ When she doubts herself, name the evidence of her progress instead of empty chee
 You CAN edit her roadmap, but only through the provided tools.
 - Propose the change first and wait for her to confirm, unless she already asked for it outright.
 - When she confirms, call add_roadmap_item (or update_roadmap_item) and only then say it's done.
-- Never claim you've updated, added to or changed her roadmap unless the matching tool call succeeded in this same turn. If a tool call fails or no roadmap exists yet, say so plainly and suggest she add it from the Roadmap page instead.`;
+- She is allowed to decline any skill. If she says she doesn't want to learn something, don't argue or quietly leave it there — offer to take it off ("Want me to drop Kubernetes from your roadmap?") and call remove_roadmap_skill (or remove_roadmap_item for a single step) once she says yes.
+- If she hasn't confirmed a removal, leave the roadmap untouched and just offer.
+- If a removal tool reports finished steps with proof, tell her exactly what would be lost and only re-call it with confirm_completed once she agrees.
+- Never claim you've updated, added to, removed from or changed her roadmap unless the matching tool call succeeded in this same turn. If a tool call fails or no roadmap exists yet, say so plainly and suggest she edit it from the Roadmap page instead.`;
 
 const ITEM_TYPES = ["learn", "practice", "certify", "build", "visibility"] as const;
 
@@ -65,9 +68,136 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "remove_roadmap_item",
+      description:
+        "Remove a single step from the user's roadmap, found by (part of) its title. Only call after she confirms she wants it gone.",
+      parameters: {
+        type: "object",
+        properties: {
+          match_title: { type: "string" },
+          confirm_completed: {
+            type: "boolean",
+            description: "Pass true only after she has agreed to lose a completed step and its proof.",
+          },
+        },
+        required: ["match_title"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "remove_roadmap_skill",
+      description:
+        "Remove an entire skill and every step under it from the user's roadmap, e.g. when she says she doesn't want to learn it. Only call after she confirms.",
+      parameters: {
+        type: "object",
+        properties: {
+          skill: { type: "string" },
+          confirm_completed: {
+            type: "boolean",
+            description: "Pass true only after she has agreed to lose completed steps and their proof.",
+          },
+        },
+        required: ["skill"],
+      },
+    },
+  },
 ] as const;
 
 type Supa = { from: (table: string) => any };
+
+const normalise = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
+
+type ItemRow = { id: string; title: string; done: boolean; proof_url: string | null; proof_path: string | null };
+
+const hasProof = (row: ItemRow) => row.done || Boolean(row.proof_url) || Boolean(row.proof_path);
+
+async function removeItem(supabase: Supa, userId: string, args: Record<string, unknown>) {
+  const match = String(args["match_title"] ?? "").trim();
+  if (!match) return { ok: false, error: "match_title is required." };
+
+  const { data, error } = await supabase
+    .from("roadmap_items")
+    .select("id, title, done, proof_url, proof_path")
+    .eq("user_id", userId)
+    .ilike("title", `%${match}%`)
+    .limit(2);
+  if (error) return { ok: false, error: error.message };
+  const rows = (data ?? []) as ItemRow[];
+  if (rows.length === 0) return { ok: false, error: `No roadmap step matches "${match}".` };
+  if (rows.length > 1) return { ok: false, error: `"${match}" matches more than one step — be more specific.` };
+
+  const row = rows[0]!;
+  if (hasProof(row) && args["confirm_completed"] !== true) {
+    return {
+      ok: false,
+      needs_confirmation: true,
+      error: `"${row.title}" is already completed (with proof). Ask her to confirm losing it, then call again with confirm_completed: true.`,
+    };
+  }
+
+  const { error: deleteError } = await supabase.from("roadmap_items").delete().eq("id", row.id);
+  if (deleteError) return { ok: false, error: deleteError.message };
+  return { ok: true, removed: row.title };
+}
+
+async function removeSkill(supabase: Supa, userId: string, args: Record<string, unknown>) {
+  const skillName = String(args["skill"] ?? "").trim();
+  if (!skillName) return { ok: false, error: "skill is required." };
+
+  const { data: skills, error: skillError } = await supabase
+    .from("roadmap_skills")
+    .select("id, name")
+    .eq("user_id", userId);
+  if (skillError) return { ok: false, error: skillError.message };
+
+  const wanted = normalise(skillName);
+  const matches = ((skills ?? []) as { id: string; name: string }[]).filter(
+    (s) => normalise(s.name) === wanted,
+  );
+  if (matches.length === 0) return { ok: false, error: `"${skillName}" isn't on her roadmap.` };
+
+  const ids = matches.map((s) => s.id);
+  const { data: items, error: itemsError } = await supabase
+    .from("roadmap_items")
+    .select("id, title, done, proof_url, proof_path")
+    .eq("user_id", userId)
+    .in("skill_id", ids);
+  if (itemsError) return { ok: false, error: itemsError.message };
+  const itemRows = (items ?? []) as ItemRow[];
+  const completed = itemRows.filter(hasProof);
+
+  if (completed.length > 0 && args["confirm_completed"] !== true) {
+    return {
+      ok: false,
+      needs_confirmation: true,
+      error: `Removing "${matches[0]!.name}" would also delete ${completed.length} completed step(s) with proof: ${completed
+        .map((i) => i.title)
+        .join(", ")}. Ask her to confirm, then call again with confirm_completed: true.`,
+    };
+  }
+
+  const { error: deleteItemsError } = await supabase
+    .from("roadmap_items")
+    .delete()
+    .eq("user_id", userId)
+    .in("skill_id", ids);
+  if (deleteItemsError) return { ok: false, error: deleteItemsError.message };
+
+  const { error: deleteSkillError } = await supabase
+    .from("roadmap_skills")
+    .delete()
+    .eq("user_id", userId)
+    .in("id", ids);
+  if (deleteSkillError) return { ok: false, error: deleteSkillError.message };
+
+  return { ok: true, removed_skill: matches[0]!.name, removed_items: itemRows.length };
+}
+
 
 const PHASE_FOR: Record<string, string[]> = {
   learn: ["learning"],
@@ -115,7 +245,7 @@ async function addItem(supabase: Supa, userId: string, args: Record<string, unkn
     order_index: number;
   }[];
 
-  const normalise = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
+  
   const wanted = normalise(skillName);
   let skillId = skillRows.find((s) => normalise(s.name) === wanted)?.id;
   if (!skillId) {
@@ -256,12 +386,17 @@ export const askCoach = createServerFn({ method: "POST" })
         } catch {
           args = {};
         }
-        const result =
-          call.function.name === "add_roadmap_item"
+        const name = call.function.name as string;
+        const result: { ok: boolean; [key: string]: unknown } =
+          name === "add_roadmap_item"
             ? await addItem(supabase, userId, args)
-            : call.function.name === "update_roadmap_item"
+            : name === "update_roadmap_item"
               ? await updateItem(supabase, userId, args)
-              : { ok: false, error: `Unknown tool ${call.function.name}` };
+              : name === "remove_roadmap_item"
+                ? await removeItem(supabase, userId, args)
+                : name === "remove_roadmap_skill"
+                  ? await removeSkill(supabase, userId, args)
+                  : { ok: false, error: `Unknown tool ${name}` };
         if (result.ok) roadmapChanged = true;
         messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
       }
