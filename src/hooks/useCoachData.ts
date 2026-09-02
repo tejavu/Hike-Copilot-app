@@ -233,6 +233,7 @@ export function useResetCoach() {
     onSuccess: () => {
       for (const key of [
         "messages",
+        "chat-threads",
         "profile",
         "jobs",
         "roadmap",
