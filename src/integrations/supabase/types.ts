@@ -579,6 +579,7 @@ export type Database = {
           certifications: Json
           created_at: string
           date_of_birth: string | null
+          drawn_to: string | null
           education: Json
           email: string | null
           experience: Json
@@ -587,21 +588,28 @@ export type Database = {
           id: string
           interests: string[]
           location: string | null
+          location_pref: string | null
           nationality: string | null
           onboarding_complete: boolean
           onboarding_stage: string
           phone: string | null
           photo_url: string | null
+          recent_role: string | null
           roadmap_generated: boolean
+          skill_confidence: Json
           skills: string[]
           timeline: string | null
           timeline_months: number | null
           updated_at: string
+          weekly_hours: number | null
+          work_auth: string | null
+          work_setup: string[]
         }
         Insert: {
           certifications?: Json
           created_at?: string
           date_of_birth?: string | null
+          drawn_to?: string | null
           education?: Json
           email?: string | null
           experience?: Json
@@ -610,21 +618,28 @@ export type Database = {
           id: string
           interests?: string[]
           location?: string | null
+          location_pref?: string | null
           nationality?: string | null
           onboarding_complete?: boolean
           onboarding_stage?: string
           phone?: string | null
           photo_url?: string | null
+          recent_role?: string | null
           roadmap_generated?: boolean
+          skill_confidence?: Json
           skills?: string[]
           timeline?: string | null
           timeline_months?: number | null
           updated_at?: string
+          weekly_hours?: number | null
+          work_auth?: string | null
+          work_setup?: string[]
         }
         Update: {
           certifications?: Json
           created_at?: string
           date_of_birth?: string | null
+          drawn_to?: string | null
           education?: Json
           email?: string | null
           experience?: Json
@@ -633,16 +648,22 @@ export type Database = {
           id?: string
           interests?: string[]
           location?: string | null
+          location_pref?: string | null
           nationality?: string | null
           onboarding_complete?: boolean
           onboarding_stage?: string
           phone?: string | null
           photo_url?: string | null
+          recent_role?: string | null
           roadmap_generated?: boolean
+          skill_confidence?: Json
           skills?: string[]
           timeline?: string | null
           timeline_months?: number | null
           updated_at?: string
+          weekly_hours?: number | null
+          work_auth?: string | null
+          work_setup?: string[]
         }
         Relationships: []
       }

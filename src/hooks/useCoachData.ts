@@ -157,3 +157,39 @@ export function useDocuments() {
     },
   });
 }
+
+/**
+ * Clears the transcript. `full` also wipes matched jobs + roadmap and puts
+ * onboarding back to the start so she can redo her answers from scratch.
+ */
+export function useResetCoach() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ full }: { full: boolean }) => {
+      const uid = user!.id;
+      const { error: msgError } = await supabase.from("chat_messages").delete().eq("user_id", uid);
+      if (msgError) throw msgError;
+      if (!full) return;
+      const { error: phaseError } = await supabase.from("roadmap_phases").delete().eq("user_id", uid);
+      if (phaseError) throw phaseError;
+      const { error: jobError } = await supabase.from("jobs").delete().eq("user_id", uid);
+      if (jobError) throw jobError;
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({
+          onboarding_stage: "welcome",
+          onboarding_complete: false,
+          roadmap_generated: false,
+        } as never)
+        .eq("id", uid);
+      if (profileError) throw profileError;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["messages", user?.id] });
+      void qc.invalidateQueries({ queryKey: ["profile", user?.id] });
+      void qc.invalidateQueries({ queryKey: ["jobs", user?.id] });
+      void qc.invalidateQueries({ queryKey: ["roadmap", user?.id] });
+    },
+  });
+}

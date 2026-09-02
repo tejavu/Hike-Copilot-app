@@ -260,8 +260,9 @@ const CATALOG: Record<string, SkillPlan> = {
       difficulty: "Easy",
       target: 10,
       detail:
-        "One problem, one hypothesis, one metric you'd move. Teardown library: https://www.productteardowns.com/ · Resources repo: https://github.com/dcvillar/product-management-resources",
-      url: "https://github.com/dcvillar/product-management-resources",
+        "One problem, one hypothesis, one metric you'd move. Teardown library: https://www.productteardowns.com/ · Curated reading: https://github.com/ProductHired/open-product-management",
+      url: "https://github.com/ProductHired/open-product-management",
+
     },
     certify: {
       title: "Professional Scrum Product Owner I",
