@@ -60,7 +60,7 @@ const DRAWN_TO_HINTS = [
 
 type Draft = {
   drawnTo: string;
-  locationPref: string;
+  locations: string[];
   setups: string[];
   workAuth: string;
   recentRole: string;
@@ -75,7 +75,10 @@ type Draft = {
 function draftFromProfile(profile: Profile): Draft {
   return {
     drawnTo: profile.drawn_to ?? "",
-    locationPref: profile.location_pref ?? "",
+    locations: (profile.location_pref ?? "")
+      .split(/[,;]\s*(?![A-Z]{2}\b)/)
+      .map((part) => part.trim())
+      .filter(Boolean),
     setups: profile.work_setup ?? [],
     workAuth: profile.work_auth ?? "",
     recentRole: profile.recent_role ?? profile.experience.map((e) => e.title).join("\n"),
@@ -90,6 +93,7 @@ function draftFromProfile(profile: Profile): Draft {
     goal: profile.goal ?? "",
   };
 }
+
 
 export function OnboardingForm() {
   const { user } = useAuth();
