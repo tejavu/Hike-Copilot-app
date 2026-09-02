@@ -105,7 +105,11 @@ export function ChatView() {
     if (!user) return;
     setBusy(true);
     try {
-      const { error } = await supabase.from("chat_messages").delete().eq("user_id", user.id);
+      const { error } = await supabase
+        .from("chat_messages")
+        .delete()
+        .eq("user_id", user.id)
+        .is("thread_id", null);
       if (error) throw error;
       seeded.current = false;
       refresh();
