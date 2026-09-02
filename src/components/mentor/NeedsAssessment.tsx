@@ -16,8 +16,10 @@ import { cn } from "@/lib/utils";
 import {
   GUIDANCE_STYLES,
   MEETING_PREF_LABELS,
+  TIME_OF_DAY_LABELS,
   type MeetingPref,
   type MentorPreferences,
+  type TimeOfDay,
 } from "@/lib/mentors";
 
 export type AssessmentDraft = {
@@ -29,9 +31,19 @@ export type AssessmentDraft = {
   location_pref: MeetingPref;
   availability_notes: string;
   session_focus: string;
+  preferred_time_of_day: TimeOfDay;
+  timezone: string;
 };
 
 const STEP_COUNT = 6;
+
+const localTimezone = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+};
 
 export function NeedsAssessment({
   existing,
