@@ -299,6 +299,65 @@ Use plausible European employer types (e.g. "a medtech scale-up") rather than in
   }
 }
 
+// ------------------------------------------------- real skill extraction
+
+/**
+ * Reads the actual required/preferred skills out of the postings that made the
+ * final list. Only the ranked shortlist is sent, to keep the cost bounded.
+ */
+async function extractRequiredSkills(jobs: SourcedJob[], notes: string[]): Promise<SourcedJob[]> {
+  const key = process.env["LOVABLE_API_KEY"];
+  if (!key || jobs.length === 0) return jobs;
+
+  const payload = jobs.map((job, index) => ({
+    id: index,
+    title: job.title,
+    description: tidy(job.description, 1200),
+  }));
+
+  const prompt = `For each job posting below, list the 3-6 most important skills that are required or preferred — stated outright or clearly implied by the text. Use the wording a recruiter would use (e.g. "VHDL", "stakeholder communication"). Do not invent skills the posting gives no basis for.
+
+Return strict JSON: {"jobs":[{"id":0,"skills":["",""]}]}
+
+Postings:
+${JSON.stringify(payload)}`;
+
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model: "google/gemini-3.6-flash",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!response.ok) {
+      const detail = await response.text();
+      console.error(`skill extraction failed [${response.status}]: ${detail}`);
+      notes.push("Could not read the skills out of every posting.");
+      return jobs;
+    }
+    const body = (await response.json()) as { choices?: { message?: { content?: string } }[] };
+    const parsed = JSON.parse(body.choices?.[0]?.message?.content ?? "{}") as {
+      jobs?: { id?: number; skills?: string[] }[];
+    };
+    const bySlot = new Map<number, string[]>();
+    for (const row of parsed.jobs ?? []) {
+      if (typeof row.id !== "number" || !Array.isArray(row.skills)) continue;
+      const skills = row.skills.map((s) => String(s).trim()).filter(Boolean).slice(0, 6);
+      if (skills.length > 0) bySlot.set(row.id, skills);
+    }
+    return jobs.map((job, index) => {
+      const skills = bySlot.get(index);
+      return skills ? { ...job, required_skills: skills } : job;
+    });
+  } catch (error) {
+    console.error("skill extraction failed", error);
+    return jobs;
+  }
+}
+
 // ------------------------------------------------------------------ export
 
 export const jobSearchSchema = inputSchema;
@@ -323,20 +382,24 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
       count: data.count,
     });
 
-    if (ranked.jobs.length >= 3) {
-      const sources = Array.from(new Set(ranked.jobs.map((j) => j.source)));
-      return { jobs: ranked.jobs, sources, examplesOnly: false, widened: ranked.widened, notes };
+    // Only the shortlist gets the LLM pass — scoring already ran on raw text.
+    const shortlist = await extractRequiredSkills(ranked.jobs, notes);
+
+    if (shortlist.length >= 3) {
+      const sources = Array.from(new Set(shortlist.map((j) => j.source)));
+      return { jobs: shortlist, sources, examplesOnly: false, widened: ranked.widened, notes };
     }
+
 
     const examples = await exampleRoles(
       terms,
       data.drawnTo,
       data.locations,
       data.setups,
-      data.count - ranked.jobs.length,
+      data.count - shortlist.length,
       notes,
     );
-    const jobs = [...ranked.jobs, ...examples].slice(0, data.count);
+    const jobs = [...shortlist, ...examples].slice(0, data.count);
     return {
       jobs,
       sources: Array.from(new Set(jobs.map((j) => j.source))),
