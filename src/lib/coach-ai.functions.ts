@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { runJobSearch } from "./job-search.server";
+import { normaliseSkill } from "./catalog";
 
 const schema = z.object({
   question: z.string().min(1).max(4000),
