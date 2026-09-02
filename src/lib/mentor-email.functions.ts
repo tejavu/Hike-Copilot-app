@@ -70,7 +70,8 @@ export const sendSessionConfirmation = createServerFn({ method: "POST" })
         : "Online — link to be shared by your mentor",
       purpose: session.theme || "General career mentoring",
       meetingLink: null,
-    });
+    }).filter((email) => data.audience === "both" || email.kind === data.audience);
+
 
     const recipients = emails.map((email) => ({
       kind: email.kind,
