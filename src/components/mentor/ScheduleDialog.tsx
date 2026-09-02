@@ -12,12 +12,27 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { formatSlot, upcomingSlots, type Mentor, type SessionSlot } from "@/lib/mentors";
+import {
+  formatSlot,
+  preferredSlots,
+  type Mentor,
+  type SessionSlot,
+  type TimeOfDay,
+} from "@/lib/mentors";
 
 export function ScheduleDialog({
   mentor,
   defaultTheme,
+  timeOfDay,
+  timezone,
   open,
   onOpenChange,
   saving,
@@ -25,24 +40,32 @@ export function ScheduleDialog({
 }: {
   mentor: Mentor | null;
   defaultTheme: string;
+  timeOfDay?: TimeOfDay | null;
+  timezone?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   saving: boolean;
-  onConfirm: (input: { slot: SessionSlot; theme: string }) => void;
+  onConfirm: (input: { slot: SessionSlot; theme: string; format: string }) => void;
 }) {
   const [selected, setSelected] = useState<number>(0);
   const [theme, setTheme] = useState(defaultTheme);
+  const [format, setFormat] = useState<string>("remote");
 
-  const slots = useMemo(() => (mentor ? upcomingSlots(mentor) : []), [mentor]);
+  const slots = useMemo(
+    () => (mentor ? preferredSlots(mentor, timeOfDay ?? "any") : []),
+    [mentor, timeOfDay],
+  );
 
   useEffect(() => {
     if (open) {
       setSelected(0);
       setTheme(defaultTheme);
+      setFormat(mentor?.meeting_pref === "in_person" ? "in_person" : "remote");
     }
-  }, [open, defaultTheme, mentor?.id]);
+  }, [open, defaultTheme, mentor?.id, mentor?.meeting_pref]);
 
   if (!mentor) return null;
+  const canMeetInPerson = mentor.meeting_pref !== "remote";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -53,14 +76,15 @@ export function ScheduleDialog({
           </DialogTitle>
           <DialogDescription>
             These are the windows she keeps open for mentoring:{" "}
-            {mentor.availability_summary.toLowerCase()}.
+            {mentor.availability_summary.toLowerCase()}
+            {timezone ? `. Times shown in ${timezone}` : ""}.
           </DialogDescription>
         </DialogHeader>
 
         {slots.length === 0 ? (
           <p className="rounded-2xl bg-muted p-4 text-sm text-muted-foreground">
-            She hasn't published any openings for the next few weeks. Shortlist her and check back,
-            or pick another strong match in the meantime.
+            She hasn't published any openings for the next few weeks. I'll keep watching for times —
+            or ask me to match you with someone else.
           </p>
         ) : (
           <div className="space-y-4">
@@ -105,6 +129,19 @@ export function ScheduleDialog({
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="session-format">How will you meet?</Label>
+              <Select value={format} onValueChange={setFormat}>
+                <SelectTrigger id="session-format">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="remote">Online video call</SelectItem>
+                  {canMeetInPerson && <SelectItem value="in_person">In person</SelectItem>}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="rounded-2xl border border-border bg-accent/40 p-4">
               <p className="inline-flex items-center gap-2 text-sm font-semibold text-accent-foreground">
                 <Video className="size-4" />
@@ -145,7 +182,7 @@ export function ScheduleDialog({
             onClick={() => {
               const slot = slots[selected];
               if (!slot) return;
-              onConfirm({ slot, theme: theme.trim() || defaultTheme });
+              onConfirm({ slot, theme: theme.trim() || defaultTheme, format });
             }}
           >
             {saving ? (
