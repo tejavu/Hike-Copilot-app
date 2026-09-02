@@ -414,19 +414,24 @@ export function activeFilterCount(filters: DirectoryFilters): number {
 
 export type SessionSlot = { start: Date; end: Date; minutes: number };
 
+/** Mentors need a week's notice, so nothing inside this window is bookable. */
+export const MIN_BOOKING_LEAD_DAYS = 7;
+const MIN_LEAD_MS = MIN_BOOKING_LEAD_DAYS * 24 * 60 * 60 * 1000;
+
 /**
  * Turns a mentor's recurring seeded availability into concrete upcoming slots.
  * Real availability from a mentor calendar would replace this function only.
  */
-export function upcomingSlots(mentor: Mentor, weeks = 3, from = new Date()): SessionSlot[] {
+export function upcomingSlots(mentor: Mentor, weeks = 5, from = new Date()): SessionSlot[] {
   const slots: SessionSlot[] = [];
+  const earliest = from.getTime() + MIN_LEAD_MS;
   for (let week = 0; week < weeks; week += 1) {
     for (const spec of mentor.slots) {
       const base = new Date(from);
       base.setHours(spec.hour, 0, 0, 0);
       const delta = (spec.dow - base.getDay() + 7) % 7;
       base.setDate(base.getDate() + delta + week * 7);
-      if (base.getTime() < from.getTime() + 3_600_000) continue;
+      if (base.getTime() < earliest) continue;
       slots.push({
         start: base,
         end: new Date(base.getTime() + spec.minutes * 60_000),
@@ -436,6 +441,7 @@ export function upcomingSlots(mentor: Mentor, weeks = 3, from = new Date()): Ses
   }
   return slots.sort((a, b) => a.start.getTime() - b.start.getTime()).slice(0, 8);
 }
+
 
 function inTimeOfDay(slot: SessionSlot, timeOfDay: TimeOfDay): boolean {
   const hour = slot.start.getHours();
@@ -454,7 +460,7 @@ export function preferredSlots(
   timeOfDay: TimeOfDay | null = "any",
   from = new Date(),
 ): SessionSlot[] {
-  const all = upcomingSlots(mentor, 3, from);
+  const all = upcomingSlots(mentor, 5, from);
   if (!timeOfDay || timeOfDay === "any") return all;
   const filtered = all.filter((slot) => inTimeOfDay(slot, timeOfDay));
   return filtered.length > 0 ? filtered : all;

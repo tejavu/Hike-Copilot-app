@@ -159,8 +159,9 @@ export function useDocuments() {
 }
 
 /**
- * Clears the transcript. `full` also wipes matched jobs + roadmap and puts
- * onboarding back to the start so she can redo her answers from scratch.
+ * Clears the transcript. `full` wipes every trace of the previous run —
+ * jobs, roadmap, documents, mentor match/sessions, event engagement — and
+ * blanks every onboarding answer so the next CV upload starts genuinely fresh.
  */
 export function useResetCoach() {
   const { user } = useAuth();
@@ -168,16 +169,50 @@ export function useResetCoach() {
   return useMutation({
     mutationFn: async ({ full }: { full: boolean }) => {
       const uid = user!.id;
-      const { error: msgError } = await supabase.from("chat_messages").delete().eq("user_id", uid);
-      if (msgError) throw msgError;
+      const wipe = async (table: string, column = "user_id") => {
+        const { error } = await supabase.from(table as never).delete().eq(column, uid);
+        if (error) throw error;
+      };
+
+      await wipe("chat_messages");
       if (!full) return;
-      const { error: phaseError } = await supabase.from("roadmap_phases").delete().eq("user_id", uid);
-      if (phaseError) throw phaseError;
-      const { error: jobError } = await supabase.from("jobs").delete().eq("user_id", uid);
-      if (jobError) throw jobError;
+
+      // Mentor Match: matches, sessions, actions and preferences all go, so
+      // she is treated as unmatched rather than offered a reconnect.
+      await wipe("mentor_actions");
+      await wipe("session_feedback");
+      await wipe("mentor_sessions");
+      await wipe("mentor_matches");
+      await wipe("mentor_preferences");
+
+      // Network engagement
+      await wipe("event_reflections");
+      await wipe("event_engagement");
+
+      // Roadmap, jobs, documents
+      await wipe("roadmap_phases");
+      await wipe("jobs");
+      await wipe("user_documents");
+
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
+          drawn_to: null,
+          interests: [],
+          skills: [],
+          skill_confidence: [],
+          education: [],
+          experience: [],
+          certifications: [],
+          location: null,
+          location_pref: null,
+          work_setup: [],
+          work_auth: null,
+          recent_role: null,
+          goal: null,
+          timeline: null,
+          timeline_months: null,
+          weekly_hours: null,
           onboarding_stage: "welcome",
           onboarding_complete: false,
           roadmap_generated: false,
@@ -186,10 +221,23 @@ export function useResetCoach() {
       if (profileError) throw profileError;
     },
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["messages", user?.id] });
-      void qc.invalidateQueries({ queryKey: ["profile", user?.id] });
-      void qc.invalidateQueries({ queryKey: ["jobs", user?.id] });
-      void qc.invalidateQueries({ queryKey: ["roadmap", user?.id] });
+      for (const key of [
+        "messages",
+        "profile",
+        "jobs",
+        "roadmap",
+        "documents",
+        "mentor-preferences",
+        "mentor-matches",
+        "mentor-sessions",
+        "mentor-actions",
+        "session-feedback",
+        "event-engagement",
+        "event-reflections",
+      ]) {
+        void qc.invalidateQueries({ queryKey: [key, user?.id] });
+      }
     },
   });
 }
+

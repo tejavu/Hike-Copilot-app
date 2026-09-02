@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  ChevronDown,
   FileUp,
   Heart,
   Loader2,
@@ -22,7 +23,7 @@ import { useJobs, useProfile, useUpdateJob, useUpdateProfile } from "@/hooks/use
 import { parseCvDocuments } from "@/lib/cv-parse.functions";
 import { normaliseAnswer } from "@/lib/profile-parse.functions";
 import { writeRoadmapCopy } from "@/lib/roadmap-copy.functions";
-import { skillGap, sweepJobs } from "@/lib/job-sweep";
+import { LOCATION_OPTIONS, skillGap, sweepJobs } from "@/lib/job-sweep";
 import { generateRoadmap, phasePlanFor } from "@/lib/roadmap-builder";
 import { confidentSkills, readDocumentFile, WEEKLY_OPTIONS, type WeeklyOption } from "@/lib/onboarding";
 import type { Job, Profile, SkillConfidence } from "@/lib/domain";
@@ -33,7 +34,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+
 
 type StepId =
   | "documents"
@@ -60,7 +68,7 @@ const DRAWN_TO_HINTS = [
 
 type Draft = {
   drawnTo: string;
-  locationPref: string;
+  locations: string[];
   setups: string[];
   workAuth: string;
   recentRole: string;
@@ -75,7 +83,11 @@ type Draft = {
 function draftFromProfile(profile: Profile): Draft {
   return {
     drawnTo: profile.drawn_to ?? "",
-    locationPref: profile.location_pref ?? "",
+    locations: (profile.location_pref ?? "")
+      .split(" · ")
+      .map((part) => part.trim())
+      .filter(Boolean),
+
     setups: profile.work_setup ?? [],
     workAuth: profile.work_auth ?? "",
     recentRole: profile.recent_role ?? profile.experience.map((e) => e.title).join("\n"),
@@ -90,6 +102,7 @@ function draftFromProfile(profile: Profile): Draft {
     goal: profile.goal ?? "",
   };
 }
+
 
 export function OnboardingForm() {
   const { user } = useAuth();
@@ -239,7 +252,7 @@ export function OnboardingForm() {
       const nextPatch: Partial<Profile> = {
         drawn_to: form.drawnTo,
         interests,
-        location_pref: form.locationPref,
+        location_pref: form.locations.join(" · "),
         work_setup: form.setups,
         work_auth: form.workAuth,
         recent_role: form.recentRole,
@@ -254,10 +267,16 @@ export function OnboardingForm() {
 
       const merged: Profile = { ...profile, ...nextPatch } as Profile;
       await supabase.from("jobs").delete().eq("user_id", profile.id);
-      const generated = sweepJobs([form.drawnTo, ...interests], confidentSkills(form.skills, 3), {
+      // Match on the skills she actually listed (confident ones weighted first),
+      // never on a generic profile.
+      const generated = sweepJobs([form.drawnTo, ...interests], [
+        ...confidentSkills(form.skills, 3),
+        ...form.skills.map((s) => s.name),
+      ], {
         setups: form.setups,
-        location: form.locationPref,
+        locations: form.locations,
       });
+
       const { error } = await supabase
         .from("jobs")
         .insert(generated.map((job) => ({ ...job, user_id: merged.id })) as never);
@@ -472,17 +491,60 @@ export function OnboardingForm() {
               </div>
             </div>
             <div>
-              <Label htmlFor="loc" className="text-xs font-semibold tracking-wide uppercase">
+              <Label className="text-xs font-semibold tracking-wide uppercase">
                 Where are you based / willing to work?
               </Label>
-              <Input
-                id="loc"
-                value={form.locationPref}
-                onChange={(e) => patch({ locationPref: e.target.value })}
-                placeholder="Zurich, or anywhere remote in Europe"
-                className="mt-2"
-              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Pick as many as you'd genuinely consider — I'll only show roles in those places.
+              </p>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="mt-2 w-full justify-between font-normal">
+                    <span className="truncate">
+                      {form.locations.length
+                        ? form.locations.join(" · ")
+                        : "Choose one or more locations"}
+                    </span>
+                    <ChevronDown className="size-4 shrink-0 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="max-h-72 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto">
+                  {LOCATION_OPTIONS.map((option) => (
+                    <DropdownMenuCheckboxItem
+                      key={option}
+                      checked={form.locations.includes(option)}
+                      onSelect={(event) => event.preventDefault()}
+                      onCheckedChange={(checked) =>
+                        patch({
+                          locations: checked
+                            ? [...form.locations, option]
+                            : form.locations.filter((l) => l !== option),
+                        })
+                      }
+                    >
+                      {option}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {form.locations.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {form.locations.map((loc) => (
+                    <Badge key={loc} variant="outline" className="gap-1 bg-secondary/60">
+                      {loc}
+                      <button
+                        type="button"
+                        aria-label={`Remove ${loc}`}
+                        onClick={() => patch({ locations: form.locations.filter((l) => l !== loc) })}
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
+
             <div>
               <Label htmlFor="auth" className="text-xs font-semibold tracking-wide uppercase">
                 Work authorisation, if it matters
@@ -618,7 +680,7 @@ export function OnboardingForm() {
             <ReviewRow label="Drawn to" value={form.drawnTo} onEdit={() => setStep("drawn_to")} />
             <ReviewRow
               label="Location & setup"
-              value={[form.setups.join(", "), form.locationPref, form.workAuth].filter(Boolean).join(" · ")}
+              value={[form.setups.join(", "), form.locations.join(" · "), form.workAuth].filter(Boolean).join(" · ")}
               onEdit={() => setStep("constraints")}
             />
             <ReviewRow label="Experience" value={form.recentRole} onEdit={() => setStep("experience")} />
