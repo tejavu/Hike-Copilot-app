@@ -74,6 +74,8 @@ export function NeedsAssessment({
     location_pref: existing?.location_pref ?? "either",
     availability_notes: existing?.availability_notes ?? "",
     session_focus: existing?.session_focus ?? "",
+    preferred_time_of_day: existing?.preferred_time_of_day ?? "any",
+    timezone: existing?.timezone ?? localTimezone(),
   }));
 
   const skillOptions = useMemo(() => {
