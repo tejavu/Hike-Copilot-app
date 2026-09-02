@@ -100,17 +100,28 @@ async function addItem(supabase: Supa, userId: string, args: Record<string, unkn
   const phase =
     preferred.map((kind) => phaseRows.find((p) => p.kind === kind)).find(Boolean) ?? phaseRows[0]!;
 
+  // Look across every phase, not just the preferred one — the same skill placed
+  // in another phase must be reused rather than duplicated.
   const { data: existing, error: skillError } = await supabase
     .from("roadmap_skills")
-    .select("id, name, order_index")
+    .select("id, name, phase_id, order_index, created_at")
     .eq("user_id", userId)
-    .eq("phase_id", phase.id);
+    .order("created_at", { ascending: true });
   if (skillError) return { ok: false, error: skillError.message };
-  const skillRows = (existing ?? []) as { id: string; name: string; order_index: number }[];
+  const skillRows = (existing ?? []) as {
+    id: string;
+    name: string;
+    phase_id: string;
+    order_index: number;
+  }[];
 
-  let skillId = skillRows.find((s) => s.name.toLowerCase() === skillName.toLowerCase())?.id;
+  const normalise = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
+  const wanted = normalise(skillName);
+  let skillId = skillRows.find((s) => normalise(s.name) === wanted)?.id;
   if (!skillId) {
-    const nextIndex = skillRows.reduce((max, s) => Math.max(max, s.order_index + 1), 0);
+    const nextIndex = skillRows
+      .filter((s) => s.phase_id === phase.id)
+      .reduce((max, s) => Math.max(max, s.order_index + 1), 0);
     const { data: created, error: createError } = await supabase
       .from("roadmap_skills")
       .insert({ user_id: userId, phase_id: phase.id, name: skillName, order_index: nextIndex } as never)
@@ -119,6 +130,7 @@ async function addItem(supabase: Supa, userId: string, args: Record<string, unkn
     if (createError) return { ok: false, error: createError.message };
     skillId = (created as { id: string }).id;
   }
+
 
   const { data: siblings } = await supabase
     .from("roadmap_items")
