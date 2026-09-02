@@ -16,8 +16,10 @@ import { cn } from "@/lib/utils";
 import {
   GUIDANCE_STYLES,
   MEETING_PREF_LABELS,
+  TIME_OF_DAY_LABELS,
   type MeetingPref,
   type MentorPreferences,
+  type TimeOfDay,
 } from "@/lib/mentors";
 
 export type AssessmentDraft = {
@@ -29,9 +31,19 @@ export type AssessmentDraft = {
   location_pref: MeetingPref;
   availability_notes: string;
   session_focus: string;
+  preferred_time_of_day: TimeOfDay;
+  timezone: string;
 };
 
 const STEP_COUNT = 6;
+
+const localTimezone = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+};
 
 export function NeedsAssessment({
   existing,
@@ -62,6 +74,8 @@ export function NeedsAssessment({
     location_pref: existing?.location_pref ?? "either",
     availability_notes: existing?.availability_notes ?? "",
     session_focus: existing?.session_focus ?? "",
+    preferred_time_of_day: existing?.preferred_time_of_day ?? "any",
+    timezone: existing?.timezone ?? localTimezone(),
   }));
 
   const skillOptions = useMemo(() => {
@@ -279,6 +293,38 @@ export function NeedsAssessment({
                 </Select>
               </div>
             </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="na-timeofday">Which part of the day suits you?</Label>
+                <Select
+                  value={draft.preferred_time_of_day}
+                  onValueChange={(value) => set("preferred_time_of_day", value as TimeOfDay)}
+                >
+                  <SelectTrigger id="na-timeofday">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(TIME_OF_DAY_LABELS) as TimeOfDay[]).map((slot) => (
+                      <SelectItem key={slot} value={slot}>
+                        {TIME_OF_DAY_LABELS[slot]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="na-timezone">Your timezone</Label>
+                <Input
+                  id="na-timezone"
+                  value={draft.timezone}
+                  onChange={(event) => set("timezone", event.target.value)}
+                  placeholder="e.g. Europe/Zurich"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Every time I show you — and every invite I send — is in this zone.
+                </p>
+              </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="na-availability">When are you realistically free?</Label>
               <Input
@@ -334,7 +380,7 @@ export function NeedsAssessment({
         {last ? (
           <Button type="button" className="gap-2" disabled={saving} onClick={() => onSubmit(draft)}>
             {saving ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-            Find my matches
+            Find my mentor
           </Button>
         ) : (
           <Button

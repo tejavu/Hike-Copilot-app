@@ -9,6 +9,7 @@ import type {
   MentorPreferences,
   MentorSession,
   ReminderCadence,
+  SessionFeedback,
   SessionStatus,
 } from "@/lib/mentors";
 
@@ -170,6 +171,7 @@ export function useCreateSession() {
       theme: string;
       agenda?: string | null;
       prepQuestions?: string[];
+      meetingFormat?: string;
     }): Promise<MentorSession> => {
       const { data, error } = await supabase
         .from("mentor_sessions")
@@ -181,6 +183,7 @@ export function useCreateSession() {
           theme: input.theme,
           agenda: input.agenda ?? null,
           prep_questions: input.prepQuestions ?? [],
+          meeting_format: input.meetingFormat ?? "remote",
         } as never)
         .select("*")
         .single();
@@ -188,6 +191,62 @@ export function useCreateSession() {
       return data as unknown as MentorSession;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["mentor-sessions", user?.id] }),
+  });
+}
+
+/** Mentee feedback captured after a session, keyed one row per session. */
+export function useSessionFeedback() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["session-feedback", user?.id],
+    enabled: Boolean(user),
+    queryFn: async (): Promise<SessionFeedback[]> => {
+      const { data, error } = await supabase
+        .from("session_feedback")
+        .select("*")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as SessionFeedback[];
+    },
+  });
+}
+
+export function useSaveSessionFeedback() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      sessionId: string;
+      mentorId: string | null;
+      attended: boolean;
+      rating: number | null;
+      helpful: string | null;
+      comments: string | null;
+      continueWithMentor: boolean;
+      followupRequest: string | null;
+    }) => {
+      const { error } = await supabase.from("session_feedback").upsert(
+        {
+          user_id: user!.id,
+          session_id: input.sessionId,
+          mentor_id: input.mentorId,
+          attended: input.attended,
+          rating: input.rating,
+          helpful: input.helpful,
+          comments: input.comments,
+          continue_with_mentor: input.continueWithMentor,
+          followup_request: input.followupRequest,
+          updated_at: new Date().toISOString(),
+        } as never,
+        { onConflict: "session_id" },
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["session-feedback", user?.id] });
+      void qc.invalidateQueries({ queryKey: ["mentor-sessions", user?.id] });
+    },
   });
 }
 

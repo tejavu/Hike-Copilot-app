@@ -28,9 +28,19 @@ export type Mentor = {
   years_experience: number;
   slots: MentorSlotSpec[];
   is_demo: boolean;
+  contact_email: string | null;
 };
 
 export type ReminderCadence = "monthly" | "six_weeks" | "off";
+
+export type TimeOfDay = "any" | "morning" | "afternoon" | "evening";
+
+export const TIME_OF_DAY_LABELS: Record<TimeOfDay, string> = {
+  any: "Any time that's open",
+  morning: "Mornings (before 12:00)",
+  afternoon: "Afternoons (12:00–17:00)",
+  evening: "Evenings (after 17:00)",
+};
 
 export type MentorPreferences = {
   user_id: string;
@@ -47,6 +57,8 @@ export type MentorPreferences = {
   reminder_pending: boolean;
   selected_mentor_id: string | null;
   completed_at: string | null;
+  preferred_time_of_day: TimeOfDay | null;
+  timezone: string | null;
 };
 
 export type MatchStatus = "suggested" | "shortlisted" | "selected" | "passed";
@@ -75,6 +87,33 @@ export type MentorSession = {
   key_advice: string | null;
   recap_source: string;
   next_check_in_at: string | null;
+  created_at: string;
+  email_status: EmailStatus;
+  email_detail: string | null;
+  email_sent_at: string | null;
+  meeting_format: string;
+};
+
+/** Delivery state of the booking confirmation email for a session. */
+export type EmailStatus = "pending" | "sent" | "not_configured" | "failed";
+
+export const EMAIL_STATUS_LABELS: Record<EmailStatus, string> = {
+  pending: "Not sent yet",
+  sent: "Confirmation email sent",
+  not_configured: "Email sending not configured",
+  failed: "Email couldn't be sent",
+};
+
+export type SessionFeedback = {
+  id: string;
+  session_id: string;
+  mentor_id: string | null;
+  attended: boolean;
+  rating: number | null;
+  helpful: string | null;
+  comments: string | null;
+  continue_with_mentor: boolean;
+  followup_request: string | null;
   created_at: string;
 };
 
@@ -269,6 +308,25 @@ export function rankMentors(mentors: Mentor[], input: MatchInput): MatchResult[]
     .sort((a, b) => b.score - a.score || a.mentor.full_name.localeCompare(b.mentor.full_name));
 }
 
+/**
+ * Ada picks the single best-fit mentor rather than asking the mentee to choose.
+ * Mentors already declined via a rematch are skipped; mentors with no upcoming
+ * openings are only used as a last resort so bookable time is the default.
+ */
+export function pickBestMentor(
+  mentors: Mentor[],
+  input: MatchInput,
+  options: { exclude?: string[]; timeOfDay?: TimeOfDay | null } = {},
+): MatchResult | null {
+  const exclude = new Set(options.exclude ?? []);
+  const ranked = rankMentors(mentors, input).filter((row) => !exclude.has(row.mentor.id));
+  if (ranked.length === 0) return null;
+  const bookable = ranked.find(
+    (row) => preferredSlots(row.mentor, options.timeOfDay ?? "any").length > 0,
+  );
+  return bookable ?? ranked[0]!;
+}
+
 /* ------------------------------- directory -------------------------------- */
 
 export type DirectoryFilters = {
@@ -377,6 +435,29 @@ export function upcomingSlots(mentor: Mentor, weeks = 3, from = new Date()): Ses
     }
   }
   return slots.sort((a, b) => a.start.getTime() - b.start.getTime()).slice(0, 8);
+}
+
+function inTimeOfDay(slot: SessionSlot, timeOfDay: TimeOfDay): boolean {
+  const hour = slot.start.getHours();
+  if (timeOfDay === "morning") return hour < 12;
+  if (timeOfDay === "afternoon") return hour >= 12 && hour < 17;
+  if (timeOfDay === "evening") return hour >= 17;
+  return true;
+}
+
+/**
+ * Openings that fit the mentee's stated time-of-day preference. Falls back to
+ * every opening when nothing matches, so she is never left without a time.
+ */
+export function preferredSlots(
+  mentor: Mentor,
+  timeOfDay: TimeOfDay | null = "any",
+  from = new Date(),
+): SessionSlot[] {
+  const all = upcomingSlots(mentor, 3, from);
+  if (!timeOfDay || timeOfDay === "any") return all;
+  const filtered = all.filter((slot) => inTimeOfDay(slot, timeOfDay));
+  return filtered.length > 0 ? filtered : all;
 }
 
 /* -------------------------------- calendar -------------------------------- */
