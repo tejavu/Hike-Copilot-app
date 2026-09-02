@@ -76,9 +76,10 @@ function draftFromProfile(profile: Profile): Draft {
   return {
     drawnTo: profile.drawn_to ?? "",
     locations: (profile.location_pref ?? "")
-      .split(/[,;]\s*(?![A-Z]{2}\b)/)
+      .split(" · ")
       .map((part) => part.trim())
       .filter(Boolean),
+
     setups: profile.work_setup ?? [],
     workAuth: profile.work_auth ?? "",
     recentRole: profile.recent_role ?? profile.experience.map((e) => e.title).join("\n"),
