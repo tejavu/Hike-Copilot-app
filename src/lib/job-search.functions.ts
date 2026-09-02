@@ -112,7 +112,12 @@ async function searchAdzuna(
       if (where) url.searchParams.set("where", where);
 
       try {
-        const response = await fetch(url.toString());
+        // Adzuna throws the occasional 503; one quiet retry saves the search.
+        let response = await fetch(url.toString());
+        if (response.status >= 500) {
+          await new Promise((r) => setTimeout(r, 700));
+          response = await fetch(url.toString());
+        }
         if (!response.ok) {
           notes.push(`Adzuna (${country}) returned ${response.status}.`);
           return [];
