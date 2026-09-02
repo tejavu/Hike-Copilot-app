@@ -24,7 +24,7 @@ import { normaliseAnswer } from "@/lib/profile-parse.functions";
 import { writeRoadmapCopy } from "@/lib/roadmap-copy.functions";
 import { skillGap, sweepJobs } from "@/lib/job-sweep";
 import { generateRoadmap, phasePlanFor } from "@/lib/roadmap-builder";
-import { confidentSkills, readDocumentFile, WEEKLY_OPTIONS } from "@/lib/onboarding";
+import { confidentSkills, readDocumentFile, WEEKLY_OPTIONS, type WeeklyOption } from "@/lib/onboarding";
 import type { Job, Profile, SkillConfidence } from "@/lib/domain";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -254,7 +254,7 @@ export function OnboardingForm() {
 
       const merged: Profile = { ...profile, ...nextPatch } as Profile;
       await supabase.from("jobs").delete().eq("user_id", profile.id);
-      const generated = sweepJobs([form.drawnTo, ...interests], confidentSkills(form.skills), {
+      const generated = sweepJobs([form.drawnTo, ...interests], confidentSkills(form.skills, 3), {
         setups: form.setups,
         location: form.locationPref,
       });
@@ -729,7 +729,7 @@ export function OnboardingForm() {
             now, so this shapes a timeline against those.
           </CardHint>
           <div className="mt-4 flex flex-wrap gap-2">
-            {WEEKLY_OPTIONS.map((option) => (
+            {WEEKLY_OPTIONS.map((option: WeeklyOption) => (
               <button
                 key={option.hours}
                 type="button"
