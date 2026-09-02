@@ -245,7 +245,7 @@ async function addItem(supabase: Supa, userId: string, args: Record<string, unkn
     order_index: number;
   }[];
 
-  const normalise = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
+  
   const wanted = normalise(skillName);
   let skillId = skillRows.find((s) => normalise(s.name) === wanted)?.id;
   if (!skillId) {
