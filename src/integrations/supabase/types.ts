@@ -171,6 +171,7 @@ export type Database = {
           external_id: string
           format: string
           id: string
+          is_example: boolean
           last_seen_at: string
           lat: number | null
           lng: number | null
@@ -195,6 +196,7 @@ export type Database = {
           external_id: string
           format?: string
           id?: string
+          is_example?: boolean
           last_seen_at?: string
           lat?: number | null
           lng?: number | null
@@ -219,6 +221,7 @@ export type Database = {
           external_id?: string
           format?: string
           id?: string
+          is_example?: boolean
           last_seen_at?: string
           lat?: number | null
           lng?: number | null
