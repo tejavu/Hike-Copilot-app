@@ -361,12 +361,14 @@ export type Database = {
           language: string | null
           location_pref: string
           next_check_in_at: string | null
+          preferred_time_of_day: string | null
           priority_skills: string[]
           reminder_cadence: string
           reminder_pending: boolean
           selected_mentor_id: string | null
           session_focus: string | null
           target_role: string | null
+          timezone: string | null
           updated_at: string
           user_id: string
         }
@@ -379,12 +381,14 @@ export type Database = {
           language?: string | null
           location_pref?: string
           next_check_in_at?: string | null
+          preferred_time_of_day?: string | null
           priority_skills?: string[]
           reminder_cadence?: string
           reminder_pending?: boolean
           selected_mentor_id?: string | null
           session_focus?: string | null
           target_role?: string | null
+          timezone?: string | null
           updated_at?: string
           user_id: string
         }
@@ -397,12 +401,14 @@ export type Database = {
           language?: string | null
           location_pref?: string
           next_check_in_at?: string | null
+          preferred_time_of_day?: string | null
           priority_skills?: string[]
           reminder_cadence?: string
           reminder_pending?: boolean
           selected_mentor_id?: string | null
           session_focus?: string | null
           target_role?: string | null
+          timezone?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -420,9 +426,13 @@ export type Database = {
         Row: {
           agenda: string | null
           created_at: string
+          email_detail: string | null
+          email_sent_at: string | null
+          email_status: string
           ends_at: string
           id: string
           key_advice: string | null
+          meeting_format: string
           mentor_id: string
           next_check_in_at: string | null
           prep_questions: string[]
@@ -437,9 +447,13 @@ export type Database = {
         Insert: {
           agenda?: string | null
           created_at?: string
+          email_detail?: string | null
+          email_sent_at?: string | null
+          email_status?: string
           ends_at: string
           id?: string
           key_advice?: string | null
+          meeting_format?: string
           mentor_id: string
           next_check_in_at?: string | null
           prep_questions?: string[]
@@ -454,9 +468,13 @@ export type Database = {
         Update: {
           agenda?: string | null
           created_at?: string
+          email_detail?: string | null
+          email_sent_at?: string | null
+          email_status?: string
           ends_at?: string
           id?: string
           key_advice?: string | null
+          meeting_format?: string
           mentor_id?: string
           next_check_in_at?: string | null
           prep_questions?: string[]
@@ -485,6 +503,7 @@ export type Database = {
           city: string | null
           community: string | null
           company: string
+          contact_email: string | null
           country: string | null
           created_at: string
           expertise: string[]
@@ -509,6 +528,7 @@ export type Database = {
           city?: string | null
           community?: string | null
           company: string
+          contact_email?: string | null
           country?: string | null
           created_at?: string
           expertise?: string[]
@@ -533,6 +553,7 @@ export type Database = {
           city?: string | null
           community?: string | null
           company?: string
+          contact_email?: string | null
           country?: string | null
           created_at?: string
           expertise?: string[]
@@ -754,6 +775,66 @@ export type Database = {
             columns: ["phase_id"]
             isOneToOne: false
             referencedRelation: "roadmap_phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_feedback: {
+        Row: {
+          attended: boolean
+          comments: string | null
+          continue_with_mentor: boolean
+          created_at: string
+          followup_request: string | null
+          helpful: string | null
+          id: string
+          mentor_id: string | null
+          rating: number | null
+          session_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attended?: boolean
+          comments?: string | null
+          continue_with_mentor?: boolean
+          created_at?: string
+          followup_request?: string | null
+          helpful?: string | null
+          id?: string
+          mentor_id?: string | null
+          rating?: number | null
+          session_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attended?: boolean
+          comments?: string | null
+          continue_with_mentor?: boolean
+          created_at?: string
+          followup_request?: string | null
+          helpful?: string | null
+          id?: string
+          mentor_id?: string | null
+          rating?: number | null
+          session_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_feedback_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "mentors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_feedback_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "mentor_sessions"
             referencedColumns: ["id"]
           },
         ]
