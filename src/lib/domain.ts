@@ -54,6 +54,12 @@ export type Job = {
   seniority: string | null;
   liked: boolean | null;
   application_status: ApplicationStatus;
+  /** Link to the original posting, when it came from a live board. */
+  url?: string | null;
+  /** Where it came from: "Adzuna", "jobs.ch", "jobup.ch" or "Example". */
+  source?: string | null;
+  /** True for AI-written example roles — never presented as real openings. */
+  is_example?: boolean | null;
 };
 
 export type ApplicationStatus = "not_applied" | "applied" | "interviewing" | "offer";

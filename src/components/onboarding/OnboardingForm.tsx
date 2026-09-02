@@ -23,7 +23,8 @@ import { useJobs, useProfile, useUpdateJob, useUpdateProfile } from "@/hooks/use
 import { parseCvDocuments } from "@/lib/cv-parse.functions";
 import { normaliseAnswer } from "@/lib/profile-parse.functions";
 import { writeRoadmapCopy } from "@/lib/roadmap-copy.functions";
-import { LOCATION_OPTIONS, skillGap, sweepJobs } from "@/lib/job-sweep";
+import { LOCATION_OPTIONS, skillGap } from "@/lib/job-sweep";
+import { searchJobs } from "@/lib/job-search.functions";
 import { generateRoadmap, phasePlanFor } from "@/lib/roadmap-builder";
 import { confidentSkills, readDocumentFile, WEEKLY_OPTIONS, type WeeklyOption } from "@/lib/onboarding";
 import type { Job, Profile, SkillConfidence } from "@/lib/domain";
@@ -114,6 +115,7 @@ export function OnboardingForm() {
   const readDocuments = useServerFn(parseCvDocuments);
   const cleanAnswer = useServerFn(normaliseAnswer);
   const roadmapCopy = useServerFn(writeRoadmapCopy);
+  const findJobs = useServerFn(searchJobs);
 
   const [step, setStep] = useState<StepId>("documents");
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -267,19 +269,31 @@ export function OnboardingForm() {
 
       const merged: Profile = { ...profile, ...nextPatch } as Profile;
       await supabase.from("jobs").delete().eq("user_id", profile.id);
-      // Match on the skills she actually listed (confident ones weighted first),
-      // never on a generic profile.
-      const generated = sweepJobs([form.drawnTo, ...interests], [
-        ...confidentSkills(form.skills, 3),
-        ...form.skills.map((s) => s.name),
-      ], {
-        setups: form.setups,
-        locations: form.locations,
+      // Live search against the skills she actually listed, with her own
+      // confidence levels doing the weighting.
+      const result = await findJobs({
+        data: {
+          skills: form.skills,
+          interests,
+          drawnTo: form.drawnTo,
+          locations: form.locations,
+          setups: form.setups,
+          count: 6,
+        },
       });
+      if (result.jobs.length === 0) {
+        toast.error("I couldn't find openings for that profile yet", {
+          description: result.notes[0] ?? "Try adding a location or another skill.",
+        });
+      } else if (result.examplesOnly) {
+        toast.info("No live postings matched yet — these are example roles", {
+          description: "They show the shape of roles that fit you while I keep looking.",
+        });
+      }
 
       const { error } = await supabase
         .from("jobs")
-        .insert(generated.map((job) => ({ ...job, user_id: merged.id })) as never);
+        .insert(result.jobs.map((job) => ({ ...job, user_id: merged.id })) as never);
       if (error) throw error;
       setStep("jobs");
       refresh();
@@ -954,6 +968,25 @@ function JobCard({
             {skill}
           </Badge>
         ))}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+        {job.is_example ? (
+          <Badge variant="outline" className="border-dashed">
+            Example role — not a live posting
+          </Badge>
+        ) : (
+          job.source && <span>Found on {job.source}</span>
+        )}
+        {job.url && (
+          <a
+            href={job.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary underline underline-offset-2"
+          >
+            View the original posting
+          </a>
+        )}
       </div>
       <div className="mt-5 flex gap-2">
         <Button variant="outline" className="flex-1 gap-2" disabled={busy} onClick={() => void onDecide(job, false)}>
