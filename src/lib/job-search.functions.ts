@@ -154,7 +154,8 @@ async function searchAdzuna(
 
 // --------------------------------------------------------------- Firecrawl
 
-const SWISS_BOARDS = ["jobs.ch", "jobup.ch"];
+/** Only individual vacancy pages — search-result pages aren't real postings. */
+const SWISS_DETAIL_PATHS = ["jobs.ch/en/vacancies/detail", "jobup.ch/en/jobs/detail"];
 
 async function searchSwissBoards(
   terms: string[],
@@ -171,7 +172,7 @@ async function searchSwissBoards(
   if (terms.length === 0) return [];
 
   const query = [
-    SWISS_BOARDS.map((b) => `site:${b}`).join(" OR "),
+    SWISS_DETAIL_PATHS.map((p) => `site:${p}`).join(" OR "),
     terms.slice(0, 4).join(" "),
     swissCities.slice(0, 3).join(" "),
   ]
@@ -194,27 +195,27 @@ async function searchSwissBoards(
       notes.push(`Swiss job boards returned ${response.status}.`);
       return [];
     }
-    const body = (await response.json()) as {
-      data?: { url?: string; title?: string; description?: string }[];
-      web?: { url?: string; title?: string; description?: string }[];
-    };
-    const rows = body.data ?? body.web ?? [];
+    type Row = { url?: string; title?: string; description?: string };
+    const body = (await response.json()) as { data?: { web?: Row[] } | Row[]; web?: Row[] };
+    const rows: Row[] = Array.isArray(body.data)
+      ? body.data
+      : (body.data?.web ?? body.web ?? []);
     return rows
-      .filter((row) => SWISS_BOARDS.some((b) => (row.url ?? "").includes(b)))
+      .filter((row) => SWISS_DETAIL_PATHS.some((p) => (row.url ?? "").includes(p)))
       .map((row): SourcedJob => {
-        const rawTitle = tidy(row.title ?? "Role", 110);
-        // jobs.ch titles read "Frontend Engineer - Company - Zurich | jobs.ch"
-        const parts = rawTitle.split(/\s+[-–|]\s+/).filter(Boolean);
-        const title = parts[0] ?? rawTitle;
-        const company = parts[1] ?? "See posting";
+        // Titles read "Electronics Engineer (Master-Level) - Job Offer on jobs.ch"
+        const title = tidy(
+          (row.title ?? "Role").replace(/\s*[-–|]\s*(job offer on\s*)?job(s|up)\.ch.*$/i, ""),
+          110,
+        );
         const description = tidy(row.description ?? "");
         const host = (row.url ?? "").includes("jobup.ch") ? "jobup.ch" : "jobs.ch";
         return {
           title,
-          company,
-          location: parts[2] ?? swissCities[0] ?? "Switzerland",
+          company: "See posting",
+          location: swissCities[0] ?? "Switzerland",
           description: description || "Full details are on the original posting.",
-          required_skills: skillsFrom(`${rawTitle} ${description}`, terms),
+          required_skills: skillsFrom(`${title} ${description}`, terms),
           seniority: seniorityOf(title, description),
           url: row.url ?? null,
           source: host,
