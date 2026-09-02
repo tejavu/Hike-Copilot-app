@@ -26,6 +26,7 @@ import {
   useUpdateProfile,
 } from "@/hooks/useCoachData";
 import { askCoach } from "@/lib/coach-ai.functions";
+import { parseCvDocuments } from "@/lib/cv-parse.functions";
 import { sweepJobs, skillGap } from "@/lib/job-sweep";
 import { generateRoadmap } from "@/lib/roadmap-builder";
 import {
@@ -42,6 +43,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+function guessMime(name: string): string {
+  const ext = name.split(".").pop()?.toLowerCase();
+  if (ext === "pdf") return "application/pdf";
+  if (ext === "png") return "image/png";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "webp") return "image/webp";
+  if (ext === "txt" || ext === "md") return "text/plain";
+  return "application/octet-stream";
+}
+
+function toDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error(`Couldn't read ${file.name}`));
+    reader.readAsDataURL(file);
+  });
+}
+
 export function ChatView() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -53,6 +73,7 @@ export function ChatView() {
   const updateProfile = useUpdateProfile();
   const updateJob = useUpdateJob();
   const callCoach = useServerFn(askCoach);
+  const readDocuments = useServerFn(parseCvDocuments);
 
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -89,7 +110,7 @@ export function ChatView() {
     seeded.current = true;
     void (async () => {
       await say(
-        `Hi ${firstName(profile)} — I'm Ada, and I'm so glad you're here. Before we do anything clever, I need to get to know you.\n\nWe can do this one of two ways, and neither is better than the other.`,
+        `Hi ${firstName(profile)} — I'm Hike Copilot, and I'm so glad you're here. Before we do anything clever, I need to get to know you.\n\nWe can do this one of two ways, and neither is better than the other.`,
         "path_choice",
       );
       refresh();
@@ -139,11 +160,19 @@ export function ChatView() {
     }
   };
 
-  const uploadFiles = async (files: FileList) => {
+  const uploadFiles = async (files: File[]) => {
+    if (!profile || files.length === 0) return;
     setBusy(true);
     try {
       const names: string[] = [];
-      for (const file of Array.from(files)) {
+      const payload: {
+        fileName: string;
+        mimeType: string;
+        dataUrl?: string;
+        text?: string;
+      }[] = [];
+
+      for (const file of files.slice(0, 5)) {
         const path = `${user!.id}/docs/${Date.now()}-${file.name}`;
         const { error } = await supabase.storage.from("user-files").upload(path, file);
         if (error) throw error;
@@ -151,21 +180,74 @@ export function ChatView() {
           .from("user_documents")
           .insert({ user_id: user!.id, kind: "document", file_name: file.name, storage_path: path } as never);
         names.push(file.name);
+
+        const mimeType = file.type || guessMime(file.name);
+        if (mimeType.startsWith("text/") || /\.(txt|md|csv|json)$/i.test(file.name)) {
+          payload.push({ fileName: file.name, mimeType, text: await file.text() });
+        } else if (mimeType === "application/pdf" || mimeType.startsWith("image/")) {
+          payload.push({ fileName: file.name, mimeType, dataUrl: await toDataUrl(file) });
+        } else {
+          payload.push({ fileName: file.name, mimeType });
+        }
       }
+
       await say(`Uploaded: ${names.join(", ")}`, "text", null, "user");
-      await say(
-        "Got them, thank you — that's your paperwork handled. Two quick things I can't read off a document, though.\n\n" +
-          PROMPTS["q_interests"],
-      );
-      await updateProfile.mutateAsync({ onboarding_stage: "q_interests" });
-      refresh();
       toast.success("Documents saved");
+
+      const { parsed, error } = await readDocuments({ data: { files: payload } });
+
+      if (error) {
+        await say(
+          `${error}\n\nYour files are saved either way. Let's do this the quick way instead.\n\n${PROMPTS["q_interests"]}`,
+        );
+        await updateProfile.mutateAsync({ onboarding_stage: "q_interests" });
+        refresh();
+        return;
+      }
+
+      const patch: Partial<Profile> = {};
+      if (parsed.full_name && !profile.full_name) patch.full_name = parsed.full_name;
+      if (parsed.skills.length) patch.skills = parsed.skills;
+      if (parsed.interests.length) patch.interests = parsed.interests;
+      if (parsed.education.length) patch.education = parsed.education;
+      if (parsed.experience.length) patch.experience = parsed.experience;
+      if (parsed.certifications.length) patch.certifications = parsed.certifications;
+
+      const lines = [
+        parsed.summary ?? "Read it — here's what I picked up.",
+        "",
+        parsed.skills.length ? `Skills: ${parsed.skills.join(", ")}` : null,
+        parsed.interests.length ? `Leaning toward: ${parsed.interests.join(", ")}` : null,
+        parsed.education.length
+          ? `Education: ${parsed.education.map((e: { title: string }) => e.title).join(" · ")}`
+          : null,
+        parsed.experience.length
+          ? `Experience: ${parsed.experience.map((e: { title: string }) => e.title).join(" · ")}`
+          : null,
+        parsed.certifications.length ? `Certifications: ${parsed.certifications.join(", ")}` : null,
+      ].filter(Boolean) as string[];
+
+      const haveEnough = parsed.skills.length > 0 && parsed.interests.length > 0;
+      const merged: Profile = { ...profile, ...patch };
+
+      if (haveEnough) {
+        await say(
+          `${lines.join("\n")}\n\nIf anything's off, just tell me and I'll correct it. Otherwise — let's go looking for roles.`,
+        );
+        await updateProfile.mutateAsync({ ...patch, onboarding_stage: "jobs" });
+        await startJobSweep(merged);
+      } else {
+        await say(`${lines.join("\n")}\n\nOne thing I couldn't read off the page.\n\n${PROMPTS["q_interests"]}`);
+        await updateProfile.mutateAsync({ ...patch, onboarding_stage: "q_interests" });
+      }
+      refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Upload failed");
     } finally {
       setBusy(false);
     }
   };
+
 
   const startJobSweep = async (currentProfile: Profile) => {
     await supabase.from("jobs").delete().eq("user_id", currentProfile.id);
@@ -332,7 +414,7 @@ export function ChatView() {
         ))}
         {busy && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-3.5 animate-spin" /> Ada is thinking…
+            <Loader2 className="size-3.5 animate-spin" /> Hike Copilot is thinking…
           </div>
         )}
         <div ref={bottom} />
@@ -415,7 +497,7 @@ function Interactive({
   jobs: Job[];
   busy: boolean;
   onChoosePath: (path: "questions" | "upload") => Promise<void>;
-  onUpload: (files: FileList) => Promise<void>;
+  onUpload: (files: File[]) => Promise<void>;
   onDecideJob: (job: Job, liked: boolean) => Promise<void>;
 }) {
   if (message.kind === "path_choice") {
@@ -452,11 +534,15 @@ function Interactive({
           <input
             type="file"
             multiple
+            accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md"
             className="hidden"
             onChange={(e) => {
-              if (e.target.files?.length) void onChoosePath("upload").then(() => onUpload(e.target.files!));
+              if (!e.target.files?.length) return;
+              const picked = Array.from(e.target.files);
+              void onChoosePath("upload").then(() => onUpload(picked));
             }}
           />
+
         </label>
       </div>
     );
@@ -470,10 +556,11 @@ function Interactive({
           <input
             type="file"
             multiple
+            accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md"
             className="hidden"
             disabled={busy}
             onChange={(e) => {
-              if (e.target.files?.length) void onUpload(e.target.files);
+              if (e.target.files?.length) void onUpload(Array.from(e.target.files));
             }}
           />
         </label>

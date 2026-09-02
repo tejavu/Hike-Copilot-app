@@ -6,13 +6,13 @@ import { ChatView } from "@/components/chat/ChatView";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Ada — Your Career Coach for Women in Tech" },
+      { title: "Hike Copilot — Your Career Coach for Women in Tech" },
       {
         name: "description",
         content:
-          "Ada is a warm AI career coach for women in tech: find your skill gaps, close them with a real roadmap, and land the role.",
+          "Hike Copilot is a warm AI career coach for women in tech: find your skill gaps, close them with a real roadmap, and land the role.",
       },
-      { property: "og:title", content: "Ada — Your Career Coach for Women in Tech" },
+      { property: "og:title", content: "Hike Copilot — Your Career Coach for Women in Tech" },
       {
         property: "og:description",
         content: "Find your skill gaps, close them with a guided roadmap, and land the role. One step at a time.",

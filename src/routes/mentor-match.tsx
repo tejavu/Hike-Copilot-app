@@ -6,13 +6,13 @@ import { MentorMatchView } from "@/components/mentor/MentorMatchView";
 export const Route = createFileRoute("/mentor-match")({
   head: () => ({
     meta: [
-      { title: "Mentor Match — someone who's walked it | Ada" },
+      { title: "Mentor Match — someone who's walked it | Hike Copilot" },
       {
         name: "description",
         content:
           "Get matched with volunteer mentors in tech based on your goal, roadmap skill gaps, language and availability — then book sessions, prep good questions and track what you agreed to do.",
       },
-      { property: "og:title", content: "Mentor Match — someone who's walked it | Ada" },
+      { property: "og:title", content: "Mentor Match — someone who's walked it | Hike Copilot" },
       {
         property: "og:description",
         content:

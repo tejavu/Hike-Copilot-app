@@ -63,21 +63,21 @@ function shell(heading: string, intro: string, rows: [string, string][], closing
   const rowsHtml = rows
     .map(
       ([label, value]) =>
-        `<tr><td style="padding:8px 0;color:#7a6a60;font-size:13px;width:150px;">${escape(label)}</td>` +
-        `<td style="padding:8px 0;color:#2f2724;font-size:14px;font-weight:600;">${escape(value)}</td></tr>`,
+        `<tr><td style="padding:8px 0;color:#63637a;font-size:13px;width:150px;">${escape(label)}</td>` +
+        `<td style="padding:8px 0;color:#1b1b25;font-size:14px;font-weight:600;">${escape(value)}</td></tr>`,
     )
     .join("");
 
-  return `<!doctype html><html><body style="margin:0;background:#faf5f1;font-family:Georgia,'Times New Roman',serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#faf5f1;padding:28px 12px;">
+  return `<!doctype html><html><body style="margin:0;background:#f5f6fa;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f6fa;padding:28px 12px;">
     <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:20px;padding:32px;border:1px solid #ecdfd6;">
-        <tr><td style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#c4674a;font-weight:700;">Ada · Mentor Match</td></tr>
-        <tr><td style="padding-top:10px;font-size:24px;line-height:1.3;color:#2f2724;font-weight:700;">${escape(heading)}</td></tr>
-        <tr><td style="padding-top:12px;font-size:15px;line-height:1.6;color:#4c403a;">${escape(intro)}</td></tr>
-        <tr><td style="padding-top:18px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #ecdfd6;">${rowsHtml}</table></td></tr>
-        <tr><td style="padding-top:18px;font-size:14px;line-height:1.6;color:#4c403a;">${escape(closing)}</td></tr>
-        <tr><td style="padding-top:22px;font-size:12px;color:#9a8b82;line-height:1.5;">A calendar invitation (.ics) is attached so this lands in your calendar. Sent by Ada on behalf of the mentee.</td></tr>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:20px;padding:32px;border:1px solid #e3e6f0;">
+        <tr><td style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#0f6cbd;font-weight:700;">Hike Copilot · Mentor Match</td></tr>
+        <tr><td style="padding-top:10px;font-size:24px;line-height:1.3;color:#1b1b25;font-weight:700;">${escape(heading)}</td></tr>
+        <tr><td style="padding-top:12px;font-size:15px;line-height:1.6;color:#3c3c4a;">${escape(intro)}</td></tr>
+        <tr><td style="padding-top:18px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e3e6f0;">${rowsHtml}</table></td></tr>
+        <tr><td style="padding-top:18px;font-size:14px;line-height:1.6;color:#3c3c4a;">${escape(closing)}</td></tr>
+        <tr><td style="padding-top:22px;font-size:12px;color:#8a8aa0;line-height:1.5;">A calendar invitation (.ics) is attached so this lands in your calendar. Sent by Hike Copilot on behalf of the mentee.</td></tr>
       </table>
     </td></tr>
   </table>
@@ -99,9 +99,9 @@ export function buildSessionEmails(input: SessionEmailInput): BuiltEmail[] {
 
   const menteeIntro = `Your mentoring session with ${input.mentorName} is confirmed. Here's everything in one place.`;
   const menteeClosing =
-    "Bring your prepped questions — they're waiting for you in Ada. If you need to move it, reschedule in the app and we'll send a fresh confirmation.";
+    "Bring your prepped questions — they're waiting for you in Hike Copilot. If you need to move it, reschedule in the app and we'll send a fresh confirmation.";
 
-  const mentorIntro = `${input.menteeName} has booked mentoring time with you through Ada. Thank you for volunteering your hours.`;
+  const mentorIntro = `${input.menteeName} has booked mentoring time with you through Hike Copilot. Thank you for volunteering your hours.`;
   const mentorClosing = `She wants to talk about: ${input.purpose}. If you're hosting on Microsoft Teams, reply with the meeting link and it'll be added to the calendar entry.`;
 
   const asText = (heading: string, intro: string, closing: string) =>

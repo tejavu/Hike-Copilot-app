@@ -146,7 +146,7 @@ export function MentorMatchView() {
     [mentors, selectedMentorId],
   );
 
-  /** Ada's single pick — never a list to shop through. */
+  /** Hike Copilot's single pick — never a list to shop through. */
   const suggestion = useMemo(() => {
     if (!mentors || selectedMentorId) return null;
     return pickBestMentor(mentors, matchInput, { exclude: declined, timeOfDay });
