@@ -1,3 +1,5 @@
+export type SkillConfidence = { name: string; level: number };
+
 export type Profile = {
   id: string;
   email: string | null;
@@ -18,10 +20,19 @@ export type Profile = {
   onboarding_stage: string;
   onboarding_complete: boolean;
   roadmap_generated: boolean;
+  /** Broad interest signal in her own words — seeds the job sweep. */
+  drawn_to: string | null;
+  location_pref: string | null;
+  work_setup: string[];
+  work_auth: string | null;
+  recent_role: string | null;
+  weekly_hours: number | null;
+  skill_confidence: SkillConfidence[];
 };
 
 export type EducationEntry = { title: string; institution?: string; period?: string };
 export type ExperienceEntry = { title: string; company?: string; period?: string; detail?: string };
+
 
 export type ChatMessage = {
   id: string;
