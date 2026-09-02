@@ -88,8 +88,13 @@ export function EventCard({
           </div>
           <h3 className="mt-2.5 font-display text-xl leading-snug font-semibold">{event.title}</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            {event.organizer} · via {event.source}
+            {event.organizer} · {event.is_example ? "illustrative example" : `via ${event.source}`}
           </p>
+          {event.is_example && (
+            <Badge variant="outline" className="mt-2 border-dashed">
+              Example event — not a live listing
+            </Badge>
+          )}
         </div>
 
         <Button
