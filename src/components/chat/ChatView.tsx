@@ -216,15 +216,15 @@ export function ChatView() {
       const lines = [
         parsed.summary ?? "Read it — here's what I picked up.",
         "",
-        parsed.skills.length ? `**Skills:** ${parsed.skills.join(", ")}` : null,
-        parsed.interests.length ? `**Leaning toward:** ${parsed.interests.join(", ")}` : null,
+        parsed.skills.length ? `Skills: ${parsed.skills.join(", ")}` : null,
+        parsed.interests.length ? `Leaning toward: ${parsed.interests.join(", ")}` : null,
         parsed.education.length
-          ? `**Education:** ${parsed.education.map((e: { title: string }) => e.title).join(" · ")}`
+          ? `Education: ${parsed.education.map((e: { title: string }) => e.title).join(" · ")}`
           : null,
         parsed.experience.length
-          ? `**Experience:** ${parsed.experience.map((e: { title: string }) => e.title).join(" · ")}`
+          ? `Experience: ${parsed.experience.map((e: { title: string }) => e.title).join(" · ")}`
           : null,
-        parsed.certifications.length ? `**Certifications:** ${parsed.certifications.join(", ")}` : null,
+        parsed.certifications.length ? `Certifications: ${parsed.certifications.join(", ")}` : null,
       ].filter(Boolean) as string[];
 
       const haveEnough = parsed.skills.length > 0 && parsed.interests.length > 0;
