@@ -129,6 +129,49 @@ const CATALOG: Record<string, SkillPlan> = {
       detail: "Infrastructure as code if you can. Document the architecture.",
     },
   },
+  azure: {
+    course: {
+      title: "Azure Fundamentals learning path",
+      provider: "Microsoft Learn",
+      url: "https://learn.microsoft.com/training/paths/microsoft-azure-fundamentals-describe-cloud-concepts/",
+    },
+    practice: {
+      title: "Hands-on sandbox modules",
+      difficulty: "Medium",
+      target: 12,
+      detail:
+        "Free in-browser sandbox modules on Microsoft Learn — portal walkthroughs, VMs, storage, functions. One module at a time. Browse: https://learn.microsoft.com/training/browse/?products=azure&resource_type=module",
+      url: "https://learn.microsoft.com/training/browse/?products=azure&resource_type=module",
+    },
+    certify: {
+      title: "AZ-900: Microsoft Certified Azure Fundamentals",
+      provider: "Microsoft",
+      url: "https://learn.microsoft.com/credentials/certifications/azure-fundamentals/",
+    },
+    project: {
+      title: "Deploy a small app on Azure",
+      detail: "App Service or Functions, documented architecture. Infrastructure as code if you can.",
+    },
+  },
+  __aws_rest__: {
+    practice: {
+      title: "Hands-on console labs",
+      difficulty: "Medium",
+      target: 12,
+      detail:
+        "S3, IAM, Lambda, RDS — one small lab at a time. Workshops: https://workshops.aws/ · Guide repo: https://github.com/open-guides/og-aws",
+      url: "https://github.com/open-guides/og-aws",
+    },
+    certify: {
+      title: "AWS Certified Cloud Practitioner",
+      provider: "AWS",
+      url: "https://aws.amazon.com/certification/certified-cloud-practitioner/",
+    },
+    project: {
+      title: "Deploy a small app on AWS",
+      detail: "Infrastructure as code if you can. Document the architecture.",
+    },
+  },
   docker: {
     course: {
       title: "Docker Mastery",
