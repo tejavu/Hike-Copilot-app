@@ -1,7 +1,6 @@
 import { CalendarClock, Globe, Heart, Loader2, MapPin, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { MentorAvatar } from "@/components/mentor/MentorCard";
 import {
   MEETING_PREF_LABELS,
@@ -28,7 +27,7 @@ export function MatchConfirmation({
   onConfirm: () => void;
   onViewProfile: () => void;
 }) {
-  const { mentor, score, reasons, matchedAttributes } = result;
+  const { mentor, reasons, matchedAttributes } = result;
   const slots = preferredSlots(mentor, timeOfDay);
   const first = mentor.full_name.split(" ")[0];
 
@@ -77,15 +76,6 @@ export function MatchConfirmation({
             </span>
           </div>
         </div>
-        <div className="w-full sm:w-44">
-          <div className="flex items-baseline justify-between">
-            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              Compatibility
-            </p>
-            <p className="font-display text-2xl font-semibold text-primary">{score}%</p>
-          </div>
-          <Progress value={score} className="mt-2 h-1.5" />
-        </div>
       </div>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
@@ -108,11 +98,6 @@ export function MatchConfirmation({
               ))}
             </div>
           )}
-          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-            That percentage is a compatibility guide built from the preferences you gave me — skills,
-            target role, language, format and when you're free. It isn't a prediction of how the
-            relationship will go.
-          </p>
         </div>
 
         <div className="rounded-2xl border border-border p-4">

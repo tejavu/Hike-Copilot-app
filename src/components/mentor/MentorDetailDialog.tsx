@@ -30,7 +30,7 @@ export function MentorDetailDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   if (!result) return null;
-  const { mentor, score, reasons, matchedAttributes } = result;
+  const { mentor, reasons, matchedAttributes } = result;
   const slots = upcomingSlots(mentor);
 
   return (

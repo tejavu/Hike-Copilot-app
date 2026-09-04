@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
-  GUIDANCE_STYLES,
   MEETING_PREF_LABELS,
   TIME_OF_DAY_LABELS,
   type MeetingPref,
@@ -36,7 +35,7 @@ export type AssessmentDraft = {
   timezone: string;
 };
 
-const STEP_COUNT = 7;
+const STEP_COUNT = 6;
 
 const MENTORSHIP_TOPIC_OPTIONS = [
   "Resume review",
@@ -120,7 +119,7 @@ export function NeedsAssessment({
     if (step === 0) return draft.goal.trim().length > 2;
     if (step === 1) return draft.target_role.trim().length > 1;
     if (step === 2) return draft.priority_skills.length > 0;
-    if (step === 5) return draft.mentorship_topics.length > 0;
+    if (step === 4) return draft.mentorship_topics.length > 0;
     return true;
   };
 
@@ -241,42 +240,6 @@ export function NeedsAssessment({
         {step === 3 && (
           <>
             <h2 className="font-display text-2xl font-semibold">
-              What kind of guidance helps you most?
-            </h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              There's no wrong answer — mentors are good at different things.
-            </p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {GUIDANCE_STYLES.map((option) => {
-                const active = draft.guidance_style === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => set("guidance_style", option.value)}
-                    className={cn(
-                      "rounded-2xl border p-4 text-left transition-colors",
-                      active ? "border-primary bg-primary/5" : "border-border hover:bg-accent/60",
-                    )}
-                  >
-                    <span className="flex items-center gap-2 text-sm font-semibold">
-                      {option.label}
-                      {active && <Check className="size-3.5 text-primary" />}
-                    </span>
-                    <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
-                      {option.hint}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {step === 4 && (
-          <>
-            <h2 className="font-display text-2xl font-semibold">
               Language and how you'd like to meet
             </h2>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -364,7 +327,7 @@ export function NeedsAssessment({
           </>
         )}
 
-        {step === 5 && (
+        {step === 4 && (
           <>
             <h2 className="font-display text-2xl font-semibold">
               What do you want from mentorship?
@@ -425,7 +388,7 @@ export function NeedsAssessment({
           </>
         )}
 
-        {step === 6 && (
+        {step === 5 && (
           <>
             <h2 className="font-display text-2xl font-semibold">
               And if you only got one hour with her — what would you want from it?
