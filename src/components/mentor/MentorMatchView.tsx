@@ -494,20 +494,31 @@ export function MentorMatchView() {
             </div>
           )}
 
-          {pendingMentor ? (
+          {pendingMentor && pendingMatch ? (
             <section className="rounded-3xl border border-border bg-card p-6 shadow-lift md:p-8">
               <p className="text-xs font-semibold tracking-wide text-primary uppercase">
-                Request sent
+                {pendingMatch.request_email_status === "sent" ? "Request sent" : "Request saved"}
               </p>
               <h2 className="mt-2 font-display text-2xl font-semibold">
-                {pendingMentor.full_name} has your request
+                {pendingMatch.request_email_status === "sent"
+                  ? `${pendingMentor.full_name} has your request`
+                  : `Your request for ${pendingMentor.full_name} is saved`}
               </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                I sent her what you told me — your goal, what you're looking for from mentoring and
-                the focus for a first session. She'll accept or decline by email. As soon as she
-                accepts, scheduling opens here and you'll get a note in your inbox. Nothing is
-                booked until then.
-              </p>
+              {pendingMatch.request_email_status === "sent" ? (
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                  I sent her what you told me — your goal, what you're looking for from mentoring
+                  and the focus for a first session. She'll accept or decline by email. As soon as
+                  she accepts, scheduling opens here and you'll get a note in your inbox. Nothing
+                  is booked until then.
+                </p>
+              ) : (
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                  {pendingMatch.request_email_detail ??
+                    "The email to your mentor didn't go out, so she doesn't know about this yet."}{" "}
+                  Your request itself is saved — as soon as the email reaches her and she accepts,
+                  scheduling opens here.
+                </p>
+              )}
               <p className="mt-4 text-sm text-muted-foreground">
                 {pendingMentor.title} · {pendingMentor.company} ·{" "}
                 {pendingMentor.availability_summary}

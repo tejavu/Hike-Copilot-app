@@ -64,7 +64,9 @@ export function useMentorMatches() {
     queryFn: async (): Promise<MentorMatch[]> => {
       const { data, error } = await supabase
         .from("mentor_matches")
-        .select("id, mentor_id, score, reasons, matched_attributes, status")
+        .select(
+          "id, mentor_id, score, reasons, matched_attributes, status, request_email_status, request_email_detail",
+        )
         .eq("user_id", user!.id)
         .order("score", { ascending: false });
       if (error) throw error;

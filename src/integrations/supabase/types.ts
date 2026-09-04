@@ -361,6 +361,8 @@ export type Database = {
           matched_attributes: string[]
           mentor_id: string
           reasons: string[]
+          request_email_detail: string | null
+          request_email_status: string | null
           request_token: string
           requested_at: string | null
           responded_at: string | null
@@ -375,6 +377,8 @@ export type Database = {
           matched_attributes?: string[]
           mentor_id: string
           reasons?: string[]
+          request_email_detail?: string | null
+          request_email_status?: string | null
           request_token?: string
           requested_at?: string | null
           responded_at?: string | null
@@ -389,6 +393,8 @@ export type Database = {
           matched_attributes?: string[]
           mentor_id?: string
           reasons?: string[]
+          request_email_detail?: string | null
+          request_email_status?: string | null
           request_token?: string
           requested_at?: string | null
           responded_at?: string | null

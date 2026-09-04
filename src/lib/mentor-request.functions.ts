@@ -105,12 +105,26 @@ export const requestMentorMatch = createServerFn({ method: "POST" })
 
     const apiKey = process.env["RESEND_API_KEY"];
     const from = process.env["MENTOR_EMAIL_FROM"];
+
+    // Persist the real delivery outcome on the match so the UI can never claim
+    // an email went out when it didn't.
+    const persistEmailState = async (status: string, detail: string) => {
+      await context.supabase
+        .from("mentor_matches")
+        .update({
+          request_email_status: status,
+          request_email_detail: detail,
+          updated_at: new Date().toISOString(),
+        } as never)
+        .eq("user_id", context.userId)
+        .eq("mentor_id", data.mentorId);
+    };
+
     if (!apiKey || !from) {
-      return {
-        status: "not_configured",
-        detail:
-          "Your request is saved, but no verified sending domain is set up for this app yet, so the email to your mentor hasn't gone out.",
-      };
+      const detail =
+        "Your request is saved, but outgoing email isn't configured for this app yet, so the email to your mentor hasn't gone out.";
+      await persistEmailState("not_configured", detail);
+      return { status: "not_configured", detail };
     }
 
     try {
@@ -126,18 +140,19 @@ export const requestMentorMatch = createServerFn({ method: "POST" })
         }),
       });
       if (!response.ok) {
-        console.error("mentor request email failed", response.status, await response.text());
-        return {
-          status: "failed",
-          detail: "Your request is saved, but the email to your mentor didn't go out.",
-        };
+        const body = await response.text();
+        console.error("mentor request email failed", response.status, body);
+        const detail = `Your request is saved, but the email to your mentor didn't go out (delivery rejected, ${response.status}).`;
+        await persistEmailState("failed", detail);
+        return { status: "failed", detail };
       }
-      return { status: "sent", detail: "Your request is with your mentor." };
+      const detail = "Your request is with your mentor — the email was accepted for delivery.";
+      await persistEmailState("sent", detail);
+      return { status: "sent", detail };
     } catch (error) {
       console.error("mentor request email error", error);
-      return {
-        status: "failed",
-        detail: "Your request is saved, but the email service couldn't be reached.",
-      };
+      const detail = "Your request is saved, but the email service couldn't be reached.";
+      await persistEmailState("failed", detail);
+      return { status: "failed", detail };
     }
   });
