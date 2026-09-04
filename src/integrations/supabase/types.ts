@@ -741,6 +741,7 @@ export type Database = {
           detail: string | null
           difficulty: string | null
           done: boolean
+          estimated_hours: number | null
           id: string
           item_type: string
           order_index: number
@@ -760,6 +761,7 @@ export type Database = {
           detail?: string | null
           difficulty?: string | null
           done?: boolean
+          estimated_hours?: number | null
           id?: string
           item_type: string
           order_index?: number
@@ -779,6 +781,7 @@ export type Database = {
           detail?: string | null
           difficulty?: string | null
           done?: boolean
+          estimated_hours?: number | null
           id?: string
           item_type?: string
           order_index?: number
