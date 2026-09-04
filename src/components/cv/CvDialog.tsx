@@ -12,9 +12,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useProfile, useRoadmap, useUpdateProfile } from "@/hooks/useCoachData";
 import { isItemComplete } from "@/lib/domain";
-import { buildCvHtml } from "@/lib/cv-template";
+import { buildCvHtml, buildCvTex } from "@/lib/cv-template";
 
 export function CvDialog({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -39,16 +40,23 @@ function CvBody() {
   const { data: profile, isLoading } = useProfile();
   const { data: roadmap } = useRoadmap();
   const updateProfile = useUpdateProfile();
-  const [details, setDetails] = useState<{ nationality: string; dob: string; location: string; phone: string } | null>(
-    null,
-  );
+  const [details, setDetails] = useState<{ location: string; phone: string; languages: string } | null>(null);
 
   const form = details ?? {
-    nationality: profile?.nationality ?? "",
-    dob: profile?.date_of_birth ?? "",
     location: profile?.location ?? "",
     phone: profile?.phone ?? "",
+    languages: (profile?.languages ?? []).map((l) => `${l.name}: ${l.level}`).join("\n"),
   };
+
+  const languages = form.languages
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [name, ...rest] = line.split(/[:\u2014-]/);
+      return { name: (name ?? "").trim(), level: rest.join(" ").trim() };
+    })
+    .filter((l) => l.name);
 
   const earned = useMemo(() => {
     const items = roadmap?.items ?? [];
@@ -80,10 +88,11 @@ function CvBody() {
     );
   }
 
-  const html = buildCvHtml({
-    profile: { ...profile, ...{ nationality: form.nationality, date_of_birth: form.dob, location: form.location, phone: form.phone } },
+  const data = {
+    profile: { ...profile, location: form.location, phone: form.phone, languages },
     earned,
-  });
+  };
+  const html = buildCvHtml(data);
 
   const download = () => {
     const frame = document.createElement("iframe");
@@ -110,32 +119,49 @@ function CvBody() {
     toast.success("Save it as PDF in the print dialog.");
   };
 
+  const downloadTex = () => {
+    const blob = new Blob([buildCvTex(data)], { type: "application/x-tex" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${(profile.full_name ?? "cv").replace(/[^\w.-]+/g, "_").toLowerCase()}.tex`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("LaTeX file downloaded — open it in your own LaTeX editor.");
+  };
+
   const saveDetails = async () => {
-    await updateProfile.mutateAsync({
-      nationality: form.nationality,
-      date_of_birth: form.dob,
-      location: form.location,
-      phone: form.phone,
-    });
-    toast.success("Personal details saved.");
+    await updateProfile.mutateAsync({ location: form.location, phone: form.phone, languages });
+    toast.success("Details saved.");
   };
 
   return (
     <div className="space-y-5">
       <div className="grid gap-3 rounded-2xl border border-border bg-secondary/50 p-4 sm:grid-cols-2">
         <p className="text-sm font-medium sm:col-span-2">
-          Swiss CVs include a personal details block. Fill in what you're comfortable sharing.
+          Contact line and languages — Swiss employers expect a CEFR level next to each language.
         </p>
-        <Field label="Nationality" value={form.nationality} onChange={(v) => setDetails({ ...form, nationality: v })} />
-        <Field label="Date of birth" value={form.dob} onChange={(v) => setDetails({ ...form, dob: v })} />
         <Field label="Address / City" value={form.location} onChange={(v) => setDetails({ ...form, location: v })} />
         <Field label="Phone" value={form.phone} onChange={(v) => setDetails({ ...form, phone: v })} />
-        <div className="flex gap-2 sm:col-span-2">
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label className="text-xs">Languages — one per line, e.g. "German: C1"</Label>
+          <Textarea
+            rows={3}
+            value={form.languages}
+            onChange={(e) => setDetails({ ...form, languages: e.target.value })}
+            className="bg-card"
+            placeholder={"English: C2\nGerman: B2\nFrench: A2"}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2 sm:col-span-2">
           <Button variant="secondary" onClick={() => void saveDetails()} disabled={updateProfile.isPending}>
             Save details
           </Button>
           <Button onClick={download} className="gap-2">
             <Download className="size-4" /> Download PDF
+          </Button>
+          <Button variant="outline" onClick={downloadTex} className="gap-2">
+            <Download className="size-4" /> Download as .tex
           </Button>
         </div>
       </div>
