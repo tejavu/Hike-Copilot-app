@@ -1,4 +1,5 @@
 import type { EducationEntry, ExperienceEntry, LanguageEntry, ProjectEntry } from "./domain";
+import { sortByPeriodDesc } from "./cv-order";
 
 type CvProfile = {
   full_name: string | null;
@@ -6,6 +7,8 @@ type CvProfile = {
   phone: string | null;
   location: string | null;
   goal: string | null;
+  /** Optional, user-written. Renders as a bare line under the header, or not at all. */
+  summary?: string | null;
   skills: string[];
   education: EducationEntry[];
   experience: ExperienceEntry[];
@@ -117,8 +120,8 @@ function collect({ profile, earned }: CvData) {
 export function buildCvHtml(data: CvData): string {
   const { profile, earned } = data;
   const { city, certificates, projects, own, newlyLearnt, courses, languages } = collect(data);
-  const experience = [...(profile.experience ?? [])].reverse();
-  const education = [...(profile.education ?? [])].reverse();
+  const experience = sortByPeriodDesc(profile.experience ?? [], "experience entry");
+  const education = sortByPeriodDesc(profile.education ?? [], "education entry");
 
   const experienceHtml =
     experience.length > 0
@@ -167,14 +170,9 @@ export function buildCvHtml(data: CvData): string {
     .map((lang) => skillRow(lang.name, lang.level || "—"))
     .join("");
 
-  const summary =
-    profile.goal?.trim() ||
-    [
-      own.length ? `Working with ${own.slice(0, 4).join(", ")}` : "",
-      newlyLearnt.length ? `currently building ${newlyLearnt.slice(0, 3).join(", ")}` : "",
-    ]
-      .filter(Boolean)
-      .join(", ");
+  // Optional and user-written only: no heading, no derived filler, nothing at
+  // all when she hasn't written one.
+  const summary = profile.summary?.trim() ?? "";
 
   return `<!doctype html><html lang="en"><head><meta charset="utf-8" />
 <title>${esc(profile.full_name) || "Curriculum Vitae"} — CV</title>
@@ -196,6 +194,7 @@ export function buildCvHtml(data: CvData): string {
   ul { margin: 2px 0 0; padding-left: 16px; }
   li { margin: 0 0 1px; }
   .muted { margin: 2px 0 0; font-style: italic; }
+  .summary-text { margin: 6px 0 0; }
 </style></head>
 <body>
   <header>
@@ -204,7 +203,7 @@ export function buildCvHtml(data: CvData): string {
     <p>${esc(profile.phone) || "Phone"} | ${esc(profile.email) || "email@example.com"}</p>
   </header>
 
-  ${summary ? `<h2>Profile</h2><p>${esc(summary)}</p>` : ""}
+  ${summary ? `<p class="summary-text">${esc(summary)}</p>` : ""}
 
   <h2>Professional Experience</h2>
   ${experienceHtml}
@@ -250,10 +249,10 @@ function texItems(items: string[]): string {
 export function buildCvTex(data: CvData): string {
   const { profile } = data;
   const { city, certificates, projects, own, newlyLearnt, courses, languages } = collect(data);
-  const experience = [...(profile.experience ?? [])].reverse();
-  const education = [...(profile.education ?? [])].reverse();
+  const experience = sortByPeriodDesc(profile.experience ?? [], "experience entry");
+  const education = sortByPeriodDesc(profile.education ?? [], "education entry");
 
-  const summary = profile.goal?.trim() || (own.length ? `Working with ${own.slice(0, 4).join(", ")}.` : "");
+  const summary = profile.summary?.trim() ?? "";
 
   const experienceTex =
     experience
@@ -353,7 +352,7 @@ export function buildCvTex(data: CvData): string {
 
 \\vspace{4pt}
 
-${summary ? `\\cvsection{Profile}\n${tex(summary)}\n` : ""}
+${summary ? `${tex(summary)}\n\\vspace{4pt}\n` : ""}
 \\cvsection{Professional Experience}
 
 ${experienceTex}
