@@ -17,7 +17,13 @@ export function useMentors() {
   return useQuery({
     queryKey: ["mentors"],
     queryFn: async (): Promise<Mentor[]> => {
-      const { data, error } = await supabase.from("mentors").select("*").order("full_name");
+      // contact_email is deliberately excluded: mentor addresses are server-only.
+      const { data, error } = await supabase
+        .from("mentors")
+        .select(
+          "id, external_id, full_name, title, company, bio, expertise, role_track, seniority, languages, city, country, lat, lng, meeting_pref, availability_summary, topics, community, years_experience, slots, is_demo, created_at",
+        )
+        .order("full_name");
       if (error) throw error;
       return (data ?? []) as unknown as Mentor[];
     },
