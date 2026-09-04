@@ -335,7 +335,7 @@ export function buildCvTex(data: CvData): string {
     ? `\\cvsection{Projects}\n\n${projects
         .map(
           (project) =>
-            `\\textbf{${tex(project.title)}} \\hfill ${tex(project.period)} \\\\{}\n${tex(project.summary)}\n${texItems(
+            `\\textbf{${tex(project.title)}} \\hfill \\textbf{${tex(project.period)}} \\\\{}\n${tex(project.summary)}\n${texItems(
               project.bullets,
             )}\n\\vspace{4pt}\n`,
         )
