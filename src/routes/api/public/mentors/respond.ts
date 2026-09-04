@@ -85,9 +85,8 @@ async function respond(request: Request): Promise<Response> {
     .eq("id", match.user_id)
     .maybeSingle();
 
-  const apiKey = process.env["RESEND_API_KEY"];
-  const from = process.env["MENTOR_EMAIL_FROM"];
-  if (apiKey && from && profile?.email) {
+  const { sendEmail, emailConfigured } = await import("@/lib/email-send.server");
+  if (emailConfigured() && profile?.email) {
     const email = buildMentorReadyEmail({
       menteeName: profile.full_name || "there",
       mentorName,
@@ -97,20 +96,12 @@ async function respond(request: Request): Promise<Response> {
       appUrl: `${appUrl()}/mentor-match`,
     });
     try {
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          from,
-          to: [profile.email],
-          subject: email.subject,
-          html: email.html,
-          text: email.text,
-        }),
+      await sendEmail({
+        to: profile.email,
+        subject: email.subject,
+        html: email.html,
+        text: email.text,
       });
-      if (!response.ok) {
-        console.error("mentor ready email failed", response.status, await response.text());
-      }
     } catch (sendError) {
       console.error("mentor ready email error", sendError);
     }

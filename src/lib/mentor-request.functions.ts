@@ -103,8 +103,7 @@ export const requestMentorMatch = createServerFn({ method: "POST" })
       declineUrl: `${base}&action=decline`,
     });
 
-    const apiKey = process.env["RESEND_API_KEY"];
-    const from = process.env["MENTOR_EMAIL_FROM"];
+    const { sendEmail, emailConfigured } = await import("@/lib/email-send.server");
 
     // Persist the real delivery outcome on the match so the UI can never claim
     // an email went out when it didn't.
@@ -120,7 +119,7 @@ export const requestMentorMatch = createServerFn({ method: "POST" })
         .eq("mentor_id", data.mentorId);
     };
 
-    if (!apiKey || !from) {
+    if (!emailConfigured()) {
       const detail =
         "Your request is saved, but outgoing email isn't configured for this app yet, so the email to your mentor hasn't gone out.";
       await persistEmailState("not_configured", detail);
@@ -128,21 +127,14 @@ export const requestMentorMatch = createServerFn({ method: "POST" })
     }
 
     try {
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          from,
-          to: [MENTOR_EMAIL_REDIRECT],
-          subject: email.subject,
-          html: email.html,
-          text: email.text,
-        }),
+      const result = await sendEmail({
+        to: MENTOR_EMAIL_REDIRECT,
+        subject: email.subject,
+        html: email.html,
+        text: email.text,
       });
-      if (!response.ok) {
-        const body = await response.text();
-        console.error("mentor request email failed", response.status, body);
-        const detail = `Your request is saved, but the email to your mentor didn't go out (delivery rejected, ${response.status}).`;
+      if (!result.ok) {
+        const detail = `Your request is saved, but the email to your mentor didn't go out (delivery rejected, ${result.status}).`;
         await persistEmailState("failed", detail);
         return { status: "failed", detail };
       }
