@@ -656,6 +656,7 @@ export type Database = {
           id: string
           interests: string[]
           languages: Json
+          linkedin: string | null
           location: string | null
           location_pref: string | null
           nationality: string | null
@@ -672,6 +673,7 @@ export type Database = {
           timeline: string | null
           timeline_months: number | null
           updated_at: string
+          websites: Json | null
           weekly_hours: number | null
           work_auth: string | null
           work_setup: string[]
@@ -689,6 +691,7 @@ export type Database = {
           id: string
           interests?: string[]
           languages?: Json
+          linkedin?: string | null
           location?: string | null
           location_pref?: string | null
           nationality?: string | null
@@ -705,6 +708,7 @@ export type Database = {
           timeline?: string | null
           timeline_months?: number | null
           updated_at?: string
+          websites?: Json | null
           weekly_hours?: number | null
           work_auth?: string | null
           work_setup?: string[]
@@ -722,6 +726,7 @@ export type Database = {
           id?: string
           interests?: string[]
           languages?: Json
+          linkedin?: string | null
           location?: string | null
           location_pref?: string | null
           nationality?: string | null
@@ -738,6 +743,7 @@ export type Database = {
           timeline?: string | null
           timeline_months?: number | null
           updated_at?: string
+          websites?: Json | null
           weekly_hours?: number | null
           work_auth?: string | null
           work_setup?: string[]
