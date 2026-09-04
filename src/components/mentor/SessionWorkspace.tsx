@@ -29,12 +29,18 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { MentorAvatar } from "@/components/mentor/MentorCard";
-import { useAddActions, useToggleAction, useUpdateSession } from "@/hooks/useMentorData";
+import {
+  useAddActions,
+  useSavePreferences,
+  useToggleAction,
+  useUpdateSession,
+} from "@/hooks/useMentorData";
 import { generateMentorPrep } from "@/lib/mentors.functions";
 import {
   buildSessionIcs,
   downloadIcsFile,
   fallbackPrep,
+  cooldownEndsAt,
   formatSlot,
   nextCheckInFrom,
   relativeDays,
@@ -61,6 +67,7 @@ export function UpcomingSessionCard({
   onCancelled?: () => void;
 }) {
   const update = useUpdateSession();
+  const savePreferences = useSavePreferences();
   const [questions, setQuestions] = useState<string[]>(session.prep_questions);
   const [agenda, setAgenda] = useState(session.agenda ?? "");
   const [loadingPrep, setLoadingPrep] = useState(false);
@@ -188,7 +195,12 @@ export function UpcomingSessionCard({
                 { id: session.id, patch: { status: "cancelled" } },
                 {
                   onSuccess: () => {
-                    toast.success("Cancelled. No guilt — book again whenever.");
+                    // Cancelling pauses new mentor requests for a while, so a
+                    // volunteer's time isn't held and dropped repeatedly.
+                    savePreferences.mutate({ cooldown_until: cooldownEndsAt() });
+                    toast.success("Cancelled.", {
+                      description: `No guilt. You can request a new mentor again after ${new Date(cooldownEndsAt()).toLocaleDateString(undefined, { day: "numeric", month: "long" })}.`,
+                    });
                     onCancelled?.();
                   },
                 },

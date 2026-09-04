@@ -60,7 +60,23 @@ export type MentorPreferences = {
   completed_at: string | null;
   preferred_time_of_day: TimeOfDay | null;
   timezone: string | null;
+  /** Set when a session is cancelled: no new mentor request until this passes. */
+  cooldown_until: string | null;
 };
+
+/** How long after cancelling a session before a new mentor can be requested. */
+export const MENTOR_COOLDOWN_DAYS = 30;
+
+export function cooldownEndsAt(from: Date = new Date()): string {
+  return new Date(from.getTime() + MENTOR_COOLDOWN_DAYS * 864e5).toISOString();
+}
+
+/** Returns the end date when the cooldown is still running, else null. */
+export function activeCooldown(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const until = new Date(value);
+  return until.getTime() > Date.now() ? until : null;
+}
 
 export type MatchStatus =
   | "suggested"
