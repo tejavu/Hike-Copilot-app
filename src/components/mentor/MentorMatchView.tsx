@@ -648,6 +648,11 @@ export function MentorMatchView() {
                   }}
                 />
               </>
+            ) : bookingPaused ? (
+              <EmptyState
+                title="Mentoring is paused"
+                body={`Because a session was cancelled, new bookings open again on ${cooldownDate}. Your mentor, notes and past sessions all stay as they are.`}
+              />
             ) : (
               <EmptyState
                 title="Nothing on the calendar"
@@ -655,6 +660,7 @@ export function MentorMatchView() {
                 action={<Button onClick={() => setScheduleFor(selectedMentor)}>Pick a time</Button>}
               />
             )}
+
 
             {awaitingFeedback.map((session) => (
               <div
