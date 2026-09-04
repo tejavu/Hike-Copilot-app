@@ -1,27 +1,25 @@
-# Fix mentor-request 401: route email straight to Resend
+# Optional CV summary + reliable newest-first ordering
 
-## What I found (verified, nothing changed yet)
+## What changes for you
 
-**1. Is the mentor-request path using the shared helper?** Yes. `requestMentorMatch` in `src/lib/mentor-request.functions.ts` imports `sendEmail` / `emailConfigured` from `src/lib/email-send.server.ts`. There are no remaining direct `api.resend.com` calls anywhere in the app; all three email paths (mentor request, mentor-accepted notice, session confirmation) go through the shared helper, which posts to the Lovable connector gateway.
+1. **A short summary line on your CV.** Fully optional and written by you. If you write one it appears as a single line under your name, with no heading. If you leave it blank, nothing shows — no placeholder, no nudge.
+2. **A place to write it.** A small optional text box in the CV panel, labelled "Add a short summary if you'd like one" — never presented as a required step.
+3. **Experience and education always show newest first**, worked out from the dates you actually wrote, instead of trusting the order things happen to be stored in. This applies to the CV (both the printable version and the .tex download) and to the onboarding review screen.
 
-**2. Is gateway routing still correct?** No. The key the running app holds today is a genuine Resend key (`re_...`, 36 chars), not the Lovable connector key (`lov...`, 37 chars) the gateway fix was built for. The gateway rejects it with `401 Credential not found`; that is the exact 401 you see, and the one recorded in the app's server log.
+## Ordering rules
 
-Why my earlier "test send arrived" was misleading: the test ran from my sandbox shell, which still holds a stale copy of the old `lov...` connector key. That copy works through the gateway, so the test passed, but the app itself already had the new `re_` key and never could. Sending with the app's real key straight to Resend (`Authorization: Bearer RESEND_API_KEY`) is accepted, and Resend reports it is a valid send-only key, which is exactly what we need.
+A small helper reads the free-text period ("September 2021 -- September 2023", "July 2017 -- May 2021", "September 2024 -- ongoing") and works out an end date to sort by:
 
-**3. Verdict:** the code path is right; the routing is wrong for the key you now have. Switch the shared helper from the connector gateway to a direct Resend call.
+- "ongoing" / "present" / "current" / "now" counts as the latest possible date, so it sorts to the top.
+- Otherwise the second date in the range is used; if there's only one date, that one is used.
+- Entries whose period can't be understood go after all the sortable ones, keeping their existing order among themselves, and a warning is logged so it's visible rather than silently wrong.
 
-## The fix
+Because sorting happens at display time, nothing that creates entries — CV parsing, onboarding, chat, anything added later — has to keep the order right.
 
-- Change `sendEmail` in `src/lib/email-send.server.ts` to POST to `https://api.resend.com/emails` with `Authorization: Bearer ${RESEND_API_KEY}` and drop the `X-Connection-Api-Key` / `LOVABLE_API_KEY` requirement from `emailConfigured()` (only `RESEND_API_KEY` and `MENTOR_EMAIL_FROM` needed).
-- Nothing else changes: same helper signature, same `sent` / `failed` / `not_configured` persistence, same "Request sent" vs "Request saved, email not sent" wording, same redirect of mentor mail to tejes478@gmail.com, same sandbox sender `onboarding@resend.dev`.
-- Callers (`mentor-request.functions.ts`, `mentor-email.functions.ts`, `routes/api/public/mentors/respond.ts`) are untouched.
+## Technical notes
 
-## Verification
-
-- Typecheck and build.
-- Call the send helper once with the app's actual key (not my shell copy) to tejes478@gmail.com and confirm Resend returns 200 with an id.
-- Request a mentor in the preview and confirm the saved `request_email_status` is `sent` and the card no longer shows the 401 notice.
-
-## Remaining limit (unchanged)
-
-Sandbox sender only delivers to the Resend account owner's address. Mentor emails go to tejes478@gmail.com so they will arrive; a mentee at any other address will still be refused by Resend, and the app will say so honestly. A verified sending domain removes that later.
+- **New `src/lib/cv-order.ts`**: `parsePeriodEnd(period)` returning a sortable timestamp or `null`, and `sortByPeriodDesc(entries)` doing a stable partition (parseable sorted desc, then unparseable in original order) with `console.warn` for each unparseable non-empty period. Month-name and numeric-month formats, plus bare years.
+- **`src/lib/cv-template.ts`**: adopt the attached version's `buildCvHtml` body and styles (including `.summary-text` and the `profile.summary` line), but reconciled with this codebase rather than dropped in verbatim — the attached file assumes `linkedin`/`websites` fields that don't exist on `Profile` here, and drops `buildCvTex`, which the .tex download uses. Keep the existing exported `CvData`/`collect`/`buildCvTex`, remove the derived-`goal` "Profile" section, and route both `buildCvHtml` and `buildCvTex` through `sortByPeriodDesc` instead of the current `.reverse()`.
+- **Data**: add a nullable `summary text` column to `profiles` via migration (existing RLS/grants unchanged), add `summary: string | null` to `Profile` in `src/lib/domain.ts`, and to `CvProfile`.
+- **`src/components/cv/CvDialog.tsx`**: add the optional summary textarea alongside the existing location/phone/languages fields, saved through the existing `useUpdateProfile` flow, and pass it into the CV data.
+- **`src/components/onboarding/OnboardingForm.tsx`** review step: display experience/education through the same sort helper.
