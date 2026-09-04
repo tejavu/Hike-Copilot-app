@@ -358,6 +358,7 @@ async function findJobRecommendations(supabase: Supa, userId: string, args: Reco
     drawnTo: profile.drawn_to ?? "",
     locations: (profile.location_pref ?? "").split(" · ").map((l) => l.trim()).filter(Boolean),
     setups: profile.work_setup ?? [],
+    recentRole: profile.recent_role ?? "",
     count,
   });
 
