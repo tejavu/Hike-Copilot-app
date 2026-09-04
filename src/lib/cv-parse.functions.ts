@@ -49,12 +49,12 @@ const EMPTY: ParsedCv = {
 
 const SYSTEM = `You extract structured career data from uploaded documents (CVs, transcripts, certificates).
 Return ONLY minified JSON, no prose, no markdown fences, matching exactly:
-{"full_name":string|null,"interests":string[],"skills":string[],"education":[{"title":string,"institution":string,"period":string}],"experience":[{"title":string,"company":string,"period":string,"detail":string}],"projects":[{"title":string,"detail":string,"period":string,"url":string}],"certifications":string[],"summary":string}
+{"full_name":string|null,"interests":string[],"skills":string[],"education":[{"title":string,"institution":string,"period":string}],"experience":[{"title":string,"company":string,"period":string,"location":string,"detail":string,"bullets":string[]}],"projects":[{"title":string,"detail":string,"period":string,"url":string}],"certifications":string[],"summary":string}
 Rules:
 - skills: concrete tools, languages, frameworks, methods (max 15).
 - interests: tech areas the person clearly leans toward, e.g. "frontend", "data science", "cloud" (max 6). Infer from their work if not stated.
 - education: title is the degree and field, institution is the school, period is the dates exactly as written (e.g. "2021 – 2023").
-- experience: EVERY paid role, internship, working-student job, apprenticeship, research assistantship and volunteer role in the document — never skip internships, and never merge two roles into one. title is the job title only, company is the employer only, period is the dates only, detail is one line on what was done there.
+- experience: EVERY paid role, internship, working-student job, apprenticeship, research assistantship and volunteer role in the document — never skip internships, and never merge two roles into one. title is the job title only, company is the employer only, period is the dates only, detail is one short line summarising the role. location is the city and country of the role if printed. bullets is 2-4 short lines taken from the document describing what was actually done and achieved there — keep the person's own facts, numbers, tools and outcomes, rewritten concisely in third-person-free plain style (start with a verb, no "I"). Never invent bullets; if the document gives none for that role, return [].
 - projects: personal, academic or side projects (max 8). title is the project name only, detail is one line on what it did/achieved, period is the dates, url only if a link is printed.
 - Keep dates out of title/company/institution fields — they belong in period.
 - certifications: certificate/course names only (max 10).
@@ -79,7 +79,9 @@ function toStringList(value: unknown, limit: number): string[] {
  * The model sometimes answers with plain strings instead of objects, so both
  * shapes are accepted and normalised into the structured entry we store.
  */
-function toEntryList<T extends Record<string, string | undefined>>(
+type EntryValue = string | string[] | undefined;
+
+function toEntryList<T extends Record<string, EntryValue>>(
   value: unknown,
   limit: number,
   fromString: (line: string) => T,
@@ -91,7 +93,7 @@ function toEntryList<T extends Record<string, string | undefined>>(
     if (typeof item === "string" && item.trim().length > 1) out.push(fromString(item.trim()));
     else if (item && typeof item === "object") {
       const entry = fromObject(item as Record<string, unknown>);
-      if (entry["title"]?.trim()) out.push(entry);
+      if (typeof entry["title"] === "string" && entry["title"].trim()) out.push(entry);
     }
     if (out.length >= limit) break;
   }
@@ -103,10 +105,23 @@ function str(obj: Record<string, unknown>, key: string): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function clean<T extends Record<string, string | undefined>>(entry: T): T {
-  const out = {} as Record<string, string>;
-  for (const [key, value] of Object.entries(entry)) if (value) out[key] = value;
+function clean<T extends Record<string, EntryValue>>(entry: T): T {
+  const out = {} as Record<string, string | string[]>;
+  for (const [key, value] of Object.entries(entry)) {
+    if (Array.isArray(value)) {
+      if (value.length) out[key] = value;
+    } else if (value) out[key] = value;
+  }
   return out as T;
+}
+
+/** Achievement lines under a role: trimmed, de-bulleted, at most four. */
+function toBullets(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === "string" ? item.replace(/^[-•*\s]+/, "").trim() : ""))
+    .filter((item) => item.length > 3)
+    .slice(0, 4);
 }
 
 /**
@@ -213,7 +228,9 @@ export const parseCvDocuments = createServerFn({ method: "POST" })
             title: str(o, "title"),
             company: str(o, "company"),
             period: str(o, "period"),
+            location: str(o, "location"),
             detail: str(o, "detail"),
+            bullets: toBullets(o["bullets"]),
           }),
       ),
       projects: toEntryList<ParsedProject>(
