@@ -38,20 +38,20 @@ function parsePoint(raw: string): number | null {
 
   const named = text.match(/([A-Za-z]{3,9})\.?\s*,?\s*(\d{4})/);
   if (named) {
-    const month = MONTHS[named[1].toLowerCase()];
-    if (month !== undefined) return Date.UTC(Number(named[2]), month, 1);
+    const month = MONTHS[(named[1] ?? "").toLowerCase()];
+    if (month !== undefined) return Date.UTC(Number(named[2] ?? 0), month, 1);
   }
 
   const numeric = text.match(/(\d{1,2})[./](\d{4})/);
   if (numeric) {
-    const month = Number(numeric[1]);
-    if (month >= 1 && month <= 12) return Date.UTC(Number(numeric[2]), month - 1, 1);
+    const month = Number(numeric[1] ?? 0);
+    if (month >= 1 && month <= 12) return Date.UTC(Number(numeric[2] ?? 0), month - 1, 1);
   }
 
   const iso = text.match(/(\d{4})[-/](\d{1,2})/);
   if (iso) {
-    const month = Number(iso[2]);
-    if (month >= 1 && month <= 12) return Date.UTC(Number(iso[1]), month - 1, 1);
+    const month = Number(iso[2] ?? 0);
+    if (month >= 1 && month <= 12) return Date.UTC(Number(iso[1] ?? 0), month - 1, 1);
   }
 
   const year = text.match(/\b(19|20)\d{2}\b/);
@@ -72,7 +72,7 @@ export function parsePeriodEnd(period: string | null | undefined): number | null
   const parts = halves(text);
   if (parts.length === 0) return null;
   // Second date if there is a range, otherwise the only date given.
-  return parsePoint(parts[parts.length - 1]) ?? parsePoint(parts[0]);
+  return parsePoint(parts[parts.length - 1] ?? "") ?? parsePoint(parts[0] ?? "");
 }
 
 /**
