@@ -10,18 +10,15 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { formatSlot, type MentorSession, type SessionFeedback } from "@/lib/mentors";
+import { formatSlot, type MentorSession } from "@/lib/mentors";
 
 export type FeedbackDraft = {
   attended: boolean;
   rating: number | null;
   helpful: string;
   comments: string;
-  continueWithMentor: boolean;
-  followupRequest: string;
 };
 
 /** Simple, warm post-session prompt: did it happen, was it useful, what next. */
