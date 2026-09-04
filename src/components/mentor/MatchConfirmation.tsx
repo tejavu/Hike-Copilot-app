@@ -46,7 +46,7 @@ export function MatchConfirmation({
       </h2>
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
         Based on what you told me and what's on your roadmap, {first} is the strongest fit in the
-        volunteer directory right now. Read why, then confirm — or ask me for someone else.
+        volunteer directory right now. Read why, then confirm.
       </p>
 
       <div className="mt-6 flex flex-wrap items-start gap-4 rounded-3xl border border-border bg-accent/30 p-5">
@@ -120,7 +120,7 @@ export function MatchConfirmation({
           {slots.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">
               She hasn't published openings for the next few weeks. Confirm her anyway and I'll
-              watch for times, or ask me for a different match.
+              watch for times.
             </p>
           ) : (
             <ul className="mt-2 space-y-1.5 text-sm">
