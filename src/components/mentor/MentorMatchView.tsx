@@ -147,8 +147,8 @@ export function MentorMatchView() {
   /** Hike Copilot's single pick — never a list to shop through. */
   const suggestion = useMemo(() => {
     if (!mentors || selectedMentorId) return null;
-    return pickBestMentor(mentors, matchInput, { exclude: declined, timeOfDay });
-  }, [mentors, matchInput, declined, timeOfDay, selectedMentorId]);
+    return pickBestMentor(mentors, matchInput, { timeOfDay });
+  }, [mentors, matchInput, timeOfDay, selectedMentorId]);
 
   const selectedResult = useMemo(
     () => ranked.find((row) => row.mentor.id === selectedMentorId) ?? null,
