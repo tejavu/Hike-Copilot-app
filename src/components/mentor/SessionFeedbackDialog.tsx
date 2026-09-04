@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { formatSlot, type MentorSession } from "@/lib/mentors";
+import { formatSlot, type MentorSession, type SessionFeedback } from "@/lib/mentors";
 
 export type FeedbackDraft = {
   attended: boolean;
