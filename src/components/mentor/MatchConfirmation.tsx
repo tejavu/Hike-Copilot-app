@@ -1,7 +1,6 @@
 import { CalendarClock, Globe, Heart, Loader2, MapPin, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { MentorAvatar } from "@/components/mentor/MentorCard";
 import {
   MEETING_PREF_LABELS,
@@ -28,7 +27,7 @@ export function MatchConfirmation({
   onConfirm: () => void;
   onViewProfile: () => void;
 }) {
-  const { mentor, score, reasons, matchedAttributes } = result;
+  const { mentor, reasons, matchedAttributes } = result;
   const slots = preferredSlots(mentor, timeOfDay);
   const first = mentor.full_name.split(" ")[0];
 
