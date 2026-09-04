@@ -143,29 +143,10 @@ export function MatchConfirmation({
           {confirming ? <Loader2 className="size-4 animate-spin" /> : <Heart className="size-4" />}
           Confirm {first} and pick a time
         </Button>
-        <Button
-          variant="outline"
-          className="gap-2"
-          disabled={!canRematch || rematching}
-          onClick={onRematch}
-        >
-          {rematching ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <RefreshCw className="size-4" />
-          )}
-          Match me with someone else
-        </Button>
         <Button variant="ghost" onClick={onViewProfile}>
           See her full profile
         </Button>
       </div>
-      {!canRematch && (
-        <p className="mt-3 text-xs text-muted-foreground">
-          That's everyone in the volunteer directory who fits what you asked for. Update what you
-          need and I'll look again.
-        </p>
-      )}
       {mentor.is_demo && (
         <p className="mt-4 rounded-2xl bg-muted p-3 text-xs leading-relaxed text-muted-foreground">
           Demo profile — a clearly-labelled stand-in so the whole mentoring flow works end to end,
