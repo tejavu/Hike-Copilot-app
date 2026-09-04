@@ -437,7 +437,7 @@ export function MentorMatchView() {
           <div className="flex flex-wrap items-start justify-between gap-3 rounded-3xl border border-border bg-card p-5">
             <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
               You don't have to compare profiles or pick from a list — I've matched you with one
-              person from the directory who fits what you asked for.
+              person from the directory who fits what you asked for, and I ask her on your behalf.
             </p>
             <Button
               variant="outline"
@@ -450,7 +450,45 @@ export function MentorMatchView() {
             </Button>
           </div>
 
-          {suggestion ? (
+          {lastDeclinedMentor && !pendingMentor && (
+            <div className="rounded-3xl border border-border bg-muted/40 p-5">
+              <h3 className="font-display text-lg font-semibold">
+                {lastDeclinedMentor.full_name.split(" ")[0]} can't take this on right now
+              </h3>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                Mentors volunteer their time, so availability comes and goes — this says nothing
+                about you or your request. I've found the next best fit below and I can ask her for
+                you.
+              </p>
+            </div>
+          )}
+
+          {pendingMentor ? (
+            <section className="rounded-3xl border border-border bg-card p-6 shadow-lift md:p-8">
+              <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+                Request sent
+              </p>
+              <h2 className="mt-2 font-display text-2xl font-semibold">
+                {pendingMentor.full_name} has your request
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                I sent her what you told me — your goal, what you're looking for from mentoring and
+                the focus for a first session. She'll accept or decline by email. As soon as she
+                accepts, scheduling opens here and you'll get a note in your inbox. Nothing is
+                booked until then.
+              </p>
+              <p className="mt-4 text-sm text-muted-foreground">
+                {pendingMentor.title} · {pendingMentor.company} ·{" "}
+                {pendingMentor.availability_summary}
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => setShowProfile(true)}>
+                  See her full profile
+                </Button>
+              </div>
+            </section>
+          ) : suggestion ? (
+
             <MatchConfirmation
               result={suggestion}
               timeOfDay={timeOfDay}
