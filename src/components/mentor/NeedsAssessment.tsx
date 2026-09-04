@@ -36,7 +36,16 @@ export type AssessmentDraft = {
   timezone: string;
 };
 
-const STEP_COUNT = 6;
+const STEP_COUNT = 7;
+
+const MENTORSHIP_TOPIC_OPTIONS = [
+  "Resume review",
+  "Interview prep",
+  "Career transition advice",
+  "Technical guidance",
+  "Networking introductions",
+  "General encouragement",
+];
 
 const localTimezone = () => {
   try {
