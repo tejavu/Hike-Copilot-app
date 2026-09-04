@@ -87,8 +87,7 @@ export function ScheduleDialog({
 
         {slots.length === 0 ? (
           <p className="rounded-2xl bg-muted p-4 text-sm text-muted-foreground">
-            She hasn't published any openings for the next few weeks. I'll keep watching for times —
-            or ask me to match you with someone else.
+            She hasn't published any openings for the next few weeks. I'll keep watching for times.
           </p>
         ) : (
           <div className="space-y-4">

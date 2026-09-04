@@ -1,4 +1,4 @@
-import { CalendarClock, Globe, Heart, Loader2, MapPin, RefreshCw, Star } from "lucide-react";
+import { CalendarClock, Globe, Heart, Loader2, MapPin, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -13,25 +13,19 @@ import {
 
 /**
  * The mentee doesn't shop around: Hike Copilot picks one best-fit mentor and explains
- * why. She either confirms, or asks for a different match.
+ * why. She confirms, then books a session.
  */
 export function MatchConfirmation({
   result,
   timeOfDay,
   confirming,
-  rematching,
-  canRematch,
   onConfirm,
-  onRematch,
   onViewProfile,
 }: {
   result: MatchResult;
   timeOfDay: TimeOfDay | null;
   confirming: boolean;
-  rematching: boolean;
-  canRematch: boolean;
   onConfirm: () => void;
-  onRematch: () => void;
   onViewProfile: () => void;
 }) {
   const { mentor, score, reasons, matchedAttributes } = result;
@@ -149,29 +143,10 @@ export function MatchConfirmation({
           {confirming ? <Loader2 className="size-4 animate-spin" /> : <Heart className="size-4" />}
           Confirm {first} and pick a time
         </Button>
-        <Button
-          variant="outline"
-          className="gap-2"
-          disabled={!canRematch || rematching}
-          onClick={onRematch}
-        >
-          {rematching ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <RefreshCw className="size-4" />
-          )}
-          Match me with someone else
-        </Button>
         <Button variant="ghost" onClick={onViewProfile}>
           See her full profile
         </Button>
       </div>
-      {!canRematch && (
-        <p className="mt-3 text-xs text-muted-foreground">
-          That's everyone in the volunteer directory who fits what you asked for. Update what you
-          need and I'll look again.
-        </p>
-      )}
       {mentor.is_demo && (
         <p className="mt-4 rounded-2xl bg-muted p-3 text-xs leading-relaxed text-muted-foreground">
           Demo profile — a clearly-labelled stand-in so the whole mentoring flow works end to end,

@@ -27,6 +27,7 @@ export type AssessmentDraft = {
   target_role: string;
   priority_skills: string[];
   guidance_style: string;
+  mentorship_topics: string[];
   language: string;
   location_pref: MeetingPref;
   availability_notes: string;
@@ -35,7 +36,16 @@ export type AssessmentDraft = {
   timezone: string;
 };
 
-const STEP_COUNT = 6;
+const STEP_COUNT = 7;
+
+const MENTORSHIP_TOPIC_OPTIONS = [
+  "Resume review",
+  "Interview prep",
+  "Career transition advice",
+  "Technical guidance",
+  "Networking introductions",
+  "General encouragement",
+];
 
 const localTimezone = () => {
   try {
@@ -68,6 +78,7 @@ export function NeedsAssessment({
       ? existing.priority_skills
       : inferred.gapSkills.slice(0, 3),
     guidance_style: existing?.guidance_style ?? "strategy",
+    mentorship_topics: existing?.mentorship_topics ?? [],
     language:
       existing?.language ??
       (languages.includes("English") ? "English" : (languages[0] ?? "English")),
@@ -84,6 +95,7 @@ export function NeedsAssessment({
   }, [inferred.gapSkills, draft.priority_skills]);
 
   const [customSkill, setCustomSkill] = useState("");
+  const [customTopic, setCustomTopic] = useState("");
 
   const set = <K extends keyof AssessmentDraft>(key: K, value: AssessmentDraft[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
@@ -96,10 +108,19 @@ export function NeedsAssessment({
         : [...current.priority_skills, skill],
     }));
 
+  const toggleTopic = (topic: string) =>
+    setDraft((current) => ({
+      ...current,
+      mentorship_topics: current.mentorship_topics.includes(topic)
+        ? current.mentorship_topics.filter((item) => item !== topic)
+        : [...current.mentorship_topics, topic],
+    }));
+
   const canAdvance = () => {
     if (step === 0) return draft.goal.trim().length > 2;
     if (step === 1) return draft.target_role.trim().length > 1;
     if (step === 2) return draft.priority_skills.length > 0;
+    if (step === 5) return draft.mentorship_topics.length > 0;
     return true;
   };
 
@@ -344,6 +365,67 @@ export function NeedsAssessment({
         )}
 
         {step === 5 && (
+          <>
+            <h2 className="font-display text-2xl font-semibold">
+              What do you want from mentorship?
+            </h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Pick the areas that matter most right now. You can change these later.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {MENTORSHIP_TOPIC_OPTIONS.map((topic) => (
+                <button
+                  key={topic}
+                  type="button"
+                  onClick={() => toggleTopic(topic)}
+                  className={cn(
+                    "rounded-full border px-4 py-2 text-sm transition-colors",
+                    draft.mentorship_topics.includes(topic)
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-card hover:bg-accent/60",
+                  )}
+                >
+                  {draft.mentorship_topics.includes(topic) && (
+                    <Check className="mr-1.5 inline size-3.5" />
+                  )}
+                  {topic}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                value={customTopic}
+                onChange={(event) => setCustomTopic(event.target.value)}
+                placeholder="Add something else..."
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && customTopic.trim()) {
+                    event.preventDefault();
+                    toggleTopic(customTopic.trim());
+                    setCustomTopic("");
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!customTopic.trim()}
+                onClick={() => {
+                  toggleTopic(customTopic.trim());
+                  setCustomTopic("");
+                }}
+              >
+                Add
+              </Button>
+            </div>
+            {draft.mentorship_topics.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Choose at least one topic so I can match you with the right volunteer.
+              </p>
+            )}
+          </>
+        )}
+
+        {step === 6 && (
           <>
             <h2 className="font-display text-2xl font-semibold">
               And if you only got one hour with her — what would you want from it?

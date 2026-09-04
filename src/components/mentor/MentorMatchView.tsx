@@ -80,8 +80,6 @@ export function MentorMatchView() {
 
   const [assessing, setAssessing] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [declined, setDeclined] = useState<string[]>([]);
-  const [rematching, setRematching] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [scheduleFor, setScheduleFor] = useState<Mentor | null>(null);
   const [feedbackFor, setFeedbackFor] = useState<MentorSession | null>(null);
@@ -149,8 +147,8 @@ export function MentorMatchView() {
   /** Hike Copilot's single pick — never a list to shop through. */
   const suggestion = useMemo(() => {
     if (!mentors || selectedMentorId) return null;
-    return pickBestMentor(mentors, matchInput, { exclude: declined, timeOfDay });
-  }, [mentors, matchInput, declined, timeOfDay, selectedMentorId]);
+    return pickBestMentor(mentors, matchInput, { timeOfDay });
+  }, [mentors, matchInput, timeOfDay, selectedMentorId]);
 
   const selectedResult = useMemo(
     () => ranked.find((row) => row.mentor.id === selectedMentorId) ?? null,
@@ -190,6 +188,7 @@ export function MentorMatchView() {
       goal: draft.goal || null,
       target_role: draft.target_role || null,
       priority_skills: draft.priority_skills,
+      mentorship_topics: draft.mentorship_topics,
       guidance_style: draft.guidance_style,
       language: draft.language,
       location_pref: draft.location_pref,
@@ -200,7 +199,6 @@ export function MentorMatchView() {
       completed_at: new Date().toISOString(),
     });
     setAssessing(false);
-    setDeclined([]);
     toast.success("Got it. Let me find the right person for this.");
   };
 
@@ -233,21 +231,6 @@ export function MentorMatchView() {
     }
   };
 
-  const rematch = () => {
-    if (!suggestion) return;
-    setRematching(true);
-    const skipped = suggestion.mentor.full_name.split(" ")[0];
-    setDeclined((current) => [...current, suggestion.mentor.id]);
-    setMatchStatus.mutate({
-      mentorId: suggestion.mentor.id,
-      status: "passed",
-      score: suggestion.score,
-      reasons: suggestion.reasons,
-      matchedAttributes: suggestion.matchedAttributes,
-    });
-    setRematching(false);
-    toast.success(`No problem — looking past ${skipped}.`);
-  };
 
   /** Books the session, notifies the mentor, then confirms back to the mentee. */
   const book = async (input: { slot: { start: Date; end: Date }; theme: string; format: string }) => {
@@ -399,8 +382,8 @@ export function MentorMatchView() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3 rounded-3xl border border-border bg-card p-5">
             <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              You don't have to compare profiles or pick from a list — I've done that part. If this
-              person isn't right, tell me and I'll find another.
+              You don't have to compare profiles or pick from a list — I've matched you with one
+              person from the directory who fits what you asked for.
             </p>
             <Button
               variant="outline"
@@ -418,10 +401,7 @@ export function MentorMatchView() {
               result={suggestion}
               timeOfDay={timeOfDay}
               confirming={confirming}
-              rematching={rematching}
-              canRematch={ranked.length - declined.length > 1}
               onConfirm={() => void confirmMentor()}
-              onRematch={rematch}
               onViewProfile={() => setShowProfile(true)}
             />
           ) : (
@@ -429,14 +409,7 @@ export function MentorMatchView() {
               title="I've run out of mentors who fit that"
               body="Nobody left in the volunteer directory matches everything you asked for. Loosen one thing — the language, the format or how near they need to be — and I'll look again."
               action={
-                <div className="flex flex-wrap justify-center gap-2">
-                  <Button onClick={() => setAssessing(true)}>Update what I need</Button>
-                  {declined.length > 0 && (
-                    <Button variant="outline" onClick={() => setDeclined([])}>
-                      Show me the ones I skipped
-                    </Button>
-                  )}
-                </div>
+                <Button onClick={() => setAssessing(true)}>Update what I need</Button>
               }
             />
           )}
@@ -594,16 +567,10 @@ export function MentorMatchView() {
                             </p>
                             <p className="mt-1">
                               {row.attended ? "Attended" : "Didn't happen"}
-                              {row.rating ? ` · ${row.rating}/5 useful` : ""} ·{" "}
-                              {row.continue_with_mentor
-                                ? "Want to continue with her"
-                                : "Would like a different mentor"}
+                              {row.rating ? ` · ${row.rating}/5 useful` : ""}
                             </p>
                             {row.helpful && <p className="mt-1">Most helpful: {row.helpful}</p>}
                             {row.comments && <p className="mt-1 italic">{row.comments}</p>}
-                            {row.followup_request && (
-                              <p className="mt-1">Next time: {row.followup_request}</p>
-                            )}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -711,8 +678,8 @@ export function MentorMatchView() {
               rating: draft.attended ? draft.rating : null,
               helpful: draft.helpful.trim() || null,
               comments: draft.comments.trim() || null,
-              continueWithMentor: draft.continueWithMentor,
-              followupRequest: draft.followupRequest.trim() || null,
+              continueWithMentor: true,
+              followupRequest: null,
             },
             {
               onSuccess: () => {
