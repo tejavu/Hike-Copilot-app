@@ -407,6 +407,7 @@ export type Database = {
           guidance_style: string | null
           language: string | null
           location_pref: string
+          mentorship_topics: string[]
           next_check_in_at: string | null
           preferred_time_of_day: string | null
           priority_skills: string[]
@@ -427,6 +428,7 @@ export type Database = {
           guidance_style?: string | null
           language?: string | null
           location_pref?: string
+          mentorship_topics?: string[]
           next_check_in_at?: string | null
           preferred_time_of_day?: string | null
           priority_skills?: string[]
@@ -447,6 +449,7 @@ export type Database = {
           guidance_style?: string | null
           language?: string | null
           location_pref?: string
+          mentorship_topics?: string[]
           next_check_in_at?: string | null
           preferred_time_of_day?: string | null
           priority_skills?: string[]
