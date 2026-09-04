@@ -327,7 +327,7 @@ async function findJobRecommendations(supabase: Supa, userId: string, args: Reco
 
   const { data: profileData, error: profileError } = await supabase
     .from("profiles")
-    .select("skill_confidence, skills, interests, drawn_to, location_pref, work_setup")
+    .select("skill_confidence, skills, interests, drawn_to, location_pref, work_setup, recent_role")
     .eq("id", userId)
     .maybeSingle();
   if (profileError) return { ok: false, error: profileError.message };
