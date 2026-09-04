@@ -62,7 +62,15 @@ export type MentorPreferences = {
   timezone: string | null;
 };
 
-export type MatchStatus = "suggested" | "shortlisted" | "selected" | "passed";
+export type MatchStatus =
+  | "suggested"
+  | "shortlisted"
+  /** Request sent to the mentor, waiting for their answer. */
+  | "pending_mentor"
+  | "selected"
+  /** The mentor said no to this request. */
+  | "declined"
+  | "passed";
 
 export type MentorMatch = {
   id: string;
@@ -71,6 +79,9 @@ export type MentorMatch = {
   reasons: string[];
   matched_attributes: string[];
   status: MatchStatus;
+  request_token?: string | null;
+  requested_at?: string | null;
+  responded_at?: string | null;
 };
 
 export type SessionStatus = "scheduled" | "completed" | "cancelled";
