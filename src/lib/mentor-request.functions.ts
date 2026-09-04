@@ -103,8 +103,7 @@ export const requestMentorMatch = createServerFn({ method: "POST" })
       declineUrl: `${base}&action=decline`,
     });
 
-    const apiKey = process.env["RESEND_API_KEY"];
-    const from = process.env["MENTOR_EMAIL_FROM"];
+    const { sendEmail, emailConfigured } = await import("@/lib/email-send.server");
 
     // Persist the real delivery outcome on the match so the UI can never claim
     // an email went out when it didn't.
@@ -120,7 +119,7 @@ export const requestMentorMatch = createServerFn({ method: "POST" })
         .eq("mentor_id", data.mentorId);
     };
 
-    if (!apiKey || !from) {
+    if (!emailConfigured()) {
       const detail =
         "Your request is saved, but outgoing email isn't configured for this app yet, so the email to your mentor hasn't gone out.";
       await persistEmailState("not_configured", detail);
