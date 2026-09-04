@@ -59,6 +59,12 @@ type StepId =
 
 const SETUPS = ["Remote", "Hybrid", "On-site"];
 
+const LEVEL_CHOICES: { value: TargetLevel; label: string }[] = [
+  { value: "junior", label: "Just starting out" },
+  { value: "mid", label: "A few years in" },
+  { value: "senior", label: "Experienced / senior" },
+];
+
 const DRAWN_TO_HINTS = [
   "Building things people use",
   "Working with data",
@@ -739,11 +745,42 @@ export function OnboardingForm() {
             />
             <ReviewRow label="Projects" value={form.projects} onEdit={() => setStep("projects")} />
           </div>
+          {needsLevelAnswer && (
+            <div className="mt-5 rounded-2xl border border-border bg-secondary/40 p-4">
+              <Label className="text-xs font-semibold tracking-wide uppercase">
+                One last thing — what stage are you at?
+              </Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                I couldn't tell from your answers, and it changes which roles I show you.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {LEVEL_CHOICES.map((choice) => (
+                  <button
+                    key={choice.value}
+                    type="button"
+                    onClick={() => patch({ targetLevel: choice.value })}
+                    className={cn(
+                      "rounded-full border px-4 py-2 text-sm font-medium transition-colors",
+                      form.targetLevel === choice.value
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card hover:border-primary/50",
+                    )}
+                  >
+                    {choice.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="mt-6 flex items-center justify-between gap-3">
             <Button variant="ghost" onClick={() => setStep("projects")} className="gap-1.5">
               <ArrowLeft className="size-4" /> Back
             </Button>
-            <Button disabled={busy} onClick={() => void saveAndSweep()} className="gap-2">
+            <Button
+              disabled={busy || (needsLevelAnswer && !form.targetLevel)}
+              onClick={() => void saveAndSweep()}
+              className="gap-2"
+            >
               Find roles for me <ArrowRight className="size-4" />
             </Button>
           </div>
