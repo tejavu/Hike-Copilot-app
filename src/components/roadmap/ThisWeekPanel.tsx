@@ -298,16 +298,18 @@ export function ThisWeekPanel({
         </p>
       ) : (
         <ul className="mt-4 space-y-2.5">
-          {picked.map((item) => renderItem(item, false))}
-          {keptDone.map((item) => renderItem(item, true))}
+          {picked.map((entry) => renderItem(entry, false))}
+          {keptDone.map((item) => renderItem({ item, hours: itemHours(item) }, true))}
         </ul>
       )}
 
       {upNext && (
         <div className="mt-4 rounded-xl border border-dashed border-border bg-secondary/20 p-3.5">
           <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-            <Sparkles className="size-3.5 text-primary" /> Up next — if you have time
+            <Sparkles className="size-3.5 text-primary" />{" "}
+            {budgetFull ? "Next — once this week's hours are used up" : "Up next — if you have time"}
           </p>
+
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
