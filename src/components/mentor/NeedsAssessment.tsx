@@ -27,6 +27,7 @@ export type AssessmentDraft = {
   target_role: string;
   priority_skills: string[];
   guidance_style: string;
+  mentorship_topics: string[];
   language: string;
   location_pref: MeetingPref;
   availability_notes: string;
