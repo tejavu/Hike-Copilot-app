@@ -15,7 +15,7 @@ export function appUrl(): string {
   return (
     process.env["PUBLIC_APP_URL"] ??
     process.env["VITE_PUBLIC_APP_URL"] ??
-    "https://tech-ascend-buddy.lovable.app"
+    "https://coach-and-grow-39.lovable.app"
   );
 }
 
