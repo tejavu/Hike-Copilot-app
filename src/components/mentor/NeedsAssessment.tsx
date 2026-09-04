@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
-  GUIDANCE_STYLES,
   MEETING_PREF_LABELS,
   TIME_OF_DAY_LABELS,
   type MeetingPref,
