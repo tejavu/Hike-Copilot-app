@@ -28,7 +28,8 @@ export type Mentor = {
   years_experience: number;
   slots: MentorSlotSpec[];
   is_demo: boolean;
-  contact_email: string | null;
+  /** Never exposed to the client — kept server-side only. */
+  contact_email?: string | null;
 };
 
 export type ReminderCadence = "monthly" | "six_weeks" | "off";

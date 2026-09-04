@@ -42,7 +42,7 @@ export const sendSessionConfirmation = createServerFn({ method: "POST" })
     const [{ data: mentor }, { data: profile }] = await Promise.all([
       context.supabase
         .from("mentors")
-        .select("full_name, title, company, contact_email, city, country, meeting_pref")
+        .select("full_name, title, company, city, country, meeting_pref")
         .eq("id", session.mentor_id)
         .maybeSingle(),
       context.supabase
