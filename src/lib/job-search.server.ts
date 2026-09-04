@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { rankJobs, type SourcedJob } from "./job-sweep";
+import { deriveTargetLevel, rankJobs, type SourcedJob, type TargetLevel } from "./job-sweep";
 
 const inputSchema = z.object({
   skills: z.array(z.object({ name: z.string(), level: z.number() })).default([]),
@@ -7,7 +7,11 @@ const inputSchema = z.object({
   drawnTo: z.string().default(""),
   locations: z.array(z.string()).default([]),
   setups: z.array(z.string()).default([]),
-  count: z.number().min(1).max(12).default(6),
+  count: z.number().min(1).max(20).default(6),
+  /** Her most recent role, if any — one of the level signals. */
+  recentRole: z.string().default(""),
+  /** Set only when she answered the clarifying question herself. */
+  targetLevel: z.enum(["junior", "mid", "senior"]).nullish(),
 });
 
 export type JobSearchResult = {
@@ -17,6 +21,9 @@ export type JobSearchResult = {
   examplesOnly: boolean;
   /** True when the city filter had to be relaxed to find anything. */
   widened: boolean;
+  /** The level we aimed at, and whether we had to guess. */
+  targetLevel: TargetLevel | null;
+  levelUnclear: boolean;
   notes: string[];
 };
 
@@ -374,12 +381,17 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
     ]);
 
     const live = [...swiss, ...adzuna];
+    const targetLevel =
+      data.targetLevel ?? deriveTargetLevel(data.skills, data.recentRole);
+    const levelUnclear = !data.targetLevel && targetLevel === null;
+
     const ranked = rankJobs(live, {
       skills: data.skills,
       interests: [...data.interests, data.drawnTo].filter(Boolean),
       setups: data.setups,
       locations: data.locations,
       count: data.count,
+      targetLevel,
     });
 
     // Only the shortlist gets the LLM pass — scoring already ran on raw text.
@@ -387,7 +399,7 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
 
     if (shortlist.length >= 3) {
       const sources = Array.from(new Set(shortlist.map((j) => j.source)));
-      return { jobs: shortlist, sources, examplesOnly: false, widened: ranked.widened, notes };
+      return { jobs: shortlist, sources, examplesOnly: false, widened: ranked.widened, targetLevel, levelUnclear, notes };
     }
 
 
@@ -405,6 +417,8 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
       sources: Array.from(new Set(jobs.map((j) => j.source))),
       examplesOnly: jobs.length > 0 && jobs.every((j) => j.is_example),
       widened: ranked.widened,
+      targetLevel,
+      levelUnclear,
       notes,
     };
 }
