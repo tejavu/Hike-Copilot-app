@@ -430,7 +430,7 @@ export function buildCvTex(data: CvData): string {
 
 \\vspace{4pt}
 
-${summary ? `${tex(summary)}\n\\vspace{4pt}\n` : ""}
+${summary ? `\\cvsection{Profile}\n${tex(summary)}\n\\vspace{4pt}\n` : ""}
 \\cvsection{Professional Experience}
 
 ${experienceTex}
