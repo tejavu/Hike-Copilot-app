@@ -42,6 +42,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { ThisWeekPanel } from "@/components/roadmap/ThisWeekPanel";
+
 
 export function RoadmapView() {
   const { data: profile } = useProfile();
