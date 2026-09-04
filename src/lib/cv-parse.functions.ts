@@ -19,6 +19,7 @@ export type ParsedCv = {
   skills: string[];
   education: { title: string }[];
   experience: { title: string }[];
+  projects: { title: string }[];
   certifications: string[];
   summary: string | null;
 };
@@ -29,18 +30,20 @@ const EMPTY: ParsedCv = {
   skills: [],
   education: [],
   experience: [],
+  projects: [],
   certifications: [],
   summary: null,
 };
 
 const SYSTEM = `You extract structured career data from uploaded documents (CVs, transcripts, certificates).
 Return ONLY minified JSON, no prose, no markdown fences, matching exactly:
-{"full_name":string|null,"interests":string[],"skills":string[],"education":string[],"experience":string[],"certifications":string[],"summary":string}
+{"full_name":string|null,"interests":string[],"skills":string[],"education":string[],"experience":string[],"projects":string[],"certifications":string[],"summary":string}
 Rules:
 - skills: concrete tools, languages, frameworks, methods (max 15).
 - interests: tech areas the person clearly leans toward, e.g. "frontend", "data science", "cloud" (max 6). Infer from their work if not stated.
 - education: one string per entry, "Degree, Field — Institution (year)".
 - experience: one string per role, "Title — Organisation (dates)".
+- projects: personal, academic or side projects (including a dedicated Projects/Portfolio section), one string per project, "Title — one line on what it did/achieved (dates if given)" (max 8).
 - certifications: certificate/course names only (max 10).
 - summary: one warm sentence (max 30 words) describing what you read.
 - Use [] when nothing is found. Never invent facts.`;
@@ -143,6 +146,7 @@ export const parseCvDocuments = createServerFn({ method: "POST" })
       skills: toStringList(obj["skills"], 15),
       education: toStringList(obj["education"], 6).map((title) => ({ title })),
       experience: toStringList(obj["experience"], 8).map((title) => ({ title })),
+      projects: toStringList(obj["projects"], 8).map((title) => ({ title })),
       certifications: toStringList(obj["certifications"], 10),
       summary: typeof obj["summary"] === "string" ? obj["summary"].trim() : null,
     };
