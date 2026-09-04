@@ -39,7 +39,7 @@ import {
   WEEKLY_OPTIONS,
   type WeeklyOption,
 } from "@/lib/onboarding";
-import type { Job, Profile, SkillConfidence } from "@/lib/domain";
+import type { ExperienceEntry, Job, Profile, SkillConfidence } from "@/lib/domain";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
