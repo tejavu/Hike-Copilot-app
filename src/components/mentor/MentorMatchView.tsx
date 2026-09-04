@@ -80,8 +80,6 @@ export function MentorMatchView() {
 
   const [assessing, setAssessing] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [declined, setDeclined] = useState<string[]>([]);
-  const [rematching, setRematching] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [scheduleFor, setScheduleFor] = useState<Mentor | null>(null);
   const [feedbackFor, setFeedbackFor] = useState<MentorSession | null>(null);
