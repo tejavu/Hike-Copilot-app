@@ -129,6 +129,30 @@ const CATALOG: Record<string, SkillPlan> = {
       detail: "Infrastructure as code if you can. Document the architecture.",
     },
   },
+  azure: {
+    course: {
+      title: "Azure Fundamentals learning path",
+      provider: "Microsoft Learn",
+      url: "https://learn.microsoft.com/training/paths/microsoft-azure-fundamentals-describe-cloud-concepts/",
+    },
+    practice: {
+      title: "Hands-on sandbox modules",
+      difficulty: "Medium",
+      target: 12,
+      detail:
+        "Free in-browser sandbox modules on Microsoft Learn — portal walkthroughs, VMs, storage, functions. One module at a time. Browse: https://learn.microsoft.com/training/browse/?products=azure&resource_type=module",
+      url: "https://learn.microsoft.com/training/browse/?products=azure&resource_type=module",
+    },
+    certify: {
+      title: "AZ-900: Microsoft Certified Azure Fundamentals",
+      provider: "Microsoft",
+      url: "https://learn.microsoft.com/credentials/certifications/azure-fundamentals/",
+    },
+    project: {
+      title: "Deploy a small app on Azure",
+      detail: "App Service or Functions, documented architecture. Infrastructure as code if you can.",
+    },
+  },
   docker: {
     course: {
       title: "Docker Mastery",
@@ -289,8 +313,9 @@ const ALIASES: Record<string, string> = {
   ai: "machine learning",
   "deep learning": "machine learning",
   cloud: "aws",
-  azure: "aws",
   gcp: "aws",
+  "microsoft azure": "azure",
+  "az-900": "azure",
   devops: "docker",
   "ci/cd": "docker",
   k8s: "kubernetes",
@@ -306,6 +331,34 @@ export function normaliseSkill(raw: string): string {
   return raw.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+/**
+ * Skills in the Microsoft ecosystem are far better served by Microsoft Learn
+ * than by a generic course search — so the fallback plan swaps only its course
+ * link when the skill name mentions one of these. Everything else, and every
+ * curated CATALOG entry, is untouched.
+ */
+const MICROSOFT_KEYWORDS = [
+  "azure",
+  ".net",
+  "c#",
+  "power bi",
+  "power platform",
+  "github actions",
+  "microsoft 365",
+  "dynamics",
+];
+
+function microsoftCourse(skill: string, pretty: string): SkillPlan["course"] | null {
+  const key = normaliseSkill(skill);
+  const hit = MICROSOFT_KEYWORDS.some((word) => key.includes(word));
+  if (!hit) return null;
+  return {
+    title: `${pretty} on Microsoft Learn`,
+    provider: "Microsoft Learn",
+    url: `https://learn.microsoft.com/search/?terms=${encodeURIComponent(skill)}&category=Training`,
+  };
+}
+
 export function planForSkill(skill: string): SkillPlan {
   const key = normaliseSkill(skill);
   const resolved = CATALOG[key] ?? CATALOG[ALIASES[key] ?? ""];
@@ -313,7 +366,7 @@ export function planForSkill(skill: string): SkillPlan {
 
   const pretty = titleCase(skill);
   return {
-    course: {
+    course: microsoftCourse(skill, pretty) ?? {
       title: `${pretty}: a structured beginner-to-confident course`,
       provider: "Coursera",
       url: `https://www.coursera.org/search?query=${encodeURIComponent(skill)}`,
