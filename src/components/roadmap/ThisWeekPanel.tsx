@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { CalendarClock, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { ItemControls } from "@/components/roadmap/ItemControls";
 import {
   isItemComplete,
   itemHours,
@@ -133,7 +134,7 @@ export function ThisWeekPanel({
               key={item.id}
               className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-border bg-secondary/40 p-3.5"
             >
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[0.65rem] font-bold tracking-[0.12em] text-muted-foreground uppercase">
                     {TYPE_LABEL[item.item_type] ?? item.item_type}
@@ -143,6 +144,11 @@ export function ThisWeekPanel({
                   </Badge>
                 </div>
                 <p className="mt-0.5 font-medium">{item.title}</p>
+                {/* Same per-type control as the main roadmap; completing here
+                    updates the same row, so the item drops out on next render. */}
+                <div className="mt-2.5">
+                  <ItemControls item={item} />
+                </div>
               </div>
               <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-muted-foreground tabular-nums">
                 <Clock className="size-3" /> {formatHours(itemHours(item))}
