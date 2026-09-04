@@ -614,12 +614,19 @@ export function MentorMatchView() {
                 <Button variant="ghost" onClick={() => setShowProfile(true)}>
                   Why we matched
                 </Button>
-                <Button className="gap-1.5" onClick={() => setScheduleFor(selectedMentor)}>
-                  <CalendarClock className="size-4" />
-                  Book a session
-                </Button>
+                {bookingPaused ? (
+                  <p className="max-w-xs text-sm text-muted-foreground">
+                    Booking is paused until {cooldownDate} because a session was cancelled.
+                  </p>
+                ) : (
+                  <Button className="gap-1.5" onClick={() => setScheduleFor(selectedMentor)}>
+                    <CalendarClock className="size-4" />
+                    Book a session
+                  </Button>
+                )}
               </div>
             </div>
+
 
             {nextSession ? (
               <>
