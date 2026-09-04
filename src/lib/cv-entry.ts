@@ -5,7 +5,7 @@
  */
 export type EntryParts = { title: string; org: string; period: string; detail: string };
 
-export function formatEntryLine(parts: Partial<EntryParts>): string {
+export function formatEntryLine(parts: { [K in keyof EntryParts]?: string | undefined }): string {
   const head = [parts.title?.trim(), parts.org?.trim()].filter(Boolean).join(" — ");
   const tail = parts.period?.trim() ? ` (${parts.period.trim()})` : "";
   const detail = parts.detail?.trim() ? ` — ${parts.detail.trim()}` : "";
