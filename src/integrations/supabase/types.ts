@@ -634,6 +634,7 @@ export type Database = {
           goal: string | null
           id: string
           interests: string[]
+          languages: Json
           location: string | null
           location_pref: string | null
           nationality: string | null
@@ -665,6 +666,7 @@ export type Database = {
           goal?: string | null
           id: string
           interests?: string[]
+          languages?: Json
           location?: string | null
           location_pref?: string | null
           nationality?: string | null
@@ -696,6 +698,7 @@ export type Database = {
           goal?: string | null
           id?: string
           interests?: string[]
+          languages?: Json
           location?: string | null
           location_pref?: string | null
           nationality?: string | null
