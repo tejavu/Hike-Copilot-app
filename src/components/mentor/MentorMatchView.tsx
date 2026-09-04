@@ -382,8 +382,8 @@ export function MentorMatchView() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3 rounded-3xl border border-border bg-card p-5">
             <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              You don't have to compare profiles or pick from a list — I've done that part. If this
-              person isn't right, tell me and I'll find another.
+              You don't have to compare profiles or pick from a list — I've matched you with one
+              person from the directory who fits what you asked for.
             </p>
             <Button
               variant="outline"
@@ -401,10 +401,7 @@ export function MentorMatchView() {
               result={suggestion}
               timeOfDay={timeOfDay}
               confirming={confirming}
-              rematching={rematching}
-              canRematch={ranked.length - declined.length > 1}
               onConfirm={() => void confirmMentor()}
-              onRematch={rematch}
               onViewProfile={() => setShowProfile(true)}
             />
           ) : (
@@ -412,14 +409,7 @@ export function MentorMatchView() {
               title="I've run out of mentors who fit that"
               body="Nobody left in the volunteer directory matches everything you asked for. Loosen one thing — the language, the format or how near they need to be — and I'll look again."
               action={
-                <div className="flex flex-wrap justify-center gap-2">
-                  <Button onClick={() => setAssessing(true)}>Update what I need</Button>
-                  {declined.length > 0 && (
-                    <Button variant="outline" onClick={() => setDeclined([])}>
-                      Show me the ones I skipped
-                    </Button>
-                  )}
-                </div>
+                <Button onClick={() => setAssessing(true)}>Update what I need</Button>
               }
             />
           )}
