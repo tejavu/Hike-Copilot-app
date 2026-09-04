@@ -328,7 +328,7 @@ export function NeedsAssessment({
           </>
         )}
 
-        {step === 5 && (
+        {step === 4 && (
           <>
             <h2 className="font-display text-2xl font-semibold">
               What do you want from mentorship?
@@ -389,7 +389,7 @@ export function NeedsAssessment({
           </>
         )}
 
-        {step === 6 && (
+        {step === 5 && (
           <>
             <h2 className="font-display text-2xl font-semibold">
               And if you only got one hour with her — what would you want from it?
