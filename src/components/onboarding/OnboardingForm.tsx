@@ -418,6 +418,17 @@ export function OnboardingForm() {
         onboarding_complete: true,
         roadmap_generated: true,
       });
+
+      // Proactively initiate the main coaching chat so the user sees what's
+      // available as soon as she opens AI Chat.
+      const { error: chatError } = await supabase.from("chat_messages").insert({
+        user_id: profile.id,
+        role: "assistant",
+        kind: "roadmap_ready",
+        content: `"${form.goal}" — I'm writing that down, because that's what everything below is in service of.\n\nYour roadmap is ready. ${gaps.length} skill${gaps.length === 1 ? "" : "s"} to close, sequenced so you're never guessing what's next. Roadmap, Network and Mentor Match are unlocked now.\n\nYou don't have to feel ready. You just have to start.`,
+      } as never);
+      if (chatError) console.error("roadmap ready chat message failed", chatError);
+
       setStep("done");
       refresh();
     });
