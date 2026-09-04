@@ -51,7 +51,14 @@ export type ExperienceEntry = {
 };
 export type WebsiteLink = { label: string; url: string };
 export type LanguageEntry = { name: string; level: string };
-export type ProjectEntry = { title: string; detail?: string; period?: string; url?: string };
+export type ProjectEntry = {
+  title: string;
+  detail?: string;
+  period?: string;
+  url?: string;
+  /** Optional action-verb lines, same shape as an experience entry. */
+  bullets?: string[];
+};
 
 export type ChatMessage = {
   id: string;

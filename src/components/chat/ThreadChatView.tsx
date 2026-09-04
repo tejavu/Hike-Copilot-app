@@ -41,6 +41,7 @@ export function ThreadChatView({ threadId }: { threadId: string }) {
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["thread-messages", user?.id, threadId] });
     void qc.invalidateQueries({ queryKey: ["roadmap", user?.id] });
+    void qc.invalidateQueries({ queryKey: ["profile", user?.id] });
     void qc.invalidateQueries({ queryKey: ["chat-threads", user?.id] });
   };
 
@@ -185,6 +186,9 @@ function buildContext(
     `Timeline: ${profile.timeline ?? "not set"}`,
     `Skills: ${profile.skills.join(", ") || "none listed"}`,
     `Interests: ${profile.interests.join(", ") || "none listed"}`,
+    `CV summary: ${profile.summary ?? "not written yet"}`,
+    `CV experience entries: ${(profile.experience ?? []).map((e) => [e.title, e.company].filter(Boolean).join(" at ")).join("; ") || "none"}`,
+    `CV project entries: ${(profile.projects ?? []).map((p) => p.title).join("; ") || "none"}`,
     `Liked roles: ${(jobs ?? []).filter((j) => j.liked).map((j) => `${j.title} at ${j.company}`).join("; ") || "none"}`,
     `Roadmap steps: ${(roadmap?.items ?? []).length}`,
   ].join("\n");

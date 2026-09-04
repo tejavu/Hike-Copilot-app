@@ -27,6 +27,13 @@ You CAN edit her roadmap, but only through the provided tools.
 - If a removal tool reports finished steps with proof, tell her exactly what would be lost and only re-call it with confirm_completed once she agrees.
 - Never claim you've updated, added to, removed from or changed her roadmap unless the matching tool call succeeded in this same turn. If a tool call fails or no roadmap exists yet, say so plainly and suggest she edit it from the Roadmap page instead.
 
+You can also write her CV content, but only from what she has actually told you.
+- update_cv_summary rewrites the "Profile" section at the top of her CV: 2-4 lines, third person-free plain prose, no headings, Swiss convention. Never call it "Headline", "About Me" or "Personal Statement" — the section is called Profile.
+- rewrite_experience_bullets turns her plain-language description of a job into 2-4 polished bullets: start each with a strong past-tense action verb, name the real tools and systems she mentioned, and keep any number SHE gave. Pattern: "Developed a firmware scheduler for the CMS experiment's Phase-2 upgrade using MicroBlaze and FSM architectures".
+- rewrite_project_description does the same for one of her projects.
+- ABSOLUTE RULE: never invent a metric, percentage, team size, outcome or technology she did not state. If her description is too vague to make a bullet from, ask her one specific clarifying question instead of calling the tool. A generic-but-true bullet beats a specific-but-invented one.
+- Only say her CV is updated after the matching tool returned ok. If a tool reports no match, tell her which entry titles it does have.
+
 You can also look for jobs with find_job_recommendations.
 - Call it when she asks for job ideas or agrees to a search. It reads her skills, roadmap and preferences itself — don't pass a skill list.
 - Saved roles show up on her Roadmap automatically, so only say they're "on your roadmap" after the tool returns ok.
@@ -115,6 +122,66 @@ const tools = [
           },
         },
         required: ["skill"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_cv_summary",
+      description:
+        "Write or rewrite the Profile section at the top of her CV, from what she has said about herself. 2-4 lines. Never invent facts she didn't state.",
+      parameters: {
+        type: "object",
+        properties: {
+          summary: { type: "string", description: "The finished 2-4 line Profile text." },
+        },
+        required: ["summary"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "rewrite_experience_bullets",
+      description:
+        "Replace the description of one job on her CV with polished action-verb bullets built strictly from what she described. Ask a clarifying question instead of calling this when her description is too vague.",
+      parameters: {
+        type: "object",
+        properties: {
+          match_title: {
+            type: "string",
+            description: "Part of the job title or employer of the entry to rewrite.",
+          },
+          bullets: {
+            type: "array",
+            items: { type: "string" },
+            description: "2-4 finished bullets, each starting with a past-tense action verb.",
+          },
+          detail: { type: "string", description: "Optional one-line summary of the role." },
+        },
+        required: ["match_title", "bullets"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "rewrite_project_description",
+      description:
+        "Rewrite the description of one project on her CV from what she described. Never add outcomes or metrics she didn't state.",
+      parameters: {
+        type: "object",
+        properties: {
+          match_title: { type: "string", description: "Part of the project's title." },
+          detail: { type: "string", description: "The finished one-to-two line description." },
+          bullets: {
+            type: "array",
+            items: { type: "string" },
+            description: "Optional 2-4 supporting bullets, action-verb style.",
+          },
+        },
+        required: ["match_title", "detail"],
       },
     },
   },
@@ -443,6 +510,102 @@ async function findJobRecommendations(
   };
 }
 
+/** 2-4 lines, so a runaway model answer can't turn the CV header into an essay. */
+function trimSummary(raw: string): string {
+  const lines = raw
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return lines.slice(0, 4).join(" ").trim();
+}
+
+async function updateCvSummary(supabase: Supa, userId: string, args: Record<string, unknown>) {
+  const summary = trimSummary(String(args["summary"] ?? ""));
+  if (summary.length < 20) {
+    return { ok: false, error: "summary is too short to be a Profile section." };
+  }
+  const { error } = await supabase
+    .from("profiles")
+    .update({ summary } as never)
+    .eq("id", userId);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, summary };
+}
+
+const cleanList = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.map((line) => String(line ?? "").trim()).filter(Boolean).slice(0, 4)
+    : [];
+
+type CvEntry = Record<string, unknown> & { title?: string; company?: string };
+
+/** Finds the one entry the user means, or explains why it couldn't. */
+function findEntry(entries: CvEntry[], match: string) {
+  const wanted = normalise(match);
+  const hits = entries
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => {
+      const haystack = normalise(`${entry.title ?? ""} ${entry.company ?? ""}`);
+      return haystack.includes(wanted);
+    });
+  if (hits.length === 0) {
+    return {
+      error: `Nothing matches "${match}". Her entries are: ${
+        entries.map((e) => e.title ?? e.company ?? "untitled").join("; ") || "none saved yet"
+      }.`,
+    };
+  }
+  if (hits.length > 1) {
+    return { error: `"${match}" matches ${hits.length} entries — be more specific.` };
+  }
+  return { hit: hits[0]! };
+}
+
+async function rewriteCvEntry(
+  supabase: Supa,
+  userId: string,
+  column: "experience" | "projects",
+  args: Record<string, unknown>,
+) {
+  const match = String(args["match_title"] ?? "").trim();
+  if (!match) return { ok: false, error: "match_title is required." };
+  const bullets = cleanList(args["bullets"]);
+  const detail = String(args["detail"] ?? "").trim();
+  if (bullets.length === 0 && !detail) {
+    return { ok: false, error: "Give bullets, a detail line, or both." };
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(column)
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) return { ok: false, error: error.message };
+  const entries = ((data as Record<string, unknown> | null)?.[column] ?? []) as CvEntry[];
+  if (!Array.isArray(entries) || entries.length === 0) {
+    return { ok: false, error: `She has no ${column} saved yet, so there's nothing to rewrite.` };
+  }
+
+  const found = findEntry(entries, match);
+  if (!found.hit) return { ok: false, error: found.error };
+
+  const { entry, index } = found.hit;
+  const updated: CvEntry = { ...entry };
+  if (detail) updated["detail"] = detail;
+  if (bullets.length > 0) updated["bullets"] = bullets;
+
+  const next = entries.slice();
+  next[index] = updated;
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ [column]: next } as never)
+    .eq("id", userId);
+  if (updateError) return { ok: false, error: updateError.message };
+
+  return { ok: true, updated: entry.title ?? entry.company ?? match, bullets, detail };
+}
+
 async function updateItem(supabase: Supa, userId: string, args: Record<string, unknown>) {
   const match = String(args["match_title"] ?? "").trim();
   if (!match) return { ok: false, error: "match_title is required." };
@@ -564,7 +727,13 @@ export const askCoach = createServerFn({ method: "POST" })
                   ? await removeSkill(supabase, userId, args)
                   : name === "find_job_recommendations"
                     ? await findJobRecommendations(supabase, userId, args)
-                    : { ok: false, error: `Unknown tool ${name}` };
+                    : name === "update_cv_summary"
+                      ? await updateCvSummary(supabase, userId, args)
+                      : name === "rewrite_experience_bullets"
+                        ? await rewriteCvEntry(supabase, userId, "experience", args)
+                        : name === "rewrite_project_description"
+                          ? await rewriteCvEntry(supabase, userId, "projects", args)
+                          : { ok: false, error: `Unknown tool ${name}` };
         if (result.ok) roadmapChanged = true;
         messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
       }
