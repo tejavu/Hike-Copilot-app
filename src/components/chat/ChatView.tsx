@@ -156,10 +156,11 @@ export function ChatView() {
   useEffect(() => {
     if (isLoading || seeded.current || !user || !profile) return;
     if ((messages?.length ?? 0) > 0) return;
+    if (stage !== "welcome") return;
     seeded.current = true;
     void (async () => {
       await say(
-        `Hi ${firstName(profile)} — I'm Hike Copilot, and I'm so glad you're here. Before we do anything clever, I need to get to know you.\n\nWe can do this one of two ways, and neither is better than the other.`,
+        `Hi ${firstName(profile)}, welcome to Hike. I'm your career copilot — over the next few minutes I'll learn where you're headed and build a roadmap to get you there.\n\nFirst, one quick choice about how you'd like to start.`,
         "path_choice",
       );
       refresh();
