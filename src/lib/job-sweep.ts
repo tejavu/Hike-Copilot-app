@@ -202,6 +202,8 @@ export type MatchProfile = {
   setups?: string[];
   locations?: string[];
   count?: number;
+  /** Roughly the level she's aiming at; null when we couldn't tell. */
+  targetLevel?: TargetLevel | null;
 };
 
 function weightFor(level: number): number {
