@@ -1,4 +1,4 @@
-import type { EducationEntry, ExperienceEntry, LanguageEntry, ProjectEntry } from "./domain";
+import type { EducationEntry, ExperienceEntry, LanguageEntry, ProjectEntry, WebsiteLink } from "./domain";
 import { sortByPeriodDesc } from "./cv-order";
 import { parseEntryLine } from "./cv-entry";
 
@@ -7,7 +7,8 @@ type CvProfile = {
   email: string | null;
   phone: string | null;
   location: string | null;
-  goal: string | null;
+  linkedin?: string | null;
+  websites?: WebsiteLink[] | null;
   /** Optional, user-written. Renders as a bare line under the header, or not at all. */
   summary?: string | null;
   skills: string[];
@@ -39,6 +40,19 @@ function cityOf(location: string | null | undefined): string {
   const parts = location.split(",").map((part) => part.trim()).filter(Boolean);
   if (parts.length <= 2) return parts.join(", ");
   return parts.slice(-2).join(", ");
+}
+
+/** LinkedIn plus any other links she added, in the order they'll be printed. */
+function links(profile: CvProfile): WebsiteLink[] {
+  const out: WebsiteLink[] = [];
+  const li = profile.linkedin?.trim();
+  if (li) out.push({ label: "LinkedIn", url: li.startsWith("http") ? li : `https://${li}` });
+  for (const site of profile.websites ?? []) {
+    const url = site?.url?.trim();
+    if (!url) continue;
+    out.push({ label: site.label?.trim() || url.replace(/^https?:\/\//, ""), url: url.startsWith("http") ? url : `https://${url}` });
+  }
+  return out;
 }
 
 const NEGATIVE = /^(no|none|n\/a|nope|not yet|nothing)\.?$/i;
@@ -215,6 +229,9 @@ export function buildCvHtml(data: CvData): string {
   // Optional and user-written only: no heading, no derived filler, nothing at
   // all when she hasn't written one.
   const summary = profile.summary?.trim() ?? "";
+  const linksHtml = links(profile)
+    .map((link) => `<a href="${esc(link.url)}">${esc(link.label)}</a>`)
+    .join(" | ");
 
   return `<!doctype html><html lang="en"><head><meta charset="utf-8" />
 <title>${esc(profile.full_name) || "Curriculum Vitae"} — CV</title>
@@ -248,6 +265,7 @@ export function buildCvHtml(data: CvData): string {
     <h1>${esc(profile.full_name) || "Your Name"}</h1>
     <p>${esc(profile.location) || "City, Country"}</p>
     <p>${esc(profile.phone) || "Phone"} | ${esc(profile.email) || "email@example.com"}</p>
+    ${linksHtml ? `<p>${linksHtml}</p>` : ""}
   </header>
 
   ${summary ? `<p class="summary-text">${esc(summary)}</p>` : ""}
@@ -306,6 +324,7 @@ export function buildCvTex(data: CvData): string {
   );
 
   const summary = profile.summary?.trim() ?? "";
+  const linkList = links(profile);
 
   const experienceTex =
     experience
@@ -395,7 +414,11 @@ export function buildCvTex(data: CvData): string {
 \\begin{minipage}[t]{0.72\\textwidth}
     {\\Huge\\bfseries ${tex(profile.full_name || "Your Name")}}\\\\[4pt]
     ${tex(profile.location || "City, Country")} \\\\{}
-    ${tex(profile.phone || "")} \\textbar{} \\href{mailto:${profile.email ?? ""}}{${tex(profile.email || "")}}
+    ${tex(profile.phone || "")} \\textbar{} \\href{mailto:${profile.email ?? ""}}{${tex(profile.email || "")}}${
+      linkList.length
+        ? ` \\\\{}\n    ${linkList.map((link) => `\\href{${link.url}}{${tex(link.label)}}`).join(" \\textbar{} ")}`
+        : ""
+    }
 \\end{minipage}%
 \\hfill
 \\begin{minipage}[t]{0.22\\textwidth}

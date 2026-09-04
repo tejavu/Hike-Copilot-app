@@ -9,6 +9,10 @@ export type Profile = {
   date_of_birth: string | null;
   location: string | null;
   phone: string | null;
+  /** Public LinkedIn profile URL, shown on the CV contact line. */
+  linkedin: string | null;
+  /** Other links she wants on the CV — portfolio, GitHub, personal site. */
+  websites: WebsiteLink[] | null;
   interests: string[];
   skills: string[];
   education: EducationEntry[];
@@ -45,6 +49,7 @@ export type ExperienceEntry = {
   /** What she actually did there — one achievement per line. */
   bullets?: string[];
 };
+export type WebsiteLink = { label: string; url: string };
 export type LanguageEntry = { name: string; level: string };
 export type ProjectEntry = { title: string; detail?: string; period?: string; url?: string };
 
