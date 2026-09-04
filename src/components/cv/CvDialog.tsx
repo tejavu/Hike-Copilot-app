@@ -40,14 +40,37 @@ function CvBody() {
   const { data: profile, isLoading } = useProfile();
   const { data: roadmap } = useRoadmap();
   const updateProfile = useUpdateProfile();
-  const [details, setDetails] = useState<{ location: string; phone: string; languages: string; summary: string } | null>(null);
+  const [details, setDetails] = useState<{
+    location: string;
+    phone: string;
+    languages: string;
+    summary: string;
+    linkedin: string;
+    websites: string;
+  } | null>(null);
 
   const form = details ?? {
     location: profile?.location ?? "",
     phone: profile?.phone ?? "",
     languages: (profile?.languages ?? []).map((l) => `${l.name}: ${l.level}`).join("\n"),
     summary: profile?.summary ?? "",
+    linkedin: profile?.linkedin ?? "",
+    websites: (profile?.websites ?? []).map((w) => (w.label ? `${w.label}: ${w.url}` : w.url)).join("\n"),
   };
+
+  // "Portfolio: example.com" per line; a bare URL is fine and labels itself.
+  const websites = form.websites
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const at = line.indexOf(":");
+      const looksLabelled = at > 0 && !/^https?$/i.test(line.slice(0, at).trim());
+      const label = looksLabelled ? line.slice(0, at).trim() : "";
+      const url = (looksLabelled ? line.slice(at + 1) : line).trim();
+      return { label: label || url.replace(/^https?:\/\//, ""), url };
+    })
+    .filter((w) => w.url);
 
   const languages = form.languages
     .split("\n")
@@ -90,7 +113,15 @@ function CvBody() {
   }
 
   const data = {
-    profile: { ...profile, location: form.location, phone: form.phone, languages, summary: form.summary },
+    profile: {
+      ...profile,
+      location: form.location,
+      phone: form.phone,
+      languages,
+      summary: form.summary,
+      linkedin: form.linkedin.trim() || null,
+      websites,
+    },
     earned,
   };
   const html = buildCvHtml(data);
@@ -147,6 +178,8 @@ function CvBody() {
       phone: form.phone,
       languages,
       summary: form.summary.trim() || null,
+      linkedin: form.linkedin.trim() || null,
+      websites: websites.length ? websites : null,
     });
     toast.success("Details saved.");
   };
@@ -167,6 +200,17 @@ function CvBody() {
             onChange={(e) => setDetails({ ...form, languages: e.target.value })}
             className="bg-card"
             placeholder={"English: C2\nGerman: B2\nFrench: A2"}
+          />
+        </div>
+        <Field label="LinkedIn" value={form.linkedin} onChange={(v) => setDetails({ ...form, linkedin: v })} />
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label className="text-xs">Other links — one per line, e.g. "Portfolio: jane.ch"</Label>
+          <Textarea
+            rows={2}
+            value={form.websites}
+            onChange={(e) => setDetails({ ...form, websites: e.target.value })}
+            className="bg-card"
+            placeholder={"Portfolio: jane.ch\nGitHub: github.com/jane"}
           />
         </div>
         <div className="space-y-1.5 sm:col-span-2">
