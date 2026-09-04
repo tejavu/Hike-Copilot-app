@@ -9,3 +9,9 @@
 - [x] Structured onboarding form: multi-step form with CV upload, editable skills,
       review step, job matching, commitment step, and roadmap generation. Chat is now
       general-purpose with clear/start-over actions.
+
+## Mentor Match request-and-wait flow
+- [x] pending_mentor / declined states, mentor email with accept + decline links
+- [x] mentor-bound email redirect, mentee "mentor is ready" email on accept
+- [x] AI-generated demo mentors when the real pool doesn't cover her field
+- [x] Keep RoadmapView toast-on-change pattern; kind, matter-of-fact rejected message
