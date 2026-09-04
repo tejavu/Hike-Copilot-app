@@ -25,6 +25,7 @@ import { normaliseAnswer } from "@/lib/profile-parse.functions";
 import { writeRoadmapCopy } from "@/lib/roadmap-copy.functions";
 import { CH_LOCATION_OPTIONS, deriveTargetLevel, skillGap, type TargetLevel } from "@/lib/job-sweep";
 import { searchJobs } from "@/lib/job-search.functions";
+import { JobPicker } from "@/components/jobs/JobPicker";
 import { generateRoadmap, phasePlanFor } from "@/lib/roadmap-builder";
 import { confidentSkills, readDocumentFile, WEEKLY_OPTIONS, type WeeklyOption } from "@/lib/onboarding";
 import type { Job, Profile, SkillConfidence } from "@/lib/domain";
@@ -800,9 +801,10 @@ export function OnboardingForm() {
               {likedJobs.length} kept · {undecided.length} still to look at
             </p>
           </Card>
-          {undecided[0] ? (
-            <JobCard job={undecided[0]} busy={busy} onDecide={decideJob} />
-          ) : (
+          {(jobs ?? []).length > 0 && (
+            <JobPicker jobs={jobs ?? []} busy={busy} onDecide={decideJob} />
+          )}
+          {undecided.length > 0 ? null : (
             <Card>
               {likedJobs.length === 0 ? (
                 <>

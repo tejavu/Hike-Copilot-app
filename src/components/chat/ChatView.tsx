@@ -34,6 +34,8 @@ import { normaliseAnswer } from "@/lib/profile-parse.functions";
 import { writeRoadmapCopy } from "@/lib/roadmap-copy.functions";
 import { skillGap } from "@/lib/job-sweep";
 import { searchJobs } from "@/lib/job-search.functions";
+import { JobPicker } from "@/components/jobs/JobPicker";
+import { CH_LOCATION_OPTIONS } from "@/lib/job-sweep";
 import { generateRoadmap, phasePlanFor } from "@/lib/roadmap-builder";
 import {
   PROMPTS,
@@ -303,9 +305,14 @@ export function ChatView() {
             : currentProfile.skills.map((name) => ({ name, level: 3 })),
         interests: currentProfile.interests,
         drawnTo: currentProfile.drawn_to ?? "",
-        locations: (currentProfile.location_pref ?? "").split(" · ").map((l) => l.trim()).filter(Boolean),
+        // Onboarding sweep stays inside Switzerland.
+        locations: (currentProfile.location_pref ?? "")
+          .split(" · ")
+          .map((l) => l.trim())
+          .filter((l) => CH_LOCATION_OPTIONS.includes(l)),
         setups: currentProfile.work_setup,
-        count: 6,
+        recentRole: currentProfile.recent_role ?? "",
+        count: 10,
       },
     });
 
@@ -700,20 +707,14 @@ function Interactive({
   }
 
   if (message.kind === "jobs") {
-    const undecided = jobs.filter((j) => j.liked === null);
-    const current = undecided[0];
-    if (!current) {
-      return (
-        <p className="ml-11 text-xs font-medium text-muted-foreground">
-          {jobs.filter((j) => j.liked).length} role{jobs.filter((j) => j.liked).length === 1 ? "" : "s"} kept.
-        </p>
-      );
-    }
+    if (jobs.length === 0) return null;
+    const kept = jobs.filter((j) => j.liked).length;
+    const undecided = jobs.filter((j) => j.liked === null).length;
     return (
       <div className="ml-11 space-y-3">
-        <JobCard job={current} busy={busy} onDecide={onDecideJob} />
+        <JobPicker jobs={jobs} busy={busy} onDecide={onDecideJob} />
         <p className="text-xs text-muted-foreground">
-          {undecided.length} of {jobs.length} still to look at
+          {kept} kept{undecided > 0 ? ` · ${undecided} still to decide on` : " · all decided"}
         </p>
       </div>
     );
