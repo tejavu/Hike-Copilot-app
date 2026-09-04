@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { rankJobs, type SourcedJob } from "./job-sweep";
+import { deriveTargetLevel, rankJobs, type SourcedJob, type TargetLevel } from "./job-sweep";
 
 const inputSchema = z.object({
   skills: z.array(z.object({ name: z.string(), level: z.number() })).default([]),
@@ -7,7 +7,11 @@ const inputSchema = z.object({
   drawnTo: z.string().default(""),
   locations: z.array(z.string()).default([]),
   setups: z.array(z.string()).default([]),
-  count: z.number().min(1).max(12).default(6),
+  count: z.number().min(1).max(20).default(6),
+  /** Her most recent role, if any — one of the level signals. */
+  recentRole: z.string().default(""),
+  /** Set only when she answered the clarifying question herself. */
+  targetLevel: z.enum(["junior", "mid", "senior"]).nullish(),
 });
 
 export type JobSearchResult = {
@@ -17,6 +21,9 @@ export type JobSearchResult = {
   examplesOnly: boolean;
   /** True when the city filter had to be relaxed to find anything. */
   widened: boolean;
+  /** The level we aimed at, and whether we had to guess. */
+  targetLevel: TargetLevel | null;
+  levelUnclear: boolean;
   notes: string[];
 };
 
@@ -104,56 +111,56 @@ async function searchAdzuna(
     if (results.length > 0) await new Promise((r) => setTimeout(r, 400));
     results.push(
       await (async () => {
-      const country = key.split("|")[0]!;
-      const url = new URL(`https://api.adzuna.com/v1/api/jobs/${country}/search/1`);
-      url.searchParams.set("app_id", appId);
-      url.searchParams.set("app_key", appKey);
-      url.searchParams.set("results_per_page", "20");
-      url.searchParams.set("what_or", terms.join(" "));
-      url.searchParams.set("max_days_old", "45");
-      url.searchParams.set("content-type", "application/json");
-      if (where) url.searchParams.set("where", where);
+        const country = key.split("|")[0]!;
+        const url = new URL(`https://api.adzuna.com/v1/api/jobs/${country}/search/1`);
+        url.searchParams.set("app_id", appId);
+        url.searchParams.set("app_key", appKey);
+        url.searchParams.set("results_per_page", "20");
+        url.searchParams.set("what_or", terms.join(" "));
+        url.searchParams.set("max_days_old", "45");
+        url.searchParams.set("content-type", "application/json");
+        if (where) url.searchParams.set("where", where);
 
-      try {
-        // Adzuna throws the occasional 503; one quiet retry saves the search.
-        let response = await fetch(url.toString());
-        if (response.status >= 500) {
-          await new Promise((r) => setTimeout(r, 700));
-          response = await fetch(url.toString());
-        }
-        if (!response.ok) {
-          notes.push(`Adzuna (${country}) returned ${response.status}.`);
+        try {
+          // Adzuna throws the occasional 503; one quiet retry saves the search.
+          let response = await fetch(url.toString());
+          if (response.status >= 500) {
+            await new Promise((r) => setTimeout(r, 700));
+            response = await fetch(url.toString());
+          }
+          if (!response.ok) {
+            notes.push(`Adzuna (${country}) returned ${response.status}.`);
+            return [];
+          }
+          const body = (await response.json()) as {
+            results?: {
+              title?: string;
+              description?: string;
+              redirect_url?: string;
+              company?: { display_name?: string };
+              location?: { display_name?: string };
+            }[];
+          };
+          return (body.results ?? []).map((row): SourcedJob => {
+            const title = tidy(row.title ?? "Role", 90);
+            const description = tidy(row.description ?? "");
+            return {
+              title,
+              company: row.company?.display_name?.trim() || "Undisclosed company",
+              location: row.location?.display_name?.trim() || where || "Europe",
+              description,
+              required_skills: skillsFrom(`${title} ${description}`, terms),
+              seniority: seniorityOf(title, description),
+              url: row.redirect_url ?? null,
+              source: "Adzuna",
+              is_example: false,
+            };
+          });
+        } catch (error) {
+          console.error("adzuna failed", error);
+          notes.push("Adzuna could not be reached.");
           return [];
         }
-        const body = (await response.json()) as {
-          results?: {
-            title?: string;
-            description?: string;
-            redirect_url?: string;
-            company?: { display_name?: string };
-            location?: { display_name?: string };
-          }[];
-        };
-        return (body.results ?? []).map((row): SourcedJob => {
-          const title = tidy(row.title ?? "Role", 90);
-          const description = tidy(row.description ?? "");
-          return {
-            title,
-            company: row.company?.display_name?.trim() || "Undisclosed company",
-            location: row.location?.display_name?.trim() || where || "Europe",
-            description,
-            required_skills: skillsFrom(`${title} ${description}`, terms),
-            seniority: seniorityOf(title, description),
-            url: row.redirect_url ?? null,
-            source: "Adzuna",
-            is_example: false,
-          };
-        });
-      } catch (error) {
-        console.error("adzuna failed", error);
-        notes.push("Adzuna could not be reached.");
-        return [];
-      }
       })(),
     );
   }
@@ -206,9 +213,7 @@ async function searchSwissBoards(
     }
     type Row = { url?: string; title?: string; description?: string };
     const body = (await response.json()) as { data?: { web?: Row[] } | Row[]; web?: Row[] };
-    const rows: Row[] = Array.isArray(body.data)
-      ? body.data
-      : (body.data?.web ?? body.web ?? []);
+    const rows: Row[] = Array.isArray(body.data) ? body.data : (body.data?.web ?? body.web ?? []);
     return rows
       .filter((row) => SWISS_DETAIL_PATHS.some((p) => (row.url ?? "").includes(p)))
       .map((row): SourcedJob => {
@@ -345,7 +350,10 @@ ${JSON.stringify(payload)}`;
     const bySlot = new Map<number, string[]>();
     for (const row of parsed.jobs ?? []) {
       if (typeof row.id !== "number" || !Array.isArray(row.skills)) continue;
-      const skills = row.skills.map((s) => String(s).trim()).filter(Boolean).slice(0, 6);
+      const skills = row.skills
+        .map((s) => String(s).trim())
+        .filter(Boolean)
+        .slice(0, 6);
       if (skills.length > 0) bySlot.set(row.id, skills);
     }
     return jobs.map((job, index) => {
@@ -364,47 +372,59 @@ export const jobSearchSchema = inputSchema;
 
 /** Runs the whole sourcing pipeline: live boards first, labelled examples last. */
 export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<JobSearchResult> {
+  const notes: string[] = [];
+  const terms = topTerms(data.skills, data.interests, data.drawnTo);
 
-    const notes: string[] = [];
-    const terms = topTerms(data.skills, data.interests, data.drawnTo);
+  const [adzuna, swiss] = await Promise.all([
+    searchAdzuna(terms, data.locations, notes),
+    searchSwissBoards(terms, data.locations, notes),
+  ]);
 
-    const [adzuna, swiss] = await Promise.all([
-      searchAdzuna(terms, data.locations, notes),
-      searchSwissBoards(terms, data.locations, notes),
-    ]);
+  const live = [...swiss, ...adzuna];
+  const targetLevel = data.targetLevel ?? deriveTargetLevel(data.skills, data.recentRole);
+  const levelUnclear = !data.targetLevel && targetLevel === null;
 
-    const live = [...swiss, ...adzuna];
-    const ranked = rankJobs(live, {
-      skills: data.skills,
-      interests: [...data.interests, data.drawnTo].filter(Boolean),
-      setups: data.setups,
-      locations: data.locations,
-      count: data.count,
-    });
+  const ranked = rankJobs(live, {
+    skills: data.skills,
+    interests: [...data.interests, data.drawnTo].filter(Boolean),
+    setups: data.setups,
+    locations: data.locations,
+    count: data.count,
+    targetLevel,
+  });
 
-    // Only the shortlist gets the LLM pass — scoring already ran on raw text.
-    const shortlist = await extractRequiredSkills(ranked.jobs, notes);
+  // Only the shortlist gets the LLM pass — scoring already ran on raw text.
+  const shortlist = await extractRequiredSkills(ranked.jobs, notes);
 
-    if (shortlist.length >= 3) {
-      const sources = Array.from(new Set(shortlist.map((j) => j.source)));
-      return { jobs: shortlist, sources, examplesOnly: false, widened: ranked.widened, notes };
-    }
-
-
-    const examples = await exampleRoles(
-      terms,
-      data.drawnTo,
-      data.locations,
-      data.setups,
-      data.count - shortlist.length,
-      notes,
-    );
-    const jobs = [...shortlist, ...examples].slice(0, data.count);
+  if (shortlist.length >= 3) {
+    const sources = Array.from(new Set(shortlist.map((j) => j.source)));
     return {
-      jobs,
-      sources: Array.from(new Set(jobs.map((j) => j.source))),
-      examplesOnly: jobs.length > 0 && jobs.every((j) => j.is_example),
+      jobs: shortlist,
+      sources,
+      examplesOnly: false,
       widened: ranked.widened,
+      targetLevel,
+      levelUnclear,
       notes,
     };
+  }
+
+  const examples = await exampleRoles(
+    terms,
+    data.drawnTo,
+    data.locations,
+    data.setups,
+    data.count - shortlist.length,
+    notes,
+  );
+  const jobs = [...shortlist, ...examples].slice(0, data.count);
+  return {
+    jobs,
+    sources: Array.from(new Set(jobs.map((j) => j.source))),
+    examplesOnly: jobs.length > 0 && jobs.every((j) => j.is_example),
+    widened: ranked.widened,
+    targetLevel,
+    levelUnclear,
+    notes,
+  };
 }

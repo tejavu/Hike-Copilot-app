@@ -44,7 +44,10 @@ const tools = [
       parameters: {
         type: "object",
         properties: {
-          skill: { type: "string", description: "Skill heading the step belongs under, e.g. 'SQL'." },
+          skill: {
+            type: "string",
+            description: "Skill heading the step belongs under, e.g. 'SQL'.",
+          },
           item_type: { type: "string", enum: ITEM_TYPES },
           title: { type: "string" },
           provider: { type: "string" },
@@ -87,7 +90,8 @@ const tools = [
           match_title: { type: "string" },
           confirm_completed: {
             type: "boolean",
-            description: "Pass true only after she has agreed to lose a completed step and its proof.",
+            description:
+              "Pass true only after she has agreed to lose a completed step and its proof.",
           },
         },
         required: ["match_title"],
@@ -106,7 +110,8 @@ const tools = [
           skill: { type: "string" },
           confirm_completed: {
             type: "boolean",
-            description: "Pass true only after she has agreed to lose completed steps and their proof.",
+            description:
+              "Pass true only after she has agreed to lose completed steps and their proof.",
           },
         },
         required: ["skill"],
@@ -122,7 +127,10 @@ const tools = [
       parameters: {
         type: "object",
         properties: {
-          count: { type: "number", description: "How many roles to look for (1-12). Defaults to 6." },
+          count: {
+            type: "number",
+            description: "How many roles to look for (1-12). Defaults to 6.",
+          },
         },
       },
     },
@@ -133,7 +141,13 @@ type Supa = { from: (table: string) => any };
 
 const normalise = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
 
-type ItemRow = { id: string; title: string; done: boolean; proof_url: string | null; proof_path: string | null };
+type ItemRow = {
+  id: string;
+  title: string;
+  done: boolean;
+  proof_url: string | null;
+  proof_path: string | null;
+};
 
 const hasProof = (row: ItemRow) => row.done || Boolean(row.proof_url) || Boolean(row.proof_path);
 
@@ -150,7 +164,8 @@ async function removeItem(supabase: Supa, userId: string, args: Record<string, u
   if (error) return { ok: false, error: error.message };
   const rows = (data ?? []) as ItemRow[];
   if (rows.length === 0) return { ok: false, error: `No roadmap step matches "${match}".` };
-  if (rows.length > 1) return { ok: false, error: `"${match}" matches more than one step — be more specific.` };
+  if (rows.length > 1)
+    return { ok: false, error: `"${match}" matches more than one step — be more specific.` };
 
   const row = rows[0]!;
   if (hasProof(row) && args["confirm_completed"] !== true) {
@@ -219,7 +234,6 @@ async function removeSkill(supabase: Supa, userId: string, args: Record<string, 
   return { ok: true, removed_skill: matches[0]!.name, removed_items: itemRows.length };
 }
 
-
 const PHASE_FOR: Record<string, string[]> = {
   learn: ["learning"],
   practice: ["learning"],
@@ -266,7 +280,6 @@ async function addItem(supabase: Supa, userId: string, args: Record<string, unkn
     order_index: number;
   }[];
 
-  
   const wanted = normalise(skillName);
   let skillId = skillRows.find((s) => normalise(s.name) === wanted)?.id;
   if (!skillId) {
@@ -275,13 +288,17 @@ async function addItem(supabase: Supa, userId: string, args: Record<string, unkn
       .reduce((max, s) => Math.max(max, s.order_index + 1), 0);
     const { data: created, error: createError } = await supabase
       .from("roadmap_skills")
-      .insert({ user_id: userId, phase_id: phase.id, name: skillName, order_index: nextIndex } as never)
+      .insert({
+        user_id: userId,
+        phase_id: phase.id,
+        name: skillName,
+        order_index: nextIndex,
+      } as never)
       .select("id")
       .single();
     if (createError) return { ok: false, error: createError.message };
     skillId = (created as { id: string }).id;
   }
-
 
   const { data: siblings } = await supabase
     .from("roadmap_items")
@@ -315,23 +332,32 @@ type ProfileRow = {
   drawn_to: string | null;
   location_pref: string | null;
   work_setup: string[] | null;
+  recent_role: string | null;
 };
 
 /**
  * Searches live boards using her saved profile plus her roadmap skills
  * (aspirational, so weighted lower) and saves the genuinely new roles.
  */
-async function findJobRecommendations(supabase: Supa, userId: string, args: Record<string, unknown>) {
+async function findJobRecommendations(
+  supabase: Supa,
+  userId: string,
+  args: Record<string, unknown>,
+) {
   const count = Math.min(12, Math.max(1, Number(args["count"] ?? 6) || 6));
 
   const { data: profileData, error: profileError } = await supabase
     .from("profiles")
-    .select("skill_confidence, skills, interests, drawn_to, location_pref, work_setup")
+    .select("skill_confidence, skills, interests, drawn_to, location_pref, work_setup, recent_role")
     .eq("id", userId)
     .maybeSingle();
   if (profileError) return { ok: false, error: profileError.message };
   const profile = profileData as ProfileRow | null;
-  if (!profile) return { ok: false, error: "She has no profile saved yet, so there's nothing to search against." };
+  if (!profile)
+    return {
+      ok: false,
+      error: "She has no profile saved yet, so there's nothing to search against.",
+    };
 
   const confirmed = profile.skill_confidence?.length
     ? profile.skill_confidence
@@ -356,8 +382,12 @@ async function findJobRecommendations(supabase: Supa, userId: string, args: Reco
     skills,
     interests: profile.interests ?? [],
     drawnTo: profile.drawn_to ?? "",
-    locations: (profile.location_pref ?? "").split(" · ").map((l) => l.trim()).filter(Boolean),
+    locations: (profile.location_pref ?? "")
+      .split(" · ")
+      .map((l) => l.trim())
+      .filter(Boolean),
     setups: profile.work_setup ?? [],
+    recentRole: profile.recent_role ?? "",
     count,
   });
 
@@ -374,7 +404,9 @@ async function findJobRecommendations(supabase: Supa, userId: string, args: Reco
   const keyOf = (title: string, company: string) =>
     `${normaliseSkill(title)}|${normaliseSkill(company)}`;
   const seen = new Set(
-    ((existing ?? []) as { title: string; company: string }[]).map((j) => keyOf(j.title, j.company)),
+    ((existing ?? []) as { title: string; company: string }[]).map((j) =>
+      keyOf(j.title, j.company),
+    ),
   );
 
   const fresh = result.jobs.filter((job) => {
@@ -385,7 +417,10 @@ async function findJobRecommendations(supabase: Supa, userId: string, args: Reco
   });
 
   if (fresh.length === 0) {
-    return { ok: false, error: "Everything I found is already on her list — nothing new was added." };
+    return {
+      ok: false,
+      error: "Everything I found is already on her list — nothing new was added.",
+    };
   }
 
   const { error: insertError } = await supabase
@@ -420,7 +455,8 @@ async function updateItem(supabase: Supa, userId: string, args: Record<string, u
   if (error) return { ok: false, error: error.message };
   const rows = (data ?? []) as { id: string; title: string }[];
   if (rows.length === 0) return { ok: false, error: `No roadmap step matches "${match}".` };
-  if (rows.length > 1) return { ok: false, error: `"${match}" matches more than one step — be more specific.` };
+  if (rows.length > 1)
+    return { ok: false, error: `"${match}" matches more than one step — be more specific.` };
 
   const patch: Record<string, unknown> = {};
   for (const key of ["title", "url", "provider", "detail"]) {
@@ -443,14 +479,19 @@ export const askCoach = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) {
-      return { reply: "I can't reach my brain right now, but I'm still here. Try again in a moment?", roadmapChanged: false };
+      return {
+        reply: "I can't reach my brain right now, but I'm still here. Try again in a moment?",
+        roadmapChanged: false,
+      };
     }
 
     const { supabase, userId } = context as unknown as { supabase: Supa; userId: string };
 
     const messages: Record<string, unknown>[] = [
       { role: "system", content: SYSTEM },
-      ...(data.context ? [{ role: "system", content: `Her profile & progress:\n${data.context}` }] : []),
+      ...(data.context
+        ? [{ role: "system", content: `Her profile & progress:\n${data.context}` }]
+        : []),
       ...data.history,
       { role: "user", content: data.question },
     ];
@@ -468,7 +509,11 @@ export const askCoach = createServerFn({ method: "POST" })
         const body = await response.text();
         console.error("AI gateway error", response.status, body);
         if (response.status === 429) {
-          return { reply: "Lots of people are talking to me at once — give me a few seconds and ask again?", roadmapChanged };
+          return {
+            reply:
+              "Lots of people are talking to me at once — give me a few seconds and ask again?",
+            roadmapChanged,
+          };
         }
         if (response.status === 402 || response.status === 403) {
           return {
@@ -519,14 +564,15 @@ export const askCoach = createServerFn({ method: "POST" })
                   ? await removeSkill(supabase, userId, args)
                   : name === "find_job_recommendations"
                     ? await findJobRecommendations(supabase, userId, args)
-                  : { ok: false, error: `Unknown tool ${name}` };
+                    : { ok: false, error: `Unknown tool ${name}` };
         if (result.ok) roadmapChanged = true;
         messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
       }
     }
 
     return {
-      reply: "I got tangled trying to make that change — can you tell me again exactly what you'd like added?",
+      reply:
+        "I got tangled trying to make that change — can you tell me again exactly what you'd like added?",
       roadmapChanged,
     };
   });

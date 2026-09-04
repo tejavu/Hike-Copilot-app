@@ -37,7 +37,6 @@ export type ExperienceEntry = { title: string; company?: string; period?: string
 export type LanguageEntry = { name: string; level: string };
 export type ProjectEntry = { title: string; detail?: string; period?: string; url?: string };
 
-
 export type ChatMessage = {
   id: string;
   user_id: string;
@@ -66,13 +65,14 @@ export type Job = {
   is_example?: boolean | null;
 };
 
-export type ApplicationStatus = "not_applied" | "applied" | "interviewing" | "offer";
+export type ApplicationStatus = "not_applied" | "applied" | "interviewing" | "offer" | "rejected";
 
 export const APPLICATION_STATUSES: { value: ApplicationStatus; label: string }[] = [
   { value: "not_applied", label: "Not applied yet" },
   { value: "applied", label: "Applied" },
   { value: "interviewing", label: "Interviewing" },
   { value: "offer", label: "Offer" },
+  { value: "rejected", label: "Rejected" },
 ];
 
 export type PhaseKind = "learning" | "building" | "applying" | "visibility";
@@ -116,7 +116,11 @@ export function isItemComplete(item: RoadmapItem): boolean {
     const target = item.target_count ?? 1;
     return item.progress_count >= target;
   }
-  if (item.item_type === "certify" || item.item_type === "build" || item.item_type === "visibility") {
+  if (
+    item.item_type === "certify" ||
+    item.item_type === "build" ||
+    item.item_type === "visibility"
+  ) {
     return item.done && Boolean(item.proof_url || item.proof_path);
   }
   return item.done;
