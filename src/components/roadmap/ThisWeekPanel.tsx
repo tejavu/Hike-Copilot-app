@@ -170,8 +170,12 @@ export function ThisWeekPanel({
   weeklyHours: number | null;
 }) {
   const budget = weeklyHours && weeklyHours > 0 ? weeklyHours : 5;
+
+  // Items already shown this session stay in the list while they're
+  // incomplete, so ticking one thing off can't reshuffle unrelated tasks out.
+  const pinnedRef = useRef<Set<string>>(new Set());
   const picked = useMemo(
-    () => pickThisWeek({ phases, skills, items, weeklyHours: budget }),
+    () => pickThisWeek({ phases, skills, items, weeklyHours: budget, pinnedIds: pinnedRef.current }),
     [phases, skills, items, budget],
   );
   const candidates = useMemo(() => rankedCandidates({ phases, skills, items }), [phases, skills, items]);
@@ -182,7 +186,7 @@ export function ThisWeekPanel({
   const [keptDone, setKeptDone] = useState<RoadmapItem[]>([]);
   const prevPickedRef = useRef<Set<string> | null>(null);
   useEffect(() => {
-    const currentIds = new Set(picked.map((i) => i.id));
+    const currentIds = new Set(picked.map((e) => e.item.id));
     const prev = prevPickedRef.current;
     if (prev) {
       const newlyDone = items.filter((i) => prev.has(i.id) && isItemComplete(i) && !currentIds.has(i.id));
@@ -195,54 +199,79 @@ export function ThisWeekPanel({
       }
     }
     prevPickedRef.current = currentIds;
+    for (const id of currentIds) pinnedRef.current.add(id);
   }, [picked, items]);
 
-  // The next thing after this week's list: read-only, clearly optional.
-  const pickedIds = useMemo(() => new Set(picked.map((i) => i.id)), [picked]);
+  // The next thing after this week's list: read-only.
+  const pickedIds = useMemo(() => new Set(picked.map((e) => e.item.id)), [picked]);
   const upNext = useMemo(
     () => candidates.find((i) => !pickedIds.has(i.id)) ?? null,
     [candidates, pickedIds],
   );
 
-  const planned = picked.reduce((sum, item) => sum + itemHours(item), 0);
+  const planned = picked.reduce((sum, entry) => sum + entry.hours, 0);
   const fill = Math.min(100, Math.round((planned / budget) * 100));
+  // "if you have time" only makes sense when there's slack left. When the
+  // week is already full (often from one oversized item), say so instead.
+  const budgetFull = planned >= budget - 0.01;
 
-  const renderItem = (item: RoadmapItem, done: boolean) => (
-    <li
-      key={item.id}
-      className={`flex flex-wrap items-start justify-between gap-2 rounded-xl border border-border p-3.5 ${
-        done ? "bg-secondary/20 opacity-75" : "bg-secondary/40"
-      }`}
-    >
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[0.65rem] font-bold tracking-[0.12em] text-muted-foreground uppercase">
-            {TYPE_LABEL[item.item_type] ?? item.item_type}
-          </span>
-          <Badge variant="outline" className="h-5 bg-card text-[0.65rem]">
-            {skillById.get(item.skill_id)?.name ?? "Your roadmap"}
-          </Badge>
-          {done && (
-            <Badge variant="secondary" className="h-5 text-[0.65rem]">
-              Done
+  const renderItem = (entry: WeekEntry | { item: RoadmapItem; hours: number }, done: boolean) => {
+    const item = entry.item;
+    const partial = "partial" in entry ? entry.partial : undefined;
+    const oversized = "oversized" in entry ? entry.oversized : false;
+    return (
+      <li
+        key={item.id}
+        className={`flex flex-wrap items-start justify-between gap-2 rounded-xl border border-border p-3.5 ${
+          done ? "bg-secondary/20 opacity-75" : "bg-secondary/40"
+        }`}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[0.65rem] font-bold tracking-[0.12em] text-muted-foreground uppercase">
+              {TYPE_LABEL[item.item_type] ?? item.item_type}
+            </span>
+            <Badge variant="outline" className="h-5 bg-card text-[0.65rem]">
+              {skillById.get(item.skill_id)?.name ?? "Your roadmap"}
             </Badge>
+            {done && (
+              <Badge variant="secondary" className="h-5 text-[0.65rem]">
+                Done
+              </Badge>
+            )}
+            {partial && (
+              <Badge variant="secondary" className="h-5 text-[0.65rem]">
+                {partial.take} this week
+              </Badge>
+            )}
+          </div>
+          <p className={`mt-0.5 font-medium ${done ? "line-through decoration-muted-foreground/50" : ""}`}>
+            {item.title}
+          </p>
+          {partial && (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Just {partial.take} of them this week — the other {partial.remaining} carry into the weeks after.
+            </p>
           )}
+          {oversized && (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              This one is bigger than a single week on its own — take it at your own pace.
+            </p>
+          )}
+          {/* Same per-type control as the main roadmap; completing here
+              updates the same row. Done items keep their control visible
+              (checked state) until the next visit. */}
+          <div className="mt-2.5">
+            <ItemControls item={item} />
+          </div>
         </div>
-        <p className={`mt-0.5 font-medium ${done ? "line-through decoration-muted-foreground/50" : ""}`}>
-          {item.title}
-        </p>
-        {/* Same per-type control as the main roadmap; completing here
-            updates the same row. Done items keep their control visible
-            (checked state) until the next visit. */}
-        <div className="mt-2.5">
-          <ItemControls item={item} />
-        </div>
-      </div>
-      <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-muted-foreground tabular-nums">
-        <Clock className="size-3" /> {formatHours(itemHours(item))}
-      </span>
-    </li>
-  );
+        <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-muted-foreground tabular-nums">
+          <Clock className="size-3" /> {formatHours(entry.hours)}
+        </span>
+      </li>
+    );
+  };
+
 
   return (
     <section className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-warm">
