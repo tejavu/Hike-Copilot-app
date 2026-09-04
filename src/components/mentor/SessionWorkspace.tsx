@@ -40,6 +40,7 @@ import {
   buildSessionIcs,
   downloadIcsFile,
   fallbackPrep,
+  cooldownEndsAt,
   formatSlot,
   nextCheckInFrom,
   relativeDays,
@@ -66,6 +67,7 @@ export function UpcomingSessionCard({
   onCancelled?: () => void;
 }) {
   const update = useUpdateSession();
+  const savePreferences = useSavePreferences();
   const [questions, setQuestions] = useState<string[]>(session.prep_questions);
   const [agenda, setAgenda] = useState(session.agenda ?? "");
   const [loadingPrep, setLoadingPrep] = useState(false);
