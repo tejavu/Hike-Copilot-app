@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 const schema = z.object({
-  field: z.enum(["interests", "skills", "education", "experience", "certifications"]),
+  field: z.enum(["interests", "skills", "education", "experience", "certifications", "projects"]),
   text: z.string().min(1).max(4000),
 });
 
@@ -16,6 +16,8 @@ const GUIDE: Record<string, string> = {
   experience:
     "Return each role as a tidy line: 'Title — Company (period)' when known. Keep only what's stated.",
   certifications: "Return official certification/course names only, properly capitalised.",
+  projects:
+    "Return each project as a tidy line: 'Title — one line on what it did or achieved (dates if given)'. Keep only what's stated.",
 };
 
 export const normaliseAnswer = createServerFn({ method: "POST" })

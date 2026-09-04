@@ -641,6 +641,7 @@ export type Database = {
           onboarding_stage: string
           phone: string | null
           photo_url: string | null
+          projects: Json
           recent_role: string | null
           roadmap_generated: boolean
           skill_confidence: Json
@@ -671,6 +672,7 @@ export type Database = {
           onboarding_stage?: string
           phone?: string | null
           photo_url?: string | null
+          projects?: Json
           recent_role?: string | null
           roadmap_generated?: boolean
           skill_confidence?: Json
@@ -701,6 +703,7 @@ export type Database = {
           onboarding_stage?: string
           phone?: string | null
           photo_url?: string | null
+          projects?: Json
           recent_role?: string | null
           roadmap_generated?: boolean
           skill_confidence?: Json

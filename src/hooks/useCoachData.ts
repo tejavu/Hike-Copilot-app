@@ -214,6 +214,7 @@ export function useResetCoach() {
           education: [],
           experience: [],
           certifications: [],
+          projects: [],
           location: null,
           location_pref: null,
           work_setup: [],

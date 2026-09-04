@@ -14,6 +14,7 @@ export type Profile = {
   education: EducationEntry[];
   experience: ExperienceEntry[];
   certifications: string[];
+  projects: ProjectEntry[];
   goal: string | null;
   timeline: string | null;
   timeline_months: number | null;
@@ -32,6 +33,7 @@ export type Profile = {
 
 export type EducationEntry = { title: string; institution?: string; period?: string };
 export type ExperienceEntry = { title: string; company?: string; period?: string; detail?: string };
+export type ProjectEntry = { title: string; detail?: string; period?: string; url?: string };
 
 
 export type ChatMessage = {
