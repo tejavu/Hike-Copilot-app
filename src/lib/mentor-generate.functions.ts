@@ -15,6 +15,8 @@ const schema = z.object({
   language: z.string().max(40).nullable().default(null),
   city: z.string().max(80).nullable().default(null),
   bestScore: z.number().min(0).max(100).default(0),
+  /** Ask explicitly (from the empty state) — bypasses the score threshold. */
+  force: z.boolean().default(false),
 });
 
 /** Below this, the strongest real match isn't credible for her field. */
@@ -48,19 +50,19 @@ const generatedSchema = z.object({
       }),
     )
     .min(1)
-    .max(2),
+    .max(3),
 });
 
 export const generateGapMentors = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => schema.parse(data))
   .handler(async ({ data }): Promise<{ created: number }> => {
-    if (data.bestScore >= MENTOR_GAP_THRESHOLD) return { created: 0 };
+    if (!data.force && data.bestScore >= MENTOR_GAP_THRESHOLD) return { created: 0 };
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) return { created: 0 };
 
     const prompt = [
-      "Create 1-2 clearly fictional volunteer mentor profiles for a women-in-tech mentoring app.",
+      "Create 2-3 clearly fictional volunteer mentor profiles for a women-in-tech mentoring app.",
       `The mentee is working toward: ${data.targetRole || "an unspecified tech role"}.`,
       `Her priority skills: ${data.prioritySkills.join(", ") || "unspecified"}.`,
       data.language ? `She prefers mentoring in ${data.language}.` : "",
