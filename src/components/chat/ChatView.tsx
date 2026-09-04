@@ -30,6 +30,7 @@ import {
 } from "@/hooks/useCoachData";
 import { askCoach } from "@/lib/coach-ai.functions";
 import { parseCvDocuments } from "@/lib/cv-parse.functions";
+import { formatEntryLine } from "@/lib/cv-entry";
 import { normaliseAnswer } from "@/lib/profile-parse.functions";
 import { writeRoadmapCopy } from "@/lib/roadmap-copy.functions";
 import { searchJobs } from "@/lib/job-search.functions";

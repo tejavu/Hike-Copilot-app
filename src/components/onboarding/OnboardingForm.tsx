@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useJobs, useProfile, useUpdateJob, useUpdateProfile } from "@/hooks/useCoachData";
 import { parseCvDocuments } from "@/lib/cv-parse.functions";
+import { formatEntryLine, parseEntryLine } from "@/lib/cv-entry";
 import { normaliseAnswer } from "@/lib/profile-parse.functions";
 import { writeRoadmapCopy } from "@/lib/roadmap-copy.functions";
 import {
@@ -111,13 +112,13 @@ function draftFromProfile(profile: Profile): Draft {
 
     setups: profile.work_setup ?? [],
     workAuth: profile.work_auth ?? "",
-    recentRole: profile.recent_role ?? profile.experience.map((e) => e.title).join("\n"),
+    recentRole: profile.recent_role ?? profile.experience.map((e) => formatEntryLine({ title: e.title, org: e.company, period: e.period, detail: e.detail })).join("\n"),
     skills: profile.skill_confidence?.length
       ? profile.skill_confidence
       : profile.skills.map((name) => ({ name, level: 3 })),
-    education: profile.education.map((e) => e.title).join("\n"),
+    education: profile.education.map((e) => formatEntryLine({ title: e.title, org: e.institution, period: e.period })).join("\n"),
     certifications: profile.certifications.join("\n"),
-    projects: (profile.projects ?? []).map((p) => p.title).join("\n"),
+    projects: (profile.projects ?? []).map((p) => formatEntryLine({ title: p.title, detail: p.detail, period: p.period })).join("\n"),
     weeklyHours: profile.weekly_hours ?? 6,
     months: profile.timeline_months ?? 6,
     goal: profile.goal ?? "",
@@ -242,14 +243,22 @@ export function OnboardingForm() {
         ...form,
         drawnTo: form.drawnTo || parsed.interests.join(", "),
         recentRole:
-          form.recentRole || parsed.experience.map((e: { title: string }) => e.title).join("\n"),
+          form.recentRole ||
+          parsed.experience
+            .map((e) => formatEntryLine({ title: e.title, org: e.company, period: e.period, detail: e.detail }))
+            .join("\n"),
         skills: skills.length ? skills : form.skills,
         education:
-          form.education || parsed.education.map((e: { title: string }) => e.title).join("\n"),
+          form.education ||
+          parsed.education
+            .map((e) => formatEntryLine({ title: e.title, org: e.institution, period: e.period }))
+            .join("\n"),
         certifications: form.certifications || parsed.certifications.join("\n"),
         projects:
           form.projects ||
-          (parsed.projects ?? []).map((p: { title: string }) => p.title).join("\n"),
+          (parsed.projects ?? [])
+            .map((p) => formatEntryLine({ title: p.title, detail: p.detail, period: p.period }))
+            .join("\n"),
       });
       if (parsed.full_name && !profile?.full_name) {
         await updateProfile.mutateAsync({ full_name: parsed.full_name });
@@ -307,10 +316,23 @@ export function OnboardingForm() {
         recent_role: form.recentRole,
         skills: form.skills.map((s) => s.name),
         skill_confidence: form.skills,
-        education: education.map((title) => ({ title })),
-        experience: experience.map((title) => ({ title })),
+        education: education.map((line) => {
+          const parts = parseEntryLine(line);
+          return { title: parts.title, institution: parts.org, period: parts.period };
+        }),
+        experience: experience.map((line) => {
+          const parts = parseEntryLine(line);
+          return { title: parts.title, company: parts.org, period: parts.period, detail: parts.detail };
+        }),
         certifications,
-        projects: projects.map((title) => ({ title })),
+        projects: projects.map((line) => {
+          const parts = parseEntryLine(line);
+          return {
+            title: parts.title,
+            detail: [parts.org, parts.detail].filter(Boolean).join(" — "),
+            period: parts.period,
+          };
+        }),
         onboarding_stage: "jobs",
       };
       await updateProfile.mutateAsync(nextPatch);
