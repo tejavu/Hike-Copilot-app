@@ -99,11 +99,6 @@ export function MatchConfirmation({
               ))}
             </div>
           )}
-          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-            That percentage is a compatibility guide built from the preferences you gave me — skills,
-            target role, language, format and when you're free. It isn't a prediction of how the
-            relationship will go.
-          </p>
         </div>
 
         <div className="rounded-2xl border border-border p-4">
