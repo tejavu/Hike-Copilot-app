@@ -13,13 +13,17 @@ const schema = z.object({
   files: z.array(fileSchema).min(1).max(5),
 });
 
+export type ParsedEducation = { title: string; institution?: string; period?: string };
+export type ParsedExperience = { title: string; company?: string; period?: string; detail?: string };
+export type ParsedProject = { title: string; detail?: string; period?: string; url?: string };
+
 export type ParsedCv = {
   full_name: string | null;
   interests: string[];
   skills: string[];
-  education: { title: string }[];
-  experience: { title: string }[];
-  projects: { title: string }[];
+  education: ParsedEducation[];
+  experience: ParsedExperience[];
+  projects: ParsedProject[];
   certifications: string[];
   summary: string | null;
 };
@@ -37,16 +41,18 @@ const EMPTY: ParsedCv = {
 
 const SYSTEM = `You extract structured career data from uploaded documents (CVs, transcripts, certificates).
 Return ONLY minified JSON, no prose, no markdown fences, matching exactly:
-{"full_name":string|null,"interests":string[],"skills":string[],"education":string[],"experience":string[],"projects":string[],"certifications":string[],"summary":string}
+{"full_name":string|null,"interests":string[],"skills":string[],"education":[{"title":string,"institution":string,"period":string}],"experience":[{"title":string,"company":string,"period":string,"detail":string}],"projects":[{"title":string,"detail":string,"period":string,"url":string}],"certifications":string[],"summary":string}
 Rules:
 - skills: concrete tools, languages, frameworks, methods (max 15).
 - interests: tech areas the person clearly leans toward, e.g. "frontend", "data science", "cloud" (max 6). Infer from their work if not stated.
-- education: one string per entry, "Degree, Field — Institution (year)".
-- experience: one string per role, "Title — Organisation (dates)".
-- projects: personal, academic or side projects (including a dedicated Projects/Portfolio section), one string per project, "Title — one line on what it did/achieved (dates if given)" (max 8).
+- education: title is the degree and field, institution is the school, period is the dates exactly as written (e.g. "2021 – 2023").
+- experience: EVERY paid role, internship, working-student job, apprenticeship, research assistantship and volunteer role in the document — never skip internships, and never merge two roles into one. title is the job title only, company is the employer only, period is the dates only, detail is one line on what was done there.
+- projects: personal, academic or side projects (max 8). title is the project name only, detail is one line on what it did/achieved, period is the dates, url only if a link is printed.
+- Keep dates out of title/company/institution fields — they belong in period.
 - certifications: certificate/course names only (max 10).
 - summary: one warm sentence (max 30 words) describing what you read.
-- Use [] when nothing is found. Never invent facts.`;
+- Use [] or "" when nothing is found. Never invent facts.`;
+
 
 type Block =
   | { type: "text"; text: string }
