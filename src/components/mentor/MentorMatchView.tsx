@@ -432,7 +432,7 @@ export function MentorMatchView() {
         </p>
       </header>
 
-      {preferences?.reminder_pending && selectedMentor && (
+      {preferences?.reminder_pending && selectedMentor && !bookingPaused && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-primary/30 bg-primary/5 p-4">
           <p className="inline-flex items-start gap-2 text-sm">
             <BellRing className="mt-0.5 size-4 shrink-0 text-primary" />
