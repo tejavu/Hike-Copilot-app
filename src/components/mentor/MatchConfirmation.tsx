@@ -1,4 +1,4 @@
-import { CalendarClock, Globe, Heart, Loader2, MapPin, RefreshCw, Star } from "lucide-react";
+import { CalendarClock, Globe, Heart, Loader2, MapPin, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -13,25 +13,19 @@ import {
 
 /**
  * The mentee doesn't shop around: Hike Copilot picks one best-fit mentor and explains
- * why. She either confirms, or asks for a different match.
+ * why. She confirms, then books a session.
  */
 export function MatchConfirmation({
   result,
   timeOfDay,
   confirming,
-  rematching,
-  canRematch,
   onConfirm,
-  onRematch,
   onViewProfile,
 }: {
   result: MatchResult;
   timeOfDay: TimeOfDay | null;
   confirming: boolean;
-  rematching: boolean;
-  canRematch: boolean;
   onConfirm: () => void;
-  onRematch: () => void;
   onViewProfile: () => void;
 }) {
   const { mentor, score, reasons, matchedAttributes } = result;
