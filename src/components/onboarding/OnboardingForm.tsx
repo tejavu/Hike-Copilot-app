@@ -51,6 +51,7 @@ type StepId =
   | "experience"
   | "skills"
   | "education"
+  | "projects"
   | "review"
   | "jobs"
   | "commitment"
@@ -76,6 +77,7 @@ type Draft = {
   skills: SkillConfidence[];
   education: string;
   certifications: string;
+  projects: string;
   weeklyHours: number;
   months: number;
   goal: string;
@@ -98,6 +100,7 @@ function draftFromProfile(profile: Profile): Draft {
         : profile.skills.map((name) => ({ name, level: 3 })),
     education: profile.education.map((e) => e.title).join("\n"),
     certifications: profile.certifications.join("\n"),
+    projects: (profile.projects ?? []).map((p) => p.title).join("\n"),
     weeklyHours: profile.weekly_hours ?? 6,
     months: profile.timeline_months ?? 6,
     goal: profile.goal ?? "",
@@ -128,7 +131,7 @@ export function OnboardingForm() {
   const form = draft ?? (profile ? draftFromProfile(profile) : null);
   const patch = (next: Partial<Draft>) => form && setDraft({ ...form, ...next });
 
-  const order: StepId[] = ["documents", "drawn_to", "constraints", "experience", "skills", "education", "review"];
+  const order: StepId[] = ["documents", "drawn_to", "constraints", "experience", "skills", "education", "projects", "review"];
   const stepIndex = order.indexOf(step);
   const totalSteps = order.length + 2;
   const progress = Math.round(((step === "jobs" ? order.length : step === "commitment" ? order.length + 1 : step === "done" ? totalSteps : stepIndex) / totalSteps) * 100);
@@ -204,6 +207,7 @@ export function OnboardingForm() {
         skills: skills.length ? skills : form.skills,
         education: form.education || parsed.education.map((e: { title: string }) => e.title).join("\n"),
         certifications: form.certifications || parsed.certifications.join("\n"),
+        projects: form.projects || (parsed.projects ?? []).map((p: { title: string }) => p.title).join("\n"),
       });
       if (parsed.full_name && !profile?.full_name) {
         await updateProfile.mutateAsync({ full_name: parsed.full_name });
@@ -241,10 +245,11 @@ export function OnboardingForm() {
   const saveAndSweep = async () => {
     if (!form || !profile) return;
     await run("Looking for roles that fit", async () => {
-      const [interests, education, certifications] = await Promise.all([
+      const [interests, education, certifications, projects] = await Promise.all([
         clean("interests", form.drawnTo),
         clean("education", form.education),
         clean("certifications", form.certifications),
+        clean("projects", form.projects),
       ]);
       const experience = form.recentRole
         .split("\n")
@@ -263,6 +268,7 @@ export function OnboardingForm() {
         education: education.map((title) => ({ title })),
         experience: experience.map((title) => ({ title })),
         certifications,
+        projects: projects.map((title) => ({ title })),
         onboarding_stage: "jobs",
       };
       await updateProfile.mutateAsync(nextPatch);
@@ -301,7 +307,7 @@ export function OnboardingForm() {
   };
 
   const clean = async (
-    field: "interests" | "skills" | "education" | "experience" | "certifications",
+    field: "interests" | "skills" | "education" | "experience" | "certifications" | "projects",
     text: string,
   ): Promise<string[]> => {
     if (!text.trim()) return [];
@@ -682,7 +688,25 @@ export function OnboardingForm() {
             className="mt-2"
             placeholder="Google Data Analytics Certificate · CS50"
           />
-          <Nav onBack={() => setStep("skills")} onNext={() => setStep("review")} />
+          <Nav onBack={() => setStep("skills")} onNext={() => setStep("projects")} />
+        </Card>
+      )}
+
+      {step === "projects" && (
+        <Card>
+          <CardTitle>Any projects you'd like to show off?</CardTitle>
+          <CardHint>
+            Side projects, coursework, volunteering builds — one line each. Add a link if there is one. Leave it
+            empty if you'd rather not.
+          </CardHint>
+          <Textarea
+            value={form.projects}
+            onChange={(e) => patch({ projects: e.target.value })}
+            rows={4}
+            className="mt-4"
+            placeholder={"Budget tracker app — React + Supabase, used by 40 people (2024)"}
+          />
+          <Nav onBack={() => setStep("education")} onNext={() => setStep("review")} />
         </Card>
       )}
 
@@ -708,9 +732,10 @@ export function OnboardingForm() {
               value={[form.education, form.certifications].filter(Boolean).join(" · ")}
               onEdit={() => setStep("education")}
             />
+            <ReviewRow label="Projects" value={form.projects} onEdit={() => setStep("projects")} />
           </div>
           <div className="mt-6 flex items-center justify-between gap-3">
-            <Button variant="ghost" onClick={() => setStep("education")} className="gap-1.5">
+            <Button variant="ghost" onClick={() => setStep("projects")} className="gap-1.5">
               <ArrowLeft className="size-4" /> Back
             </Button>
             <Button disabled={busy} onClick={() => void saveAndSweep()} className="gap-2">
