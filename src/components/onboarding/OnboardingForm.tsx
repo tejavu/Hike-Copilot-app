@@ -418,6 +418,17 @@ export function OnboardingForm() {
         onboarding_complete: true,
         roadmap_generated: true,
       });
+
+      // Proactively initiate the main coaching chat so the user sees what's
+      // available as soon as she opens AI Chat.
+      const { error: chatError } = await supabase.from("chat_messages").insert({
+        user_id: profile.id,
+        role: "assistant",
+        kind: "roadmap_ready",
+        content: `"${form.goal}" — I'm writing that down, because that's what everything below is in service of.\n\nYour roadmap is ready. ${gaps.length} skill${gaps.length === 1 ? "" : "s"} to close, sequenced so you're never guessing what's next. Roadmap, Network and Mentor Match are unlocked now.\n\nYou don't have to feel ready. You just have to start.`,
+      } as never);
+      if (chatError) console.error("roadmap ready chat message failed", chatError);
+
       setStep("done");
       refresh();
     });
@@ -1017,12 +1028,20 @@ export function OnboardingForm() {
             sequenced so you're never guessing what's next. Roadmap, Network and Mentor Match are
             unlocked now. You don't have to feel ready — you just have to start.
           </CardHint>
-          <Link
-            to="/roadmap"
-            className="animate-pop mt-5 inline-flex items-center gap-2 rounded-xl bg-warm-gradient px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lift transition-transform hover:-translate-y-0.5"
-          >
-            <PartyPopper className="size-4" /> Open my roadmap
-          </Link>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Link
+              to="/"
+              className="animate-pop inline-flex items-center gap-2 rounded-xl bg-warm-gradient px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lift transition-transform hover:-translate-y-0.5"
+            >
+              <PartyPopper className="size-4" /> Go to chat
+            </Link>
+            <Link
+              to="/roadmap"
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-sm font-semibold shadow-warm transition-colors hover:bg-accent"
+            >
+              Open my roadmap
+            </Link>
+          </div>
         </Card>
       )}
     </div>
