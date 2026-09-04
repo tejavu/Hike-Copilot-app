@@ -91,6 +91,7 @@ export function MentorMatchView() {
   const [confirming, setConfirming] = useState(false);
   const [scheduleFor, setScheduleFor] = useState<Mentor | null>(null);
   const [feedbackFor, setFeedbackFor] = useState<MentorSession | null>(null);
+  const [findingMore, setFindingMore] = useState(false);
 
   const roadmapSkills = useMemo(
     () => (roadmap?.skills ?? []).map((skill) => ({ id: skill.id, name: skill.name })),
@@ -256,6 +257,34 @@ export function MentorMatchView() {
       } catch (error) {
         console.error("mentor gap fill failed", error);
       }
+    }
+  };
+
+  /** Explicit ask from the empty state: invent labelled demo mentors in her field. */
+  const findMoreMentors = async () => {
+    setFindingMore(true);
+    try {
+      const result = await generateGapMentors({
+        data: {
+          prioritySkills: matchInput.prioritySkills,
+          targetRole: matchInput.targetRole,
+          language: matchInput.language,
+          city: profile?.location ?? null,
+          bestScore: 0,
+          force: true,
+        },
+      });
+      if (result.created > 0) {
+        await refetch();
+        toast.success("Found a few more people in your field.");
+      } else {
+        toast.info("I couldn't add anyone new just now. Try again in a moment.");
+      }
+    } catch (error) {
+      console.error("mentor generation failed", error);
+      toast.error("That didn't work. Try again?");
+    } finally {
+      setFindingMore(false);
     }
   };
 
@@ -540,10 +569,17 @@ export function MentorMatchView() {
             />
           ) : (
             <EmptyState
-              title="I've run out of mentors who fit that"
-              body="Nobody left in the volunteer directory matches everything you asked for. Loosen one thing — the language, the format or how near they need to be — and I'll look again."
+              title="Nobody in the directory fits that yet"
+              body="I can put together a few mentor profiles in your field right now, or you can loosen one thing — the language, the format or how near they need to be — and I'll look again."
               action={
-                <Button onClick={() => setAssessing(true)}>Update what I need</Button>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button onClick={() => void findMoreMentors()} disabled={findingMore}>
+                    {findingMore ? "Finding people…" : "Find mentors in my field"}
+                  </Button>
+                  <Button variant="outline" onClick={() => setAssessing(true)}>
+                    Update what I need
+                  </Button>
+                </div>
               }
             />
           )}
