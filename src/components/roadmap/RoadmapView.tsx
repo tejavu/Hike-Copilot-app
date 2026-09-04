@@ -42,6 +42,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { ThisWeekPanel } from "@/components/roadmap/ThisWeekPanel";
+
 
 export function RoadmapView() {
   const { data: profile } = useProfile();
@@ -103,7 +105,15 @@ export function RoadmapView() {
           </div>
           <Progress value={overall.pct} className="mt-3 h-2.5" />
         </div>
+
+        <ThisWeekPanel
+          phases={phases}
+          skills={skills}
+          items={items}
+          weeklyHours={profile?.weekly_hours ?? null}
+        />
       </header>
+
 
       <div className="relative space-y-10 border-l border-dashed border-border pl-6 md:pl-8">
         {phases.map((phase, index) => (

@@ -109,7 +109,38 @@ export type RoadmapItem = {
   proof_url: string | null;
   proof_path: string | null;
   order_index: number;
+  /** Rough time this step takes, in hours. Null on older rows. */
+  estimated_hours?: number | null;
 };
+
+/** Consistent fallback estimate when a row has no stored value. */
+export function itemHours(item: RoadmapItem): number {
+  if (typeof item.estimated_hours === "number" && item.estimated_hours > 0) return item.estimated_hours;
+  switch (item.item_type) {
+    case "learn":
+      return 3;
+    case "practice":
+      return Math.min(12, Math.max(1, (item.target_count ?? 1) * 0.5));
+    case "build":
+      return 5;
+    case "certify":
+      return 2;
+    case "visibility":
+      return 1.5;
+    default:
+      return 2;
+  }
+}
+
+/** Order steps are meant to be tackled in within one skill. */
+export const ITEM_TYPE_ORDER: Record<ItemType, number> = {
+  learn: 0,
+  practice: 1,
+  build: 2,
+  certify: 3,
+  visibility: 4,
+};
+
 
 export function isItemComplete(item: RoadmapItem): boolean {
   if (item.item_type === "practice") {
