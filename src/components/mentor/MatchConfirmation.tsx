@@ -77,15 +77,6 @@ export function MatchConfirmation({
             </span>
           </div>
         </div>
-        <div className="w-full sm:w-44">
-          <div className="flex items-baseline justify-between">
-            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              Compatibility
-            </p>
-            <p className="font-display text-2xl font-semibold text-primary">{score}%</p>
-          </div>
-          <Progress value={score} className="mt-2 h-1.5" />
-        </div>
       </div>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
