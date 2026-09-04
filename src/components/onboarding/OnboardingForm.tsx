@@ -331,14 +331,16 @@ export function OnboardingForm() {
           const known = [...roleDetails, ...(profile.experience ?? [])].find(
             (role) => role.title.trim().toLowerCase() === parts.title.trim().toLowerCase(),
           );
-          return {
-            title: parts.title,
-            company: parts.org || known?.company,
-            period: parts.period || known?.period,
-            detail: parts.detail || known?.detail,
-            location: known?.location,
-            bullets: known?.bullets,
-          };
+          const entry: ExperienceEntry = { title: parts.title };
+          const company = parts.org || known?.company;
+          const period = parts.period || known?.period;
+          const detail = parts.detail || known?.detail;
+          if (company) entry.company = company;
+          if (period) entry.period = period;
+          if (detail) entry.detail = detail;
+          if (known?.location) entry.location = known.location;
+          if (known?.bullets?.length) entry.bullets = known.bullets;
+          return entry;
         }),
         certifications,
         projects: projects.map((line) => {
