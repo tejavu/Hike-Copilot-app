@@ -199,8 +199,9 @@ export function UpcomingSessionCard({
                     // volunteer's time isn't held and dropped repeatedly.
                     savePreferences.mutate({ cooldown_until: cooldownEndsAt() });
                     toast.success("Cancelled.", {
-                      description: `No guilt. You can request a new mentor again after ${new Date(cooldownEndsAt()).toLocaleDateString(undefined, { day: "numeric", month: "long" })}.`,
+                      description: `No guilt. Mentoring is paused — you can book again or request a new mentor after ${new Date(cooldownEndsAt()).toLocaleDateString(undefined, { day: "numeric", month: "long" })}.`,
                     });
+
                     onCancelled?.();
                   },
                 },

@@ -399,11 +399,13 @@ export function MentorMatchView() {
   const needsAssessment = !preferences?.completed_at;
 
   /**
-   * Cancelling a session pauses new mentor requests for 30 days. It never blocks
-   * an existing mentoring relationship — only starting a new one.
+   * Cancelling a session pauses mentoring for 30 days: no new match, and no new
+   * booking with the current mentor either, so a volunteer's calendar isn't
+   * held and released repeatedly.
    */
   const cooldownUntil = activeCooldown(preferences?.cooldown_until);
   const cooldownActive = Boolean(cooldownUntil) && !selectedMentor;
+  const bookingPaused = Boolean(cooldownUntil);
   const cooldownDate = cooldownUntil
     ? cooldownUntil.toLocaleDateString(undefined, {
         weekday: "long",
@@ -411,6 +413,7 @@ export function MentorMatchView() {
         month: "long",
       })
     : "";
+
 
   return (
     <div className="space-y-6">
@@ -429,7 +432,7 @@ export function MentorMatchView() {
         </p>
       </header>
 
-      {preferences?.reminder_pending && selectedMentor && (
+      {preferences?.reminder_pending && selectedMentor && !bookingPaused && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-primary/30 bg-primary/5 p-4">
           <p className="inline-flex items-start gap-2 text-sm">
             <BellRing className="mt-0.5 size-4 shrink-0 text-primary" />
@@ -611,12 +614,19 @@ export function MentorMatchView() {
                 <Button variant="ghost" onClick={() => setShowProfile(true)}>
                   Why we matched
                 </Button>
-                <Button className="gap-1.5" onClick={() => setScheduleFor(selectedMentor)}>
-                  <CalendarClock className="size-4" />
-                  Book a session
-                </Button>
+                {bookingPaused ? (
+                  <p className="max-w-xs text-sm text-muted-foreground">
+                    Booking is paused until {cooldownDate} because a session was cancelled.
+                  </p>
+                ) : (
+                  <Button className="gap-1.5" onClick={() => setScheduleFor(selectedMentor)}>
+                    <CalendarClock className="size-4" />
+                    Book a session
+                  </Button>
+                )}
               </div>
             </div>
+
 
             {nextSession ? (
               <>
@@ -638,6 +648,11 @@ export function MentorMatchView() {
                   }}
                 />
               </>
+            ) : bookingPaused ? (
+              <EmptyState
+                title="Mentoring is paused"
+                body={`Because a session was cancelled, new bookings open again on ${cooldownDate}. Your mentor, notes and past sessions all stay as they are.`}
+              />
             ) : (
               <EmptyState
                 title="Nothing on the calendar"
@@ -645,6 +660,7 @@ export function MentorMatchView() {
                 action={<Button onClick={() => setScheduleFor(selectedMentor)}>Pick a time</Button>}
               />
             )}
+
 
             {awaitingFeedback.map((session) => (
               <div
