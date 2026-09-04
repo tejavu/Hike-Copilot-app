@@ -36,7 +36,7 @@ export type AssessmentDraft = {
   timezone: string;
 };
 
-const STEP_COUNT = 7;
+const STEP_COUNT = 6;
 
 const MENTORSHIP_TOPIC_OPTIONS = [
   "Resume review",
