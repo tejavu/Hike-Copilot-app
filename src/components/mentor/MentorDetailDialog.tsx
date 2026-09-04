@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { MentorAvatar } from "@/components/mentor/MentorCard";
 import {
   MEETING_PREF_LABELS,
