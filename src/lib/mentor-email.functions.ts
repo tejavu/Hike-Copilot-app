@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { buildSessionEmails, type BuiltEmail } from "@/lib/mentor-email";
+import { MENTOR_EMAIL_REDIRECT } from "@/lib/mentor-request.functions";
 
 const schema = z.object({
   sessionId: z.string().uuid(),
@@ -58,7 +59,8 @@ export const sendSessionConfirmation = createServerFn({ method: "POST" })
       menteeName: profile?.full_name || "Your mentee",
       menteeEmail: profile?.email ?? null,
       mentorName: mentor.full_name,
-      mentorEmail: mentor.contact_email ?? null,
+      // Mentor-bound mail is redirected to one inbox while the directory is a demo pool.
+      mentorEmail: MENTOR_EMAIL_REDIRECT,
       mentorTitle: mentor.title,
       mentorCompany: mentor.company,
       startsAt: session.starts_at,

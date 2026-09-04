@@ -60,6 +60,10 @@ import {
   UpcomingSessionCard,
 } from "@/components/mentor/SessionWorkspace";
 import { sendSessionConfirmation } from "@/lib/mentor-email.functions";
+import { requestMentorMatch } from "@/lib/mentor-request.functions";
+import { generateGapMentors, MENTOR_GAP_THRESHOLD } from "@/lib/mentor-generate.functions";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 
 export function MentorMatchView() {
   const { data: profile, isLoading: profileLoading } = useProfile();
@@ -72,6 +76,8 @@ export function MentorMatchView() {
   const { data: actions } = useMentorActions();
   const { data: feedback } = useSessionFeedback();
 
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const savePreferences = useSavePreferences();
   const recordMatches = useRecordMatches();
   const setMatchStatus = useSetMatchStatus();
@@ -130,9 +136,38 @@ export function MentorMatchView() {
     [preferences, gapSkills, profile?.goal, profile?.location],
   );
 
+  /** Mentors who already said no to this mentee are out of the running. */
+  const declinedMentorIds = useMemo(
+    () =>
+      new Set(
+        (matches ?? []).filter((row) => row.status === "declined").map((row) => row.mentor_id),
+      ),
+    [matches],
+  );
+  const availableMentors = useMemo(
+    () => (mentors ?? []).filter((mentor) => !declinedMentorIds.has(mentor.id)),
+    [mentors, declinedMentorIds],
+  );
+
+  /** A request that's with a mentor, waiting on her answer. */
+  const pendingMatch = useMemo(
+    () => (matches ?? []).find((row) => row.status === "pending_mentor") ?? null,
+    [matches],
+  );
+  const pendingMentor = useMemo(
+    () => (mentors ?? []).find((mentor) => mentor.id === pendingMatch?.mentor_id) ?? null,
+    [mentors, pendingMatch],
+  );
+  const lastDeclinedMentor = useMemo(() => {
+    const declined = (matches ?? [])
+      .filter((row) => row.status === "declined")
+      .sort((a, b) => (b.responded_at ?? "").localeCompare(a.responded_at ?? ""))[0];
+    return declined ? ((mentors ?? []).find((m) => m.id === declined.mentor_id) ?? null) : null;
+  }, [matches, mentors]);
+
   const ranked = useMemo(
-    () => (mentors ? rankMentors(mentors, matchInput) : []),
-    [mentors, matchInput],
+    () => (mentors ? rankMentors(availableMentors, matchInput) : []),
+    [mentors, availableMentors, matchInput],
   );
 
   const timeOfDay = preferences?.preferred_time_of_day ?? "any";
@@ -146,9 +181,9 @@ export function MentorMatchView() {
 
   /** Hike Copilot's single pick — never a list to shop through. */
   const suggestion = useMemo(() => {
-    if (!mentors || selectedMentorId) return null;
-    return pickBestMentor(mentors, matchInput, { timeOfDay });
-  }, [mentors, matchInput, timeOfDay, selectedMentorId]);
+    if (!mentors || selectedMentorId || pendingMatch) return null;
+    return pickBestMentor(availableMentors, matchInput, { timeOfDay });
+  }, [mentors, availableMentors, matchInput, timeOfDay, selectedMentorId, pendingMatch]);
 
   const selectedResult = useMemo(
     () => ranked.find((row) => row.mentor.id === selectedMentorId) ?? null,
@@ -200,30 +235,49 @@ export function MentorMatchView() {
     });
     setAssessing(false);
     toast.success("Got it. Let me find the right person for this.");
+
+    // The seeded directory doesn't cover every field. If nobody in it is a
+    // credible fit, add one or two labelled demo mentors in her actual field.
+    const best = pickBestMentor(availableMentors, { ...matchInput, prioritySkills: draft.priority_skills.length ? draft.priority_skills : matchInput.prioritySkills }, { timeOfDay: draft.preferred_time_of_day });
+    if (!best || best.score < MENTOR_GAP_THRESHOLD) {
+      try {
+        const result = await generateGapMentors({
+          data: {
+            prioritySkills: draft.priority_skills,
+            targetRole: draft.target_role || null,
+            language: draft.language,
+            city: profile?.location ?? null,
+            bestScore: best?.score ?? 0,
+          },
+        });
+        if (result.created > 0) await refetch();
+      } catch (error) {
+        console.error("mentor gap fill failed", error);
+      }
+    }
   };
 
   const confirmMentor = async () => {
     if (!suggestion) return;
     setConfirming(true);
     try {
-      await setMatchStatus.mutateAsync({
-        mentorId: suggestion.mentor.id,
-        status: "selected",
-        score: suggestion.score,
-        reasons: suggestion.reasons,
-        matchedAttributes: suggestion.matchedAttributes,
-      });
-      await savePreferences.mutateAsync({ selected_mentor_id: suggestion.mentor.id });
-      recordMatches.mutate([
-        {
-          mentor_id: suggestion.mentor.id,
+      const result = await requestMentorMatch({
+        data: {
+          mentorId: suggestion.mentor.id,
           score: suggestion.score,
           reasons: suggestion.reasons,
-          matched_attributes: suggestion.matchedAttributes,
+          matchedAttributes: suggestion.matchedAttributes,
         },
-      ]);
-      toast.success(`${suggestion.mentor.full_name.split(" ")[0]} is your mentor. Let's book time.`);
-      setScheduleFor(suggestion.mentor);
+      });
+      await queryClient.invalidateQueries({ queryKey: ["mentor-matches", user?.id] });
+      const first = suggestion.mentor.full_name.split(" ")[0];
+      if (result.status === "sent") {
+        toast.success(`Your request is with ${first}.`, {
+          description: "You'll hear back by email, and I'll open scheduling the moment she accepts.",
+        });
+      } else {
+        toast.info("Request saved, email not sent", { description: result.detail });
+      }
     } catch {
       toast.error("That didn't save. Try again?");
     } finally {
@@ -383,7 +437,7 @@ export function MentorMatchView() {
           <div className="flex flex-wrap items-start justify-between gap-3 rounded-3xl border border-border bg-card p-5">
             <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
               You don't have to compare profiles or pick from a list — I've matched you with one
-              person from the directory who fits what you asked for.
+              person from the directory who fits what you asked for, and I ask her on your behalf.
             </p>
             <Button
               variant="outline"
@@ -396,7 +450,45 @@ export function MentorMatchView() {
             </Button>
           </div>
 
-          {suggestion ? (
+          {lastDeclinedMentor && !pendingMentor && (
+            <div className="rounded-3xl border border-border bg-muted/40 p-5">
+              <h3 className="font-display text-lg font-semibold">
+                {lastDeclinedMentor.full_name.split(" ")[0]} can't take this on right now
+              </h3>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                Mentors volunteer their time, so availability comes and goes — this says nothing
+                about you or your request. I've found the next best fit below and I can ask her for
+                you.
+              </p>
+            </div>
+          )}
+
+          {pendingMentor ? (
+            <section className="rounded-3xl border border-border bg-card p-6 shadow-lift md:p-8">
+              <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+                Request sent
+              </p>
+              <h2 className="mt-2 font-display text-2xl font-semibold">
+                {pendingMentor.full_name} has your request
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                I sent her what you told me — your goal, what you're looking for from mentoring and
+                the focus for a first session. She'll accept or decline by email. As soon as she
+                accepts, scheduling opens here and you'll get a note in your inbox. Nothing is
+                booked until then.
+              </p>
+              <p className="mt-4 text-sm text-muted-foreground">
+                {pendingMentor.title} · {pendingMentor.company} ·{" "}
+                {pendingMentor.availability_summary}
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => setShowProfile(true)}>
+                  See her full profile
+                </Button>
+              </div>
+            </section>
+          ) : suggestion ? (
+
             <MatchConfirmation
               result={suggestion}
               timeOfDay={timeOfDay}
@@ -637,8 +729,14 @@ export function MentorMatchView() {
       )}
 
       <MentorDetailDialog
-        result={selectedResult ?? suggestion}
-        status={selectedMentorId ? "selected" : undefined}
+        result={
+          selectedResult ??
+          suggestion ??
+          ranked.find((row) => row.mentor.id === pendingMatch?.mentor_id) ??
+          null
+        }
+        status={selectedMentorId ? "selected" : pendingMatch ? "pending_mentor" : undefined}
+
         open={showProfile}
         onOpenChange={setShowProfile}
       />

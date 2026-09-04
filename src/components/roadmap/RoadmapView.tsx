@@ -467,6 +467,10 @@ function ApplyingBlock({ jobs }: { jobs: Job[] }) {
                     if (value === "offer") toast.success("An offer. Look at what you built.");
                     else if (value === "interviewing") toast.success("Interviewing — they want to meet you.");
                     else if (value === "applied") toast.success("Applied. That took nerve.");
+                    else if (value === "rejected")
+                      toast("Noted — this one's closed.", {
+                        description: "One outcome, not a verdict. Your roadmap carries on.",
+                      });
                   })
               }
             >
