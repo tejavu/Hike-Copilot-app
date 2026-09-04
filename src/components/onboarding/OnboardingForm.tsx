@@ -340,6 +340,7 @@ export function OnboardingForm() {
 
   const likedJobs = (jobs ?? []).filter((j) => j.liked);
   const undecided = (jobs ?? []).filter((j) => j.liked === null);
+  const needsLevelAnswer = form ? deriveTargetLevel(form.skills, form.recentRole) === null : false;
 
   const gapPreview = useMemo(() => {
     if (!form) return { strengths: [], gaps: [] };
