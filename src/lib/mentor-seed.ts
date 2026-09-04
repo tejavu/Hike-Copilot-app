@@ -593,8 +593,8 @@ export const MENTOR_SEED: SeedMentor[] = [
     ],
   },
   {
-    external_id: "demo:mentor-ines-moreau",
-    full_name: "Inès Moreau",
+    external_id: "demo:mentor-camille-perrin",
+    full_name: "Camille Perrin",
     title: "Game Developer",
     company: "an independent studio",
     bio: "Unity, small teams, shipped titles. Games are a hard industry and I would rather tell you the truth early than let you find out after a year of unpaid jam work.",
