@@ -331,6 +331,34 @@ export function normaliseSkill(raw: string): string {
   return raw.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+/**
+ * Skills in the Microsoft ecosystem are far better served by Microsoft Learn
+ * than by a generic course search — so the fallback plan swaps only its course
+ * link when the skill name mentions one of these. Everything else, and every
+ * curated CATALOG entry, is untouched.
+ */
+const MICROSOFT_KEYWORDS = [
+  "azure",
+  ".net",
+  "c#",
+  "power bi",
+  "power platform",
+  "github actions",
+  "microsoft 365",
+  "dynamics",
+];
+
+function microsoftCourse(skill: string, pretty: string): SkillPlan["course"] | null {
+  const key = normaliseSkill(skill);
+  const hit = MICROSOFT_KEYWORDS.some((word) => key.includes(word));
+  if (!hit) return null;
+  return {
+    title: `${pretty} on Microsoft Learn`,
+    provider: "Microsoft Learn",
+    url: `https://learn.microsoft.com/search/?terms=${encodeURIComponent(skill)}&category=Training`,
+  };
+}
+
 export function planForSkill(skill: string): SkillPlan {
   const key = normaliseSkill(skill);
   const resolved = CATALOG[key] ?? CATALOG[ALIASES[key] ?? ""];
@@ -338,7 +366,7 @@ export function planForSkill(skill: string): SkillPlan {
 
   const pretty = titleCase(skill);
   return {
-    course: {
+    course: microsoftCourse(skill, pretty) ?? {
       title: `${pretty}: a structured beginner-to-confident course`,
       provider: "Coursera",
       url: `https://www.coursera.org/search?query=${encodeURIComponent(skill)}`,
