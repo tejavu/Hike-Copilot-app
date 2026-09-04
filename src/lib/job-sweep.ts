@@ -47,7 +47,63 @@ export const LOCATION_OPTIONS = [
   "Remote, EU",
 ];
 
+/** The Swiss-only subset — the onboarding sweep never leaves Switzerland. */
+export const CH_LOCATION_OPTIONS = [
+  ...LOCATION_OPTIONS.filter((l) => l.endsWith(", CH")),
+  "Remote, CH",
+];
+
 export type Setup = "remote" | "hybrid" | "onsite";
+
+// ------------------------------------------------------------------ level
+
+export type TargetLevel = "junior" | "mid" | "senior";
+
+/** Where a posting sits, read off the seniority tag we store at ingestion. */
+export function levelOfJob(seniority: string | null | undefined, title = ""): TargetLevel {
+  const value = `${seniority ?? ""} ${title}`.toLowerCase();
+  if (/intern|junior|graduate|entry|einsteiger/.test(value)) return "junior";
+  if (/senior|principal|staff|lead|head of|director/.test(value)) return "senior";
+  return "mid";
+}
+
+const LEVEL_ORDER: TargetLevel[] = ["junior", "mid", "senior"];
+
+/**
+ * Works out roughly what level she's aiming at from what we already know —
+ * how confident she is in her skills, and whether she has a role behind her.
+ * Returns null when there's genuinely nothing to go on, so the caller can ask
+ * instead of guessing.
+ */
+export function deriveTargetLevel(
+  skills: SkillConfidence[],
+  recentRole: string | null | undefined,
+): TargetLevel | null {
+  const levelled = skills.filter((s) => Number.isFinite(s.level) && s.level > 0);
+  const role = (recentRole ?? "").trim().toLowerCase();
+  const fresh =
+    role.length === 0 || /starting fresh|no experience|none|student|graduat|career change/.test(role);
+
+  if (levelled.length === 0 && fresh) return null;
+  if (levelled.length === 0) return "mid";
+
+  const avg = levelled.reduce((sum, s) => sum + s.level, 0) / levelled.length;
+  if (fresh) return avg >= 4.2 ? "mid" : "junior";
+  if (avg >= 4.2) return "senior";
+  if (avg >= 3) return "mid";
+  return "junior";
+}
+
+/** Nudges, never a wall: on-level roles lead, two steps away drop back. */
+function levelFactor(job: SourcedJob, target: TargetLevel | null | undefined): number {
+  if (!target) return 1;
+  const distance = Math.abs(
+    LEVEL_ORDER.indexOf(levelOfJob(job.seniority, job.title)) - LEVEL_ORDER.indexOf(target),
+  );
+  if (distance === 0) return 1.3;
+  if (distance === 1) return 1;
+  return 0.6;
+}
 
 export function setupOf(location: string, description = ""): Setup {
   const value = `${location} ${description}`.toLowerCase();
