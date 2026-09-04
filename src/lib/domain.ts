@@ -35,7 +35,16 @@ export type Profile = {
 };
 
 export type EducationEntry = { title: string; institution?: string; period?: string };
-export type ExperienceEntry = { title: string; company?: string; period?: string; detail?: string };
+export type ExperienceEntry = {
+  title: string;
+  company?: string;
+  period?: string;
+  detail?: string;
+  /** Where the role was based, e.g. "Geneva, Switzerland". */
+  location?: string;
+  /** What she actually did there — one achievement per line. */
+  bullets?: string[];
+};
 export type LanguageEntry = { name: string; level: string };
 export type ProjectEntry = { title: string; detail?: string; period?: string; url?: string };
 

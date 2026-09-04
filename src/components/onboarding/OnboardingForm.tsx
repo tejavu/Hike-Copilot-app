@@ -39,7 +39,7 @@ import {
   WEEKLY_OPTIONS,
   type WeeklyOption,
 } from "@/lib/onboarding";
-import type { Job, Profile, SkillConfidence } from "@/lib/domain";
+import type { ExperienceEntry, Job, Profile, SkillConfidence } from "@/lib/domain";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -144,6 +144,11 @@ export function OnboardingForm() {
   const [busyLabel, setBusyLabel] = useState("");
   const [cvSummary, setCvSummary] = useState<string | null>(null);
   const [newSkill, setNewSkill] = useState("");
+  /**
+   * The full role records (location, achievement lines) behind the one-line
+   * textarea, so editing the line doesn't throw the rest of the role away.
+   */
+  const [roleDetails, setRoleDetails] = useState<ExperienceEntry[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const form = draft ?? (profile ? draftFromProfile(profile) : null);
@@ -239,6 +244,7 @@ export function OnboardingForm() {
       }
 
       const skills: SkillConfidence[] = parsed.skills.map((name: string) => ({ name, level: 3 }));
+      if (parsed.experience.length) setRoleDetails(parsed.experience);
       setDraft({
         ...form,
         drawnTo: form.drawnTo || parsed.interests.join(", "),
@@ -322,7 +328,19 @@ export function OnboardingForm() {
         }),
         experience: experience.map((line) => {
           const parts = parseEntryLine(line);
-          return { title: parts.title, company: parts.org, period: parts.period, detail: parts.detail };
+          const known = [...roleDetails, ...(profile.experience ?? [])].find(
+            (role) => role.title.trim().toLowerCase() === parts.title.trim().toLowerCase(),
+          );
+          const entry: ExperienceEntry = { title: parts.title };
+          const company = parts.org || known?.company;
+          const period = parts.period || known?.period;
+          const detail = parts.detail || known?.detail;
+          if (company) entry.company = company;
+          if (period) entry.period = period;
+          if (detail) entry.detail = detail;
+          if (known?.location) entry.location = known.location;
+          if (known?.bullets?.length) entry.bullets = known.bullets;
+          return entry;
         }),
         certifications,
         projects: projects.map((line) => {
