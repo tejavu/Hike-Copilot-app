@@ -81,8 +81,7 @@ export const sendSessionConfirmation = createServerFn({ method: "POST" })
       subject: email.subject,
     }));
 
-    const apiKey = process.env["RESEND_API_KEY"];
-    const from = process.env["MENTOR_EMAIL_FROM"];
+    const { sendEmail, emailConfigured } = await import("@/lib/email-send.server");
 
     const persist = async (status: SendResult["status"], detail: string) => {
       await context.supabase
@@ -96,7 +95,7 @@ export const sendSessionConfirmation = createServerFn({ method: "POST" })
         .eq("id", session.id);
     };
 
-    if (!apiKey || !from) {
+    if (!emailConfigured()) {
       const detail =
         "No verified sending domain is configured for this app, so the confirmation email was prepared but not delivered. Your in-app confirmation and calendar file (.ics) are ready now.";
       await persist("not_configured", detail);
@@ -104,22 +103,15 @@ export const sendSessionConfirmation = createServerFn({ method: "POST" })
     }
 
     const send = async (email: BuiltEmail) => {
-      if (!email.to) return { ok: false, reason: `No ${email.kind} email address on file.` };
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          from,
-          to: [email.to],
-          subject: email.subject,
-          html: email.html,
-          text: email.text,
-        }),
+      if (!email.to) return { ok: false as const, reason: `No ${email.kind} email address on file.` };
+      const result = await sendEmail({
+        to: email.to,
+        subject: email.subject,
+        html: email.html,
+        text: email.text,
       });
-      if (response.ok) return { ok: true as const, reason: "" };
-      const body = await response.text();
-      console.error("mentor confirmation email failed", email.kind, response.status, body);
-      return { ok: false as const, reason: `${email.kind}: delivery rejected (${response.status})` };
+      if (result.ok) return { ok: true as const, reason: "" };
+      return { ok: false as const, reason: `${email.kind}: delivery rejected (${result.status})` };
     };
 
     try {
