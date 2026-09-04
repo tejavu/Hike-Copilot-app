@@ -188,6 +188,7 @@ export function MentorMatchView() {
       goal: draft.goal || null,
       target_role: draft.target_role || null,
       priority_skills: draft.priority_skills,
+      mentorship_topics: draft.mentorship_topics,
       guidance_style: draft.guidance_style,
       language: draft.language,
       location_pref: draft.location_pref,
@@ -198,7 +199,6 @@ export function MentorMatchView() {
       completed_at: new Date().toISOString(),
     });
     setAssessing(false);
-    setDeclined([]);
     toast.success("Got it. Let me find the right person for this.");
   };
 
