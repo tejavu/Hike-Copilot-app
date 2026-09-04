@@ -52,13 +52,9 @@ export function MentorDetailDialog({
 
         <div className="space-y-5">
           <div className="rounded-2xl border border-border bg-accent/40 p-4">
-            <div className="flex items-baseline justify-between">
-              <p className="text-xs font-semibold tracking-wide text-accent-foreground uppercase">
-                Compatibility guide
-              </p>
-              <p className="font-display text-2xl font-semibold text-primary">{score}%</p>
-            </div>
-            <Progress value={score} className="mt-2 h-1.5" />
+            <p className="text-xs font-semibold tracking-wide text-accent-foreground uppercase">
+              Why you match
+            </p>
             <ul className="mt-3 space-y-1.5">
               {reasons.map((reason) => (
                 <li
@@ -70,11 +66,6 @@ export function MentorDetailDialog({
                 </li>
               ))}
             </ul>
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              This percentage is a compatibility guide built from the preferences you gave me —
-              skills, target role, language, format and availability. It isn't a prediction of how
-              the relationship will go.
-            </p>
           </div>
 
           <p className="text-sm leading-relaxed">{mentor.bio}</p>
