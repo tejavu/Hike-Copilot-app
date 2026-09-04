@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { parseEntryLine } from "./cv-entry";
 
 const fileSchema = z.object({
   fileName: z.string().min(1).max(300),
@@ -65,6 +66,40 @@ function toStringList(value: unknown, limit: number): string[] {
     .map((item) => (typeof item === "string" ? item.trim() : ""))
     .filter((item) => item.length > 1)
     .slice(0, limit);
+}
+
+/**
+ * The model sometimes answers with plain strings instead of objects, so both
+ * shapes are accepted and normalised into the structured entry we store.
+ */
+function toEntryList<T extends Record<string, string | undefined>>(
+  value: unknown,
+  limit: number,
+  fromString: (line: string) => T,
+  fromObject: (obj: Record<string, unknown>) => T,
+): T[] {
+  if (!Array.isArray(value)) return [];
+  const out: T[] = [];
+  for (const item of value) {
+    if (typeof item === "string" && item.trim().length > 1) out.push(fromString(item.trim()));
+    else if (item && typeof item === "object") {
+      const entry = fromObject(item as Record<string, unknown>);
+      if (entry["title"]?.trim()) out.push(entry);
+    }
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+function str(obj: Record<string, unknown>, key: string): string {
+  const value = obj[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function clean<T extends Record<string, string | undefined>>(entry: T): T {
+  const out = {} as Record<string, string>;
+  for (const [key, value] of Object.entries(entry)) if (value) out[key] = value;
+  return out as T;
 }
 
 /**
@@ -150,9 +185,45 @@ export const parseCvDocuments = createServerFn({ method: "POST" })
       full_name: typeof obj["full_name"] === "string" && obj["full_name"].trim() ? obj["full_name"].trim() : null,
       interests: toStringList(obj["interests"], 6),
       skills: toStringList(obj["skills"], 15),
-      education: toStringList(obj["education"], 6).map((title) => ({ title })),
-      experience: toStringList(obj["experience"], 8).map((title) => ({ title })),
-      projects: toStringList(obj["projects"], 8).map((title) => ({ title })),
+      education: toEntryList<ParsedEducation>(
+        obj["education"],
+        6,
+        (line) => {
+          const parts = parseEntryLine(line);
+          return clean({ title: parts.title, institution: parts.org, period: parts.period });
+        },
+        (o) => clean({ title: str(o, "title"), institution: str(o, "institution"), period: str(o, "period") }),
+      ),
+      experience: toEntryList<ParsedExperience>(
+        obj["experience"],
+        10,
+        (line) => {
+          const parts = parseEntryLine(line);
+          return clean({ title: parts.title, company: parts.org, period: parts.period, detail: parts.detail });
+        },
+        (o) =>
+          clean({
+            title: str(o, "title"),
+            company: str(o, "company"),
+            period: str(o, "period"),
+            detail: str(o, "detail"),
+          }),
+      ),
+      projects: toEntryList<ParsedProject>(
+        obj["projects"],
+        8,
+        (line) => {
+          const parts = parseEntryLine(line);
+          return clean({ title: parts.title, detail: [parts.org, parts.detail].filter(Boolean).join(" — "), period: parts.period });
+        },
+        (o) =>
+          clean({
+            title: str(o, "title"),
+            detail: str(o, "detail"),
+            period: str(o, "period"),
+            url: str(o, "url"),
+          }),
+      ),
       certifications: toStringList(obj["certifications"], 10),
       summary: typeof obj["summary"] === "string" ? obj["summary"].trim() : null,
     };
