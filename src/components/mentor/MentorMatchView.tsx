@@ -231,21 +231,6 @@ export function MentorMatchView() {
     }
   };
 
-  const rematch = () => {
-    if (!suggestion) return;
-    setRematching(true);
-    const skipped = suggestion.mentor.full_name.split(" ")[0];
-    setDeclined((current) => [...current, suggestion.mentor.id]);
-    setMatchStatus.mutate({
-      mentorId: suggestion.mentor.id,
-      status: "passed",
-      score: suggestion.score,
-      reasons: suggestion.reasons,
-      matchedAttributes: suggestion.matchedAttributes,
-    });
-    setRematching(false);
-    toast.success(`No problem — looking past ${skipped}.`);
-  };
 
   /** Books the session, notifies the mentor, then confirms back to the mentee. */
   const book = async (input: { slot: { start: Date; end: Date }; theme: string; format: string }) => {
