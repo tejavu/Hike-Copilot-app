@@ -127,21 +127,14 @@ export const requestMentorMatch = createServerFn({ method: "POST" })
     }
 
     try {
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          from,
-          to: [MENTOR_EMAIL_REDIRECT],
-          subject: email.subject,
-          html: email.html,
-          text: email.text,
-        }),
+      const result = await sendEmail({
+        to: MENTOR_EMAIL_REDIRECT,
+        subject: email.subject,
+        html: email.html,
+        text: email.text,
       });
-      if (!response.ok) {
-        const body = await response.text();
-        console.error("mentor request email failed", response.status, body);
-        const detail = `Your request is saved, but the email to your mentor didn't go out (delivery rejected, ${response.status}).`;
+      if (!result.ok) {
+        const detail = `Your request is saved, but the email to your mentor didn't go out (delivery rejected, ${result.status}).`;
         await persistEmailState("failed", detail);
         return { status: "failed", detail };
       }
