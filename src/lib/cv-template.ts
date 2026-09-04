@@ -324,6 +324,7 @@ export function buildCvTex(data: CvData): string {
   );
 
   const summary = profile.summary?.trim() ?? "";
+  const linkList = links(profile);
 
   const experienceTex =
     experience
