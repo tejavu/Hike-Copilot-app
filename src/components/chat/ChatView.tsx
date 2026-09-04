@@ -613,6 +613,9 @@ function buildContext(
     `Timeline: ${profile.timeline ?? "not set"}`,
     `Skills: ${profile.skills.join(", ") || "none listed"}`,
     `Interests: ${profile.interests.join(", ") || "none listed"}`,
+    `CV summary: ${profile.summary ?? "not written yet"}`,
+    `CV experience entries: ${(profile.experience ?? []).map((e) => [e.title, e.company].filter(Boolean).join(" at ")).join("; ") || "none"}`,
+    `CV project entries: ${(profile.projects ?? []).map((p) => p.title).join("; ") || "none"}`,
     `Liked roles: ${
       (jobs ?? [])
         .filter((j) => j.liked)
