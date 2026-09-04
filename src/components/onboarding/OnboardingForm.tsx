@@ -23,11 +23,21 @@ import { useJobs, useProfile, useUpdateJob, useUpdateProfile } from "@/hooks/use
 import { parseCvDocuments } from "@/lib/cv-parse.functions";
 import { normaliseAnswer } from "@/lib/profile-parse.functions";
 import { writeRoadmapCopy } from "@/lib/roadmap-copy.functions";
-import { CH_LOCATION_OPTIONS, deriveTargetLevel, skillGap, type TargetLevel } from "@/lib/job-sweep";
+import {
+  CH_LOCATION_OPTIONS,
+  deriveTargetLevel,
+  skillGap,
+  type TargetLevel,
+} from "@/lib/job-sweep";
 import { searchJobs } from "@/lib/job-search.functions";
 import { JobPicker } from "@/components/jobs/JobPicker";
 import { generateRoadmap, phasePlanFor } from "@/lib/roadmap-builder";
-import { confidentSkills, readDocumentFile, WEEKLY_OPTIONS, type WeeklyOption } from "@/lib/onboarding";
+import {
+  confidentSkills,
+  readDocumentFile,
+  WEEKLY_OPTIONS,
+  type WeeklyOption,
+} from "@/lib/onboarding";
 import type { Job, Profile, SkillConfidence } from "@/lib/domain";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +53,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-
 
 type StepId =
   | "documents"
@@ -103,10 +112,9 @@ function draftFromProfile(profile: Profile): Draft {
     setups: profile.work_setup ?? [],
     workAuth: profile.work_auth ?? "",
     recentRole: profile.recent_role ?? profile.experience.map((e) => e.title).join("\n"),
-    skills:
-      profile.skill_confidence?.length
-        ? profile.skill_confidence
-        : profile.skills.map((name) => ({ name, level: 3 })),
+    skills: profile.skill_confidence?.length
+      ? profile.skill_confidence
+      : profile.skills.map((name) => ({ name, level: 3 })),
     education: profile.education.map((e) => e.title).join("\n"),
     certifications: profile.certifications.join("\n"),
     projects: (profile.projects ?? []).map((p) => p.title).join("\n"),
@@ -116,7 +124,6 @@ function draftFromProfile(profile: Profile): Draft {
     targetLevel: null,
   };
 }
-
 
 export function OnboardingForm() {
   const { user } = useAuth();
@@ -141,10 +148,29 @@ export function OnboardingForm() {
   const form = draft ?? (profile ? draftFromProfile(profile) : null);
   const patch = (next: Partial<Draft>) => form && setDraft({ ...form, ...next });
 
-  const order: StepId[] = ["documents", "drawn_to", "constraints", "experience", "skills", "education", "projects", "review"];
+  const order: StepId[] = [
+    "documents",
+    "drawn_to",
+    "constraints",
+    "experience",
+    "skills",
+    "education",
+    "projects",
+    "review",
+  ];
   const stepIndex = order.indexOf(step);
   const totalSteps = order.length + 2;
-  const progress = Math.round(((step === "jobs" ? order.length : step === "commitment" ? order.length + 1 : step === "done" ? totalSteps : stepIndex) / totalSteps) * 100);
+  const progress = Math.round(
+    ((step === "jobs"
+      ? order.length
+      : step === "commitment"
+        ? order.length + 1
+        : step === "done"
+          ? totalSteps
+          : stepIndex) /
+      totalSteps) *
+      100,
+  );
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["profile", user?.id] });
@@ -189,9 +215,12 @@ export function OnboardingForm() {
           console.error("storage upload failed", uploadError);
           toast.error(`Couldn't save ${file.name}, but I'll still read it.`);
         } else {
-          await supabase
-            .from("user_documents")
-            .insert({ user_id: user!.id, kind: "document", file_name: file.name, storage_path: path } as never);
+          await supabase.from("user_documents").insert({
+            user_id: user!.id,
+            kind: "document",
+            file_name: file.name,
+            storage_path: path,
+          } as never);
         }
         stored.push(file.name);
         payload.push(read.payload);
@@ -215,9 +244,12 @@ export function OnboardingForm() {
         recentRole:
           form.recentRole || parsed.experience.map((e: { title: string }) => e.title).join("\n"),
         skills: skills.length ? skills : form.skills,
-        education: form.education || parsed.education.map((e: { title: string }) => e.title).join("\n"),
+        education:
+          form.education || parsed.education.map((e: { title: string }) => e.title).join("\n"),
         certifications: form.certifications || parsed.certifications.join("\n"),
-        projects: form.projects || (parsed.projects ?? []).map((p: { title: string }) => p.title).join("\n"),
+        projects:
+          form.projects ||
+          (parsed.projects ?? []).map((p: { title: string }) => p.title).join("\n"),
       });
       if (parsed.full_name && !profile?.full_name) {
         await updateProfile.mutateAsync({ full_name: parsed.full_name });
@@ -345,7 +377,10 @@ export function OnboardingForm() {
 
   const gapPreview = useMemo(() => {
     if (!form) return { strengths: [], gaps: [] };
-    return skillGap(confidentSkills(form.skills), likedJobs.flatMap((j) => j.required_skills));
+    return skillGap(
+      confidentSkills(form.skills),
+      likedJobs.flatMap((j) => j.required_skills),
+    );
   }, [form, jobs]);
 
   const buildRoadmap = async () => {
@@ -361,7 +396,11 @@ export function OnboardingForm() {
             months: form.months,
             gaps: gaps.slice(0, 6),
             roles: likedJobs.map((j) => `${j.title} at ${j.company}`).slice(0, 8),
-            phases: phasePlanFor(form.months).map((p) => ({ kind: p.kind, name: p.name, blurb: p.blurb })),
+            phases: phasePlanFor(form.months).map((p) => ({
+              kind: p.kind,
+              name: p.name,
+              blurb: p.blurb,
+            })),
           },
         });
         copy = result.copy;
@@ -395,12 +434,15 @@ export function OnboardingForm() {
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8 md:px-8 md:py-12">
       <header className="mb-8">
-        <p className="text-xs font-semibold tracking-wide text-primary uppercase">Let's get to know you</p>
+        <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+          Let's get to know you
+        </p>
         <h1 className="font-display mt-1.5 text-2xl font-semibold">
           {step === "done" ? "Your plan is ready" : "A few questions, then a real plan"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Nothing here is a test. Answer roughly and come back to edit any of it — you can always go back a step.
+          Nothing here is a test. Answer roughly and come back to edit any of it — you can always go
+          back a step.
         </p>
         <Progress value={progress} className="mt-5 h-2" />
       </header>
@@ -424,15 +466,11 @@ export function OnboardingForm() {
         <Card>
           <CardTitle>Have a CV handy?</CardTitle>
           <CardHint>
-            Upload it and I'll pre-fill your experience, skills and education so you only have to correct me. PDF,
-            image or plain text — Word files need exporting to PDF first.
+            Upload it and I'll pre-fill your experience, skills and education so you only have to
+            correct me. PDF, image or plain text — Word files need exporting to PDF first.
           </CardHint>
           <div className="mt-5 flex flex-wrap gap-2.5">
-            <Button
-              disabled={busy}
-              onClick={() => fileInput.current?.click()}
-              className="gap-2"
-            >
+            <Button disabled={busy} onClick={() => fileInput.current?.click()} className="gap-2">
               <FileUp className="size-4" /> Choose files
             </Button>
             <Button variant="outline" disabled={busy} onClick={() => setStep("drawn_to")}>
@@ -458,8 +496,8 @@ export function OnboardingForm() {
         <Card>
           <CardTitle>What kind of work or problems do you find yourself drawn to?</CardTitle>
           <CardHint>
-            No job titles needed — "building things", "working with data", "helping people directly" is exactly the
-            right level. This is what I go looking for roles with.
+            No job titles needed — "building things", "working with data", "helping people directly"
+            is exactly the right level. This is what I go looking for roles with.
           </CardHint>
           <Textarea
             value={form.drawnTo}
@@ -474,7 +512,11 @@ export function OnboardingForm() {
                 key={hint}
                 type="button"
                 onClick={() =>
-                  patch({ drawnTo: form.drawnTo ? `${form.drawnTo.replace(/[\s,]+$/, "")}, ${hint}` : hint })
+                  patch({
+                    drawnTo: form.drawnTo
+                      ? `${form.drawnTo.replace(/[\s,]+$/, "")}, ${hint}`
+                      : hint,
+                  })
                 }
                 className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium transition-colors hover:border-primary/50 hover:text-primary"
               >
@@ -506,7 +548,9 @@ export function OnboardingForm() {
                       type="button"
                       onClick={() =>
                         patch({
-                          setups: on ? form.setups.filter((s) => s !== setup) : [...form.setups, setup],
+                          setups: on
+                            ? form.setups.filter((s) => s !== setup)
+                            : [...form.setups, setup],
                         })
                       }
                       className={cn(
@@ -541,7 +585,10 @@ export function OnboardingForm() {
                     <ChevronDown className="size-4 shrink-0 opacity-60" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="max-h-72 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto">
+                <DropdownMenuContent
+                  align="start"
+                  className="max-h-72 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto"
+                >
                   {CH_LOCATION_OPTIONS.map((option) => (
                     <DropdownMenuCheckboxItem
                       key={option}
@@ -568,7 +615,9 @@ export function OnboardingForm() {
                       <button
                         type="button"
                         aria-label={`Remove ${loc}`}
-                        onClick={() => patch({ locations: form.locations.filter((l) => l !== loc) })}
+                        onClick={() =>
+                          patch({ locations: form.locations.filter((l) => l !== loc) })
+                        }
                       >
                         <X className="size-3" />
                       </button>
@@ -599,8 +648,8 @@ export function OnboardingForm() {
         <Card>
           <CardTitle>What's your most recent role, or closest experience?</CardTitle>
           <CardHint>
-            One line each is plenty. "I'm starting fresh" is a completely fine answer — it just tells me where to
-            begin.
+            One line each is plenty. "I'm starting fresh" is a completely fine answer — it just
+            tells me where to begin.
           </CardHint>
           <Textarea
             value={form.recentRole}
@@ -617,8 +666,8 @@ export function OnboardingForm() {
         <Card>
           <CardTitle>What can you already do — and how confident do you feel?</CardTitle>
           <CardHint>
-            Confidence matters more than a yes/no. Anything you rate 1 or 2 I'll treat as still growing, so it lands
-            in your roadmap.
+            Confidence matters more than a yes/no. Anything you rate 1 or 2 I'll treat as still
+            growing, so it lands in your roadmap.
           </CardHint>
           <div className="mt-4 flex gap-2">
             <Input
@@ -643,7 +692,10 @@ export function OnboardingForm() {
               </p>
             )}
             {form.skills.map((skill, index) => (
-              <div key={`${skill.name}-${index}`} className="rounded-xl border border-border bg-card p-3.5">
+              <div
+                key={`${skill.name}-${index}`}
+                className="rounded-xl border border-border bg-card p-3.5"
+              >
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold">{skill.name}</p>
                   <button
@@ -663,13 +715,19 @@ export function OnboardingForm() {
                     step={1}
                     onValueChange={([level]) =>
                       patch({
-                        skills: form.skills.map((s, i) => (i === index ? { ...s, level: level ?? 3 } : s)),
+                        skills: form.skills.map((s, i) =>
+                          i === index ? { ...s, level: level ?? 3 } : s,
+                        ),
                       })
                     }
                     className="flex-1"
                   />
                   <span className="w-32 shrink-0 text-right text-xs font-medium text-muted-foreground">
-                    {["just curious", "learning", "can use it", "comfortable", "could teach it"][skill.level - 1]}
+                    {
+                      ["just curious", "learning", "can use it", "comfortable", "could teach it"][
+                        skill.level - 1
+                      ]
+                    }
                   </span>
                 </div>
               </div>
@@ -683,7 +741,9 @@ export function OnboardingForm() {
         <Card>
           <CardTitle>Education, certifications or courses worth mentioning?</CardTitle>
           <CardHint>Bootcamps, self-taught courses and half-finished things all count.</CardHint>
-          <Label className="mt-4 block text-xs font-semibold tracking-wide uppercase">Education</Label>
+          <Label className="mt-4 block text-xs font-semibold tracking-wide uppercase">
+            Education
+          </Label>
           <Textarea
             value={form.education}
             onChange={(e) => patch({ education: e.target.value })}
@@ -709,8 +769,8 @@ export function OnboardingForm() {
         <Card>
           <CardTitle>Any projects you'd like to show off?</CardTitle>
           <CardHint>
-            Side projects, coursework, volunteering builds — one line each. Add a link if there is one. Leave it
-            empty if you'd rather not.
+            Side projects, coursework, volunteering builds — one line each. Add a link if there is
+            one. Leave it empty if you'd rather not.
           </CardHint>
           <Textarea
             value={form.projects}
@@ -731,10 +791,16 @@ export function OnboardingForm() {
             <ReviewRow label="Drawn to" value={form.drawnTo} onEdit={() => setStep("drawn_to")} />
             <ReviewRow
               label="Location & setup"
-              value={[form.setups.join(", "), form.locations.join(" · "), form.workAuth].filter(Boolean).join(" · ")}
+              value={[form.setups.join(", "), form.locations.join(" · "), form.workAuth]
+                .filter(Boolean)
+                .join(" · ")}
               onEdit={() => setStep("constraints")}
             />
-            <ReviewRow label="Experience" value={form.recentRole} onEdit={() => setStep("experience")} />
+            <ReviewRow
+              label="Experience"
+              value={form.recentRole}
+              onEdit={() => setStep("experience")}
+            />
             <ReviewRow
               label="Skills"
               value={form.skills.map((s) => `${s.name} (${s.level}/5)`).join(", ")}
@@ -794,8 +860,8 @@ export function OnboardingForm() {
           <Card>
             <CardTitle>Roles that fit the direction you're pointing in</CardTitle>
             <CardHint>
-              Keep the ones that make you a little bit excited — especially the ones that feel like a stretch. Your
-              roadmap gets built around these.
+              Keep the ones that make you a little bit excited — especially the ones that feel like
+              a stretch. Your roadmap gets built around these.
             </CardHint>
             <p className="mt-3 text-xs font-medium text-muted-foreground">
               {likedJobs.length} kept · {undecided.length} still to look at
@@ -810,7 +876,8 @@ export function OnboardingForm() {
                 <>
                   <CardTitle>None of those landed</CardTitle>
                   <CardHint>
-                    That's information, not a failure. Tweak what you're drawn to and I'll go looking again.
+                    That's information, not a failure. Tweak what you're drawn to and I'll go
+                    looking again.
                   </CardHint>
                   <div className="mt-5 flex gap-2">
                     <Button variant="outline" onClick={() => setStep("drawn_to")}>
@@ -826,11 +893,16 @@ export function OnboardingForm() {
                   <CardTitle>Here's the honest picture — and it's a good one</CardTitle>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <div className="rounded-2xl border border-success/30 bg-success/10 p-4">
-                      <p className="text-xs font-semibold tracking-wide text-success uppercase">Already yours</p>
+                      <p className="text-xs font-semibold tracking-wide text-success uppercase">
+                        Already yours
+                      </p>
                       <div className="mt-2.5 flex flex-wrap gap-1.5">
                         {gapPreview.strengths.length ? (
                           gapPreview.strengths.map((skill) => (
-                            <Badge key={skill} className="border-0 bg-success text-success-foreground">
+                            <Badge
+                              key={skill}
+                              className="border-0 bg-success text-success-foreground"
+                            >
                               {skill}
                             </Badge>
                           ))
@@ -842,10 +914,16 @@ export function OnboardingForm() {
                       </div>
                     </div>
                     <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
-                      <p className="text-xs font-semibold tracking-wide text-primary uppercase">Next to grow</p>
+                      <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+                        Next to grow
+                      </p>
                       <div className="mt-2.5 flex flex-wrap gap-1.5">
                         {gapPreview.gaps.map((skill) => (
-                          <Badge key={skill} variant="outline" className="border-primary/40 bg-card text-foreground">
+                          <Badge
+                            key={skill}
+                            variant="outline"
+                            className="border-primary/40 bg-card text-foreground"
+                          >
                             {skill}
                           </Badge>
                         ))}
@@ -871,8 +949,8 @@ export function OnboardingForm() {
         <Card>
           <CardTitle>How much time can you realistically commit each week?</CardTitle>
           <CardHint>
-            Be honest rather than ambitious — I'd rather build a plan you can actually keep. You've seen the roles
-            now, so this shapes a timeline against those.
+            Be honest rather than ambitious — I'd rather build a plan you can actually keep. You've
+            seen the roles now, so this shapes a timeline against those.
           </CardHint>
           <div className="mt-4 flex flex-wrap gap-2">
             {WEEKLY_OPTIONS.map((option: WeeklyOption) => (
@@ -902,7 +980,10 @@ export function OnboardingForm() {
             onValueChange={([months]) => patch({ months: months ?? 6 })}
             className="mt-3"
           />
-          <Label htmlFor="goal" className="mt-6 block text-xs font-semibold tracking-wide uppercase">
+          <Label
+            htmlFor="goal"
+            className="mt-6 block text-xs font-semibold tracking-wide uppercase"
+          >
             What are you working toward, in your own words?
           </Label>
           <Textarea
@@ -932,9 +1013,9 @@ export function OnboardingForm() {
         <Card>
           <CardTitle>"{form.goal}" — written down, and everything below serves it</CardTitle>
           <CardHint>
-            {gapPreview.gaps.length} skill{gapPreview.gaps.length === 1 ? "" : "s"} to close, sequenced so you're
-            never guessing what's next. Roadmap, Network and Mentor Match are unlocked now. You don't have to feel
-            ready — you just have to start.
+            {gapPreview.gaps.length} skill{gapPreview.gaps.length === 1 ? "" : "s"} to close,
+            sequenced so you're never guessing what's next. Roadmap, Network and Mentor Match are
+            unlocked now. You don't have to feel ready — you just have to start.
           </CardHint>
           <Link
             to="/roadmap"
@@ -985,19 +1066,13 @@ function Nav({
   );
 }
 
-function ReviewRow({
-  label,
-  value,
-  onEdit,
-}: {
-  label: string;
-  value: string;
-  onEdit: () => void;
-}) {
+function ReviewRow({ label, value, onEdit }: { label: string; value: string; onEdit: () => void }) {
   return (
     <div className="flex items-start justify-between gap-4 py-3.5">
       <div className="min-w-0">
-        <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{label}</p>
+        <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          {label}
+        </p>
         <p className="mt-1 text-sm whitespace-pre-line">{value || "—"}</p>
       </div>
       <Button variant="ghost" size="sm" onClick={onEdit} className="shrink-0 gap-1.5 text-primary">
@@ -1006,4 +1081,3 @@ function ReviewRow({
     </div>
   );
 }
-

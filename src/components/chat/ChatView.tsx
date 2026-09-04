@@ -32,10 +32,9 @@ import { askCoach } from "@/lib/coach-ai.functions";
 import { parseCvDocuments } from "@/lib/cv-parse.functions";
 import { normaliseAnswer } from "@/lib/profile-parse.functions";
 import { writeRoadmapCopy } from "@/lib/roadmap-copy.functions";
-import { skillGap } from "@/lib/job-sweep";
 import { searchJobs } from "@/lib/job-search.functions";
 import { JobPicker } from "@/components/jobs/JobPicker";
-import { CH_LOCATION_OPTIONS } from "@/lib/job-sweep";
+import { CH_LOCATION_OPTIONS, skillGap } from "@/lib/job-sweep";
 import { generateRoadmap, phasePlanFor } from "@/lib/roadmap-builder";
 import {
   PROMPTS,
@@ -124,7 +123,11 @@ export function ChatView() {
   };
 
   const startOver = async () => {
-    if (!user || !confirm("This clears your chat, roadmap and matches and restarts onboarding. Are you sure?")) return;
+    if (
+      !user ||
+      !confirm("This clears your chat, roadmap and matches and restarts onboarding. Are you sure?")
+    )
+      return;
     setBusy(true);
     try {
       await resetCoach.mutateAsync({ full: true });
@@ -222,9 +225,12 @@ export function ChatView() {
         const path = `${user!.id}/docs/${Date.now()}-${file.name}`;
         const { error } = await supabase.storage.from("user-files").upload(path, file);
         if (error) throw error;
-        await supabase
-          .from("user_documents")
-          .insert({ user_id: user!.id, kind: "document", file_name: file.name, storage_path: path } as never);
+        await supabase.from("user_documents").insert({
+          user_id: user!.id,
+          kind: "document",
+          file_name: file.name,
+          storage_path: path,
+        } as never);
         names.push(file.name);
 
         const mimeType = file.type || guessMime(file.name);
@@ -283,7 +289,9 @@ export function ChatView() {
         await updateProfile.mutateAsync({ ...patch, onboarding_stage: "jobs" });
         await startJobSweep(merged);
       } else {
-        await say(`${lines.join("\n")}\n\nOne thing I couldn't read off the page.\n\n${PROMPTS["q_interests"]}`);
+        await say(
+          `${lines.join("\n")}\n\nOne thing I couldn't read off the page.\n\n${PROMPTS["q_interests"]}`,
+        );
         await updateProfile.mutateAsync({ ...patch, onboarding_stage: "q_interests" });
       }
       refresh();
@@ -294,15 +302,13 @@ export function ChatView() {
     }
   };
 
-
   const startJobSweep = async (currentProfile: Profile) => {
     await supabase.from("jobs").delete().eq("user_id", currentProfile.id);
     const result = await findJobs({
       data: {
-        skills:
-          currentProfile.skill_confidence?.length
-            ? currentProfile.skill_confidence
-            : currentProfile.skills.map((name) => ({ name, level: 3 })),
+        skills: currentProfile.skill_confidence?.length
+          ? currentProfile.skill_confidence
+          : currentProfile.skills.map((name) => ({ name, level: 3 })),
         interests: currentProfile.interests,
         drawnTo: currentProfile.drawn_to ?? "",
         // Onboarding sweep stays inside Switzerland.
@@ -479,7 +485,9 @@ export function ChatView() {
       } else if (stage === "q_goal") {
         await finishOnboarding(text);
       } else if (stage === "jobs") {
-        await say("Swipe through the roles above first — like or pass on each one and I'll take it from there.");
+        await say(
+          "Swipe through the roles above first — like or pass on each one and I'll take it from there.",
+        );
       } else if (stage.startsWith("q_")) {
         await answerQuestion(text);
       } else if (stage === "welcome" || stage === "upload") {
@@ -508,7 +516,9 @@ export function ChatView() {
       <div className="flex items-center justify-between gap-3 border-b border-border py-4">
         <div>
           <h1 className="font-display text-lg font-semibold">Chat with Hike Copilot</h1>
-          <p className="text-xs text-muted-foreground">Ask anything about your career, roadmap or job search.</p>
+          <p className="text-xs text-muted-foreground">
+            Ask anything about your career, roadmap or job search.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -568,7 +578,12 @@ export function ChatView() {
             rows={1}
             className="max-h-32 min-h-11 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0"
           />
-          <Button size="icon" className="size-11 shrink-0 rounded-xl" onClick={() => void send()} disabled={busy}>
+          <Button
+            size="icon"
+            className="size-11 shrink-0 rounded-xl"
+            onClick={() => void send()}
+            disabled={busy}
+          >
             <Send className="size-4" />
           </Button>
         </div>
@@ -590,7 +605,12 @@ function buildContext(
     `Timeline: ${profile.timeline ?? "not set"}`,
     `Skills: ${profile.skills.join(", ") || "none listed"}`,
     `Interests: ${profile.interests.join(", ") || "none listed"}`,
-    `Liked roles: ${(jobs ?? []).filter((j) => j.liked).map((j) => `${j.title} at ${j.company}`).join("; ") || "none"}`,
+    `Liked roles: ${
+      (jobs ?? [])
+        .filter((j) => j.liked)
+        .map((j) => `${j.title} at ${j.company}`)
+        .join("; ") || "none"
+    }`,
     `Roadmap steps: ${done}`,
   ].join("\n");
 }
@@ -652,7 +672,8 @@ function Interactive({
             One friendly question at a time — interests, skills, education, certificates.
           </p>
           <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
-            Let's talk <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+            Let's talk{" "}
+            <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
           </span>
         </button>
         <label
@@ -667,7 +688,8 @@ function Interactive({
             Resume, transcripts, certificates. I'll build your profile from those.
           </p>
           <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-plum">
-            Choose files <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+            Choose files{" "}
+            <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
           </span>
           <input
             type="file"
@@ -680,7 +702,6 @@ function Interactive({
               void onChoosePath("upload").then(() => onUpload(picked));
             }}
           />
-
         </label>
       </div>
     );
@@ -725,7 +746,9 @@ function Interactive({
     return (
       <div className="ml-11 grid gap-3 sm:grid-cols-2">
         <div className="animate-pop rounded-2xl border border-success/30 bg-success/10 p-4">
-          <p className="text-xs font-semibold tracking-wide text-success uppercase">Already yours</p>
+          <p className="text-xs font-semibold tracking-wide text-success uppercase">
+            Already yours
+          </p>
           <div className="mt-2.5 flex flex-wrap gap-1.5">
             {(payload.strengths ?? []).length ? (
               payload.strengths!.map((skill) => (
@@ -744,7 +767,11 @@ function Interactive({
           <p className="text-xs font-semibold tracking-wide text-primary uppercase">Next to grow</p>
           <div className="mt-2.5 flex flex-wrap gap-1.5">
             {(payload.gaps ?? []).map((skill) => (
-              <Badge key={skill} variant="outline" className="border-primary/40 bg-card text-foreground">
+              <Badge
+                key={skill}
+                variant="outline"
+                className="border-primary/40 bg-card text-foreground"
+              >
                 {skill}
               </Badge>
             ))}
@@ -772,4 +799,3 @@ function Interactive({
 
   return null;
 }
-

@@ -36,7 +36,10 @@ export function JobPicker({
                 <span className="flex items-center gap-1.5">
                   <span className="font-display truncate text-sm font-semibold">{job.title}</span>
                   <ChevronDown
-                    className={cn("size-3.5 shrink-0 opacity-60 transition-transform", open && "rotate-180")}
+                    className={cn(
+                      "size-3.5 shrink-0 opacity-60 transition-transform",
+                      open && "rotate-180",
+                    )}
                   />
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
@@ -54,7 +57,12 @@ export function JobPicker({
                   >
                     <X className="size-3.5" /> Pass
                   </Button>
-                  <Button size="sm" className="gap-1.5" disabled={busy} onClick={() => void onDecide(job, true)}>
+                  <Button
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={busy}
+                    onClick={() => void onDecide(job, true)}
+                  >
                     <Heart className="size-3.5" /> Keep
                   </Button>
                 </div>

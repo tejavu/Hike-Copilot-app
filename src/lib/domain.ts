@@ -37,7 +37,6 @@ export type ExperienceEntry = { title: string; company?: string; period?: string
 export type LanguageEntry = { name: string; level: string };
 export type ProjectEntry = { title: string; detail?: string; period?: string; url?: string };
 
-
 export type ChatMessage = {
   id: string;
   user_id: string;
@@ -117,7 +116,11 @@ export function isItemComplete(item: RoadmapItem): boolean {
     const target = item.target_count ?? 1;
     return item.progress_count >= target;
   }
-  if (item.item_type === "certify" || item.item_type === "build" || item.item_type === "visibility") {
+  if (
+    item.item_type === "certify" ||
+    item.item_type === "build" ||
+    item.item_type === "visibility"
+  ) {
     return item.done && Boolean(item.proof_url || item.proof_path);
   }
   return item.done;

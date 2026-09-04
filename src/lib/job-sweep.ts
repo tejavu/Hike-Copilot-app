@@ -82,7 +82,8 @@ export function deriveTargetLevel(
   const levelled = skills.filter((s) => Number.isFinite(s.level) && s.level > 0);
   const role = (recentRole ?? "").trim().toLowerCase();
   const fresh =
-    role.length === 0 || /starting fresh|no experience|none|student|graduat|career change/.test(role);
+    role.length === 0 ||
+    /starting fresh|no experience|none|student|graduat|career change/.test(role);
 
   if (levelled.length === 0 && fresh) return null;
   if (levelled.length === 0) return "mid";
