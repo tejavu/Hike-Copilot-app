@@ -567,16 +567,10 @@ export function MentorMatchView() {
                             </p>
                             <p className="mt-1">
                               {row.attended ? "Attended" : "Didn't happen"}
-                              {row.rating ? ` · ${row.rating}/5 useful` : ""} ·{" "}
-                              {row.continue_with_mentor
-                                ? "Want to continue with her"
-                                : "Would like a different mentor"}
+                              {row.rating ? ` · ${row.rating}/5 useful` : ""}
                             </p>
                             {row.helpful && <p className="mt-1">Most helpful: {row.helpful}</p>}
                             {row.comments && <p className="mt-1 italic">{row.comments}</p>}
-                            {row.followup_request && (
-                              <p className="mt-1">Next time: {row.followup_request}</p>
-                            )}
                             <Button
                               variant="ghost"
                               size="sm"
