@@ -78,6 +78,7 @@ export function NeedsAssessment({
       ? existing.priority_skills
       : inferred.gapSkills.slice(0, 3),
     guidance_style: existing?.guidance_style ?? "strategy",
+    mentorship_topics: existing?.mentorship_topics ?? [],
     language:
       existing?.language ??
       (languages.includes("English") ? "English" : (languages[0] ?? "English")),
