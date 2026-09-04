@@ -98,6 +98,9 @@ export type MentorMatch = {
   request_token?: string | null;
   requested_at?: string | null;
   responded_at?: string | null;
+  /** Real delivery outcome of the mentor request email — drives honest UI. */
+  request_email_status?: string | null;
+  request_email_detail?: string | null;
 };
 
 export type SessionStatus = "scheduled" | "completed" | "cancelled";
