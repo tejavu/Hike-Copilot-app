@@ -1,5 +1,6 @@
 import type { EducationEntry, ExperienceEntry, LanguageEntry, ProjectEntry } from "./domain";
 import { sortByPeriodDesc } from "./cv-order";
+import { parseEntryLine } from "./cv-entry";
 
 type CvProfile = {
   full_name: string | null;
@@ -48,10 +49,16 @@ function bullets(items: string[]): string {
   return `<ul>${clean.map((item) => `<li>${esc(item)}</li>`).join("")}</ul>`;
 }
 
-function entry(leftTop: string, rightTop: string, sub: string, bulletItems: string[]): string {
+function entry(
+  leftTop: string,
+  rightTop: string,
+  sub: string,
+  bulletItems: string[],
+  subClass: "sub" | "plain" = "sub",
+): string {
   return `<div class="block">
-    <div class="row"><span class="bold">${esc(leftTop)}</span><span>${esc(rightTop)}</span></div>
-    ${sub ? `<div class="sub">${esc(sub)}</div>` : ""}
+    <div class="row"><span class="bold">${esc(leftTop)}</span><span class="bold when">${esc(rightTop)}</span></div>
+    ${sub ? `<div class="${subClass}">${esc(sub)}</div>` : ""}
     ${bullets(bulletItems)}
   </div>`;
 }
@@ -65,6 +72,34 @@ function skillRow(label: string, value: string): string {
  * Everything the two exporters share, so the HTML preview and the .tex
  * download can never drift apart.
  */
+/**
+ * Older saved entries kept the whole line in `title`. Split those back out so
+ * the employer sits under the role and the dates sit in the right column.
+ */
+function split<T extends { title: string; period?: string }>(entry: T, orgKey: "company" | "institution"): T {
+  const record = entry as unknown as Record<string, string | undefined>;
+  if (entry.period?.trim() && record[orgKey]?.trim()) return entry;
+  const parts = parseEntryLine(entry.title);
+  return {
+    ...entry,
+    title: parts.title || entry.title,
+    [orgKey]: record[orgKey]?.trim() || parts.org,
+    period: entry.period?.trim() || parts.period,
+    ...(orgKey === "company" && !record["detail"]?.trim() && parts.detail ? { detail: parts.detail } : {}),
+  } as T;
+}
+
+function splitProject(entry: ProjectEntry): ProjectEntry {
+  if (entry.period?.trim() && entry.detail?.trim()) return entry;
+  const parts = parseEntryLine(entry.title);
+  return {
+    ...entry,
+    title: parts.title || entry.title,
+    detail: entry.detail?.trim() || [parts.org, parts.detail].filter(Boolean).join(" — "),
+    period: entry.period?.trim() || parts.period,
+  };
+}
+
 function collect({ profile, earned }: CvData) {
   const city = cityOf(profile.location);
 
@@ -84,6 +119,7 @@ function collect({ profile, earned }: CvData) {
   const projects = [
     ...(profile.projects ?? [])
       .filter((project) => project.title && !NEGATIVE.test(project.title.trim()))
+      .map(splitProject)
       .map((project) => ({
         title: project.title,
         period: project.period ?? "",
@@ -120,8 +156,14 @@ function collect({ profile, earned }: CvData) {
 export function buildCvHtml(data: CvData): string {
   const { profile, earned } = data;
   const { city, certificates, projects, own, newlyLearnt, courses, languages } = collect(data);
-  const experience = sortByPeriodDesc(profile.experience ?? [], "experience entry");
-  const education = sortByPeriodDesc(profile.education ?? [], "education entry");
+  const experience = sortByPeriodDesc(
+    (profile.experience ?? []).map((role) => split(role, "company")),
+    "experience entry",
+  );
+  const education = sortByPeriodDesc(
+    (profile.education ?? []).map((edu) => split(edu, "institution")),
+    "education entry",
+  );
 
   const experienceHtml =
     experience.length > 0
@@ -152,7 +194,7 @@ export function buildCvHtml(data: CvData): string {
       : `<p class="muted">Add your education and it will appear here.</p>`;
 
   const projectsHtml = projects
-    .map((project) => entry(project.title, project.period, project.summary, project.bullets))
+    .map((project) => entry(project.title, project.period, project.summary, project.bullets, "plain"))
     .join("");
 
   const certificatesHtml = certificates.length
@@ -177,16 +219,21 @@ export function buildCvHtml(data: CvData): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8" />
 <title>${esc(profile.full_name) || "Curriculum Vitae"} — CV</title>
 <style>
-  @page { size: A4; margin: 25.4mm; }
+  /* Half the margin on the page box, half as padding on the sheet: the CV
+     keeps a full inch of white space even if the print dialog zeroes the
+     browser margin. */
+  @page { size: A4; margin: 12.7mm; }
   * { box-sizing: border-box; }
-  body { font-family: "Times New Roman", Times, Georgia, serif; color: #000; background: #fff; font-size: 10.5pt; line-height: 1.34; margin: 0; }
+  body { font-family: "Times New Roman", Times, Georgia, serif; color: #000; background: #fff; font-size: 10.5pt; line-height: 1.34; margin: 0; padding: 12.7mm; }
   header { margin-bottom: 10px; }
   h1 { font-size: 20pt; font-weight: bold; margin: 0 0 4px; }
   header p { margin: 0; font-size: 10pt; }
   h2 { font-size: 11pt; font-weight: bold; margin: 14px 0 5px; padding-bottom: 2px; border-bottom: 1px solid #000; text-transform: uppercase; letter-spacing: 0.04em; }
   .block { margin-bottom: 8px; page-break-inside: avoid; }
   .row { display: flex; justify-content: space-between; gap: 12px; }
-  .row span:last-child { white-space: nowrap; }
+  .row span:last-child { white-space: nowrap; text-align: right; }
+  .when { font-weight: bold; }
+  .plain { font-weight: normal; font-style: normal; }
   .row2 { display: flex; gap: 12px; margin-bottom: 2px; }
   .row2 span:first-child { width: 34%; flex: none; }
   .sub { font-style: italic; }
@@ -249,8 +296,14 @@ function texItems(items: string[]): string {
 export function buildCvTex(data: CvData): string {
   const { profile } = data;
   const { city, certificates, projects, own, newlyLearnt, courses, languages } = collect(data);
-  const experience = sortByPeriodDesc(profile.experience ?? [], "experience entry");
-  const education = sortByPeriodDesc(profile.education ?? [], "education entry");
+  const experience = sortByPeriodDesc(
+    (profile.experience ?? []).map((role) => split(role, "company")),
+    "experience entry",
+  );
+  const education = sortByPeriodDesc(
+    (profile.education ?? []).map((edu) => split(edu, "institution")),
+    "education entry",
+  );
 
   const summary = profile.summary?.trim() ?? "";
 
