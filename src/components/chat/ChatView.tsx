@@ -264,6 +264,7 @@ export function ChatView() {
       if (parsed.interests.length) patch.interests = parsed.interests;
       if (parsed.education.length) patch.education = parsed.education;
       if (parsed.experience.length) patch.experience = parsed.experience;
+      if (parsed.projects.length) patch.projects = parsed.projects;
       if (parsed.certifications.length) patch.certifications = parsed.certifications;
 
       const lines = [
@@ -272,12 +273,17 @@ export function ChatView() {
         parsed.skills.length ? `Skills: ${parsed.skills.join(", ")}` : null,
         parsed.interests.length ? `Leaning toward: ${parsed.interests.join(", ")}` : null,
         parsed.education.length
-          ? `Education: ${parsed.education.map((e: { title: string }) => e.title).join(" · ")}`
+          ? `Education: ${parsed.education
+              .map((e) => formatEntryLine({ title: e.title, org: e.institution, period: e.period }))
+              .join(" · ")}`
           : null,
         parsed.experience.length
-          ? `Experience: ${parsed.experience.map((e: { title: string }) => e.title).join(" · ")}`
+          ? `Experience: ${parsed.experience
+              .map((e) => formatEntryLine({ title: e.title, org: e.company, period: e.period }))
+              .join(" · ")}`
           : null,
         parsed.certifications.length ? `Certifications: ${parsed.certifications.join(", ")}` : null,
+
       ].filter(Boolean) as string[];
 
       const haveEnough = parsed.skills.length > 0 && parsed.interests.length > 0;
