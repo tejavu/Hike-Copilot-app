@@ -15,7 +15,14 @@ const schema = z.object({
 });
 
 export type ParsedEducation = { title: string; institution?: string; period?: string };
-export type ParsedExperience = { title: string; company?: string; period?: string; detail?: string };
+export type ParsedExperience = {
+  title: string;
+  company?: string;
+  period?: string;
+  detail?: string;
+  location?: string;
+  bullets?: string[];
+};
 export type ParsedProject = { title: string; detail?: string; period?: string; url?: string };
 
 export type ParsedCv = {
