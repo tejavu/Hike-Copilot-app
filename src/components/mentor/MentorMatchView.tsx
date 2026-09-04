@@ -729,8 +729,14 @@ export function MentorMatchView() {
       )}
 
       <MentorDetailDialog
-        result={selectedResult ?? suggestion}
-        status={selectedMentorId ? "selected" : undefined}
+        result={
+          selectedResult ??
+          suggestion ??
+          ranked.find((row) => row.mentor.id === pendingMatch?.mentor_id) ??
+          null
+        }
+        status={selectedMentorId ? "selected" : pendingMatch ? "pending_mentor" : undefined}
+
         open={showProfile}
         onOpenChange={setShowProfile}
       />
