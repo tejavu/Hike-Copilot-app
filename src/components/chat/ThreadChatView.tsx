@@ -41,6 +41,7 @@ export function ThreadChatView({ threadId }: { threadId: string }) {
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["thread-messages", user?.id, threadId] });
     void qc.invalidateQueries({ queryKey: ["roadmap", user?.id] });
+    void qc.invalidateQueries({ queryKey: ["profile", user?.id] });
     void qc.invalidateQueries({ queryKey: ["chat-threads", user?.id] });
   };
 

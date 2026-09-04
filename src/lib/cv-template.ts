@@ -138,7 +138,9 @@ function collect({ profile, earned }: CvData) {
         title: project.title,
         period: project.period ?? "",
         summary: project.detail ?? "",
-        bullets: project.url ? [`Link: ${project.url}`] : [],
+        bullets: [...(project.bullets ?? []), project.url ? `Link: ${project.url}` : ""].filter(
+          Boolean,
+        ),
       })),
     ...earned.projects.map((project) => ({
       title: project.title,
@@ -258,7 +260,7 @@ export function buildCvHtml(data: CvData): string {
   ul { margin: 2px 0 0; padding-left: 16px; }
   li { margin: 0 0 1px; }
   .muted { margin: 2px 0 0; font-style: italic; }
-  .summary-text { margin: 6px 0 0; }
+  .summary-text { margin: 0; }
 </style></head>
 <body>
   <header>
@@ -268,7 +270,7 @@ export function buildCvHtml(data: CvData): string {
     ${linksHtml ? `<p>${linksHtml}</p>` : ""}
   </header>
 
-  ${summary ? `<p class="summary-text">${esc(summary)}</p>` : ""}
+  ${summary ? `<h2>Profile</h2><p class="summary-text">${esc(summary)}</p>` : ""}
 
   <h2>Professional Experience</h2>
   ${experienceHtml}
