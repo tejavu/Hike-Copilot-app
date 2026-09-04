@@ -66,13 +66,14 @@ export type Job = {
   is_example?: boolean | null;
 };
 
-export type ApplicationStatus = "not_applied" | "applied" | "interviewing" | "offer";
+export type ApplicationStatus = "not_applied" | "applied" | "interviewing" | "offer" | "rejected";
 
 export const APPLICATION_STATUSES: { value: ApplicationStatus; label: string }[] = [
   { value: "not_applied", label: "Not applied yet" },
   { value: "applied", label: "Applied" },
   { value: "interviewing", label: "Interviewing" },
   { value: "offer", label: "Offer" },
+  { value: "rejected", label: "Rejected" },
 ];
 
 export type PhaseKind = "learning" | "building" | "applying" | "visibility";
