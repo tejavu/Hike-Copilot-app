@@ -177,7 +177,7 @@ export function buildCvHtml(data: CvData): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8" />
 <title>${esc(profile.full_name) || "Curriculum Vitae"} — CV</title>
 <style>
-  @page { size: A4; margin: 16mm 18mm; }
+  @page { size: A4; margin: 25.4mm; }
   * { box-sizing: border-box; }
   body { font-family: "Times New Roman", Times, Georgia, serif; color: #000; background: #fff; font-size: 10.5pt; line-height: 1.34; margin: 0; }
   header { margin-bottom: 10px; }
