@@ -96,29 +96,39 @@ function CvBody() {
   const html = buildCvHtml(data);
 
   const download = () => {
+    // The print frame must be laid out at real A4 width. A 0x0 frame lays the
+    // document out at width 0, which collapses every flex row (so dates stop
+    // sitting on the right) and pushes content past the page margins — the
+    // stylesheet is there, it just has no width to work with. So: real size,
+    // parked off-screen, srcdoc, and print only once it has loaded.
     const frame = document.createElement("iframe");
+    frame.setAttribute("aria-hidden", "true");
     frame.style.position = "fixed";
-    frame.style.right = "0";
-    frame.style.bottom = "0";
-    frame.style.width = "0";
-    frame.style.height = "0";
+    frame.style.left = "-10000px";
+    frame.style.top = "0";
+    frame.style.width = "794px";
+    frame.style.height = "1123px";
     frame.style.border = "0";
+    frame.style.opacity = "0";
+    frame.srcdoc = html;
+    frame.onload = () => {
+      const win = frame.contentWindow;
+      if (!win) {
+        toast.error("Couldn't open the print view — try again?");
+        frame.remove();
+        return;
+      }
+      const cleanup = () => setTimeout(() => frame.remove(), 500);
+      win.addEventListener("afterprint", cleanup, { once: true });
+      win.focus();
+      win.print();
+      // Safari/Firefox don't always fire afterprint on a frame.
+      setTimeout(cleanup, 60000);
+      toast.success("Save it as PDF in the print dialog.");
+    };
     document.body.appendChild(frame);
-    const doc = frame.contentWindow?.document;
-    if (!doc) {
-      toast.error("Couldn't open the print view — try again?");
-      return;
-    }
-    doc.open();
-    doc.write(html);
-    doc.close();
-    frame.contentWindow?.focus();
-    setTimeout(() => {
-      frame.contentWindow?.print();
-      setTimeout(() => frame.remove(), 1000);
-    }, 300);
-    toast.success("Save it as PDF in the print dialog.");
   };
+
 
   const downloadTex = () => {
     const blob = new Blob([buildCvTex(data)], { type: "application/x-tex" });
