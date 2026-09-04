@@ -399,11 +399,13 @@ export function MentorMatchView() {
   const needsAssessment = !preferences?.completed_at;
 
   /**
-   * Cancelling a session pauses new mentor requests for 30 days. It never blocks
-   * an existing mentoring relationship — only starting a new one.
+   * Cancelling a session pauses mentoring for 30 days: no new match, and no new
+   * booking with the current mentor either, so a volunteer's calendar isn't
+   * held and released repeatedly.
    */
   const cooldownUntil = activeCooldown(preferences?.cooldown_until);
   const cooldownActive = Boolean(cooldownUntil) && !selectedMentor;
+  const bookingPaused = Boolean(cooldownUntil);
   const cooldownDate = cooldownUntil
     ? cooldownUntil.toLocaleDateString(undefined, {
         weekday: "long",
@@ -411,6 +413,7 @@ export function MentorMatchView() {
         month: "long",
       })
     : "";
+
 
   return (
     <div className="space-y-6">
