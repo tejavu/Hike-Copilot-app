@@ -139,31 +139,6 @@ export function SessionFeedbackDialog({
             />
           </div>
 
-          <div className="flex items-center justify-between rounded-2xl border border-border p-4">
-            <Label htmlFor="fb-continue" className="text-sm font-medium">
-              Do you want to keep working with {first}?
-            </Label>
-            <Switch
-              id="fb-continue"
-              checked={draft.continueWithMentor}
-              onCheckedChange={(checked) => setDraft({ ...draft, continueWithMentor: checked })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="fb-followup">
-              {draft.continueWithMentor
-                ? "What would you like from the next session?"
-                : "What would you want from a different mentor?"}
-            </Label>
-            <Textarea
-              id="fb-followup"
-              rows={2}
-              value={draft.followupRequest}
-              onChange={(event) => setDraft({ ...draft, followupRequest: event.target.value })}
-              placeholder="e.g. A mock interview, or someone closer to data engineering"
-            />
-          </div>
         </div>
 
         <DialogFooter className="gap-2 sm:justify-start">
