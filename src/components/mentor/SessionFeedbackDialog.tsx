@@ -44,8 +44,6 @@ export function SessionFeedbackDialog({
     rating: null,
     helpful: "",
     comments: "",
-    continueWithMentor: true,
-    followupRequest: "",
   });
 
   useEffect(() => {
@@ -55,8 +53,6 @@ export function SessionFeedbackDialog({
       rating: existing?.rating ?? null,
       helpful: existing?.helpful ?? "",
       comments: existing?.comments ?? "",
-      continueWithMentor: existing?.continue_with_mentor ?? true,
-      followupRequest: existing?.followup_request ?? "",
     });
   }, [open, existing?.id]);
 
