@@ -315,6 +315,7 @@ type ProfileRow = {
   drawn_to: string | null;
   location_pref: string | null;
   work_setup: string[] | null;
+  recent_role: string | null;
 };
 
 /**
