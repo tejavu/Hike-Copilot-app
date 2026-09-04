@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   BadgeCheck,
@@ -8,18 +8,13 @@ import {
   Hammer,
   Loader2,
   Megaphone,
-  Minus,
-  Plus,
   Send,
   Sparkles,
   Target,
   Trophy,
-  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { useJobs, useProfile, useRoadmap, useUpdateItem, useUpdateJob } from "@/hooks/useCoachData";
+import { useJobs, useProfile, useRoadmap, useUpdateJob } from "@/hooks/useCoachData";
 import {
   APPLICATION_STATUSES,
   isItemComplete,
@@ -43,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ThisWeekPanel } from "@/components/roadmap/ThisWeekPanel";
+import { ItemControls } from "@/components/roadmap/ItemControls";
 
 
 export function RoadmapView() {
