@@ -23,7 +23,7 @@ import { useJobs, useProfile, useUpdateJob, useUpdateProfile } from "@/hooks/use
 import { parseCvDocuments } from "@/lib/cv-parse.functions";
 import { normaliseAnswer } from "@/lib/profile-parse.functions";
 import { writeRoadmapCopy } from "@/lib/roadmap-copy.functions";
-import { LOCATION_OPTIONS, skillGap } from "@/lib/job-sweep";
+import { CH_LOCATION_OPTIONS, deriveTargetLevel, skillGap, type TargetLevel } from "@/lib/job-sweep";
 import { searchJobs } from "@/lib/job-search.functions";
 import { generateRoadmap, phasePlanFor } from "@/lib/roadmap-builder";
 import { confidentSkills, readDocumentFile, WEEKLY_OPTIONS, type WeeklyOption } from "@/lib/onboarding";
@@ -81,6 +81,8 @@ type Draft = {
   weeklyHours: number;
   months: number;
   goal: string;
+  /** Only set when we couldn't work her level out and had to ask. */
+  targetLevel: TargetLevel | null;
 };
 
 function draftFromProfile(profile: Profile): Draft {
@@ -104,6 +106,7 @@ function draftFromProfile(profile: Profile): Draft {
     weeklyHours: profile.weekly_hours ?? 6,
     months: profile.timeline_months ?? 6,
     goal: profile.goal ?? "",
+    targetLevel: null,
   };
 }
 
@@ -284,7 +287,9 @@ export function OnboardingForm() {
           drawnTo: form.drawnTo,
           locations: form.locations,
           setups: form.setups,
-          count: 6,
+          recentRole: form.recentRole,
+          targetLevel: form.targetLevel,
+          count: 10,
         },
       });
       if (result.jobs.length === 0) {
@@ -529,7 +534,7 @@ export function OnboardingForm() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="max-h-72 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto">
-                  {LOCATION_OPTIONS.map((option) => (
+                  {CH_LOCATION_OPTIONS.map((option) => (
                     <DropdownMenuCheckboxItem
                       key={option}
                       checked={form.locations.includes(option)}
