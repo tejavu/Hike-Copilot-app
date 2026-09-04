@@ -678,8 +678,8 @@ export function MentorMatchView() {
               rating: draft.attended ? draft.rating : null,
               helpful: draft.helpful.trim() || null,
               comments: draft.comments.trim() || null,
-              continueWithMentor: draft.continueWithMentor,
-              followupRequest: draft.followupRequest.trim() || null,
+              continueWithMentor: true,
+              followupRequest: null,
             },
             {
               onSuccess: () => {
