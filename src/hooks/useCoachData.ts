@@ -222,6 +222,7 @@ export function useResetCoach() {
           work_auth: null,
           recent_role: null,
           goal: null,
+          summary: null,
           timeline: null,
           timeline_months: null,
           weekly_hours: null,
