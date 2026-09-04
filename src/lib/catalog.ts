@@ -153,25 +153,6 @@ const CATALOG: Record<string, SkillPlan> = {
       detail: "App Service or Functions, documented architecture. Infrastructure as code if you can.",
     },
   },
-  __aws_rest__: {
-    practice: {
-      title: "Hands-on console labs",
-      difficulty: "Medium",
-      target: 12,
-      detail:
-        "S3, IAM, Lambda, RDS — one small lab at a time. Workshops: https://workshops.aws/ · Guide repo: https://github.com/open-guides/og-aws",
-      url: "https://github.com/open-guides/og-aws",
-    },
-    certify: {
-      title: "AWS Certified Cloud Practitioner",
-      provider: "AWS",
-      url: "https://aws.amazon.com/certification/certified-cloud-practitioner/",
-    },
-    project: {
-      title: "Deploy a small app on AWS",
-      detail: "Infrastructure as code if you can. Document the architecture.",
-    },
-  },
   docker: {
     course: {
       title: "Docker Mastery",
