@@ -70,33 +70,93 @@ function rankedCandidates(opts: {
   return candidates;
 }
 
+/** How many units of a Practice item are still outstanding (1 for other types). */
+function remainingUnits(item: RoadmapItem): number {
+  if (item.item_type !== "practice") return 1;
+  const target = item.target_count ?? 1;
+  return Math.max(0, target - (item.progress_count ?? 0));
+}
+
+/** Hours per single solve, so a big Practice item can be split across weeks. */
+function hoursPerUnit(item: RoadmapItem): number {
+  const target = Math.max(1, item.target_count ?? 1);
+  return itemHours(item) / target;
+}
+
+export type WeekEntry = {
+  item: RoadmapItem;
+  /** Hours this week only (a partial Practice slice costs less than the whole). */
+  hours: number;
+  /** Set when only part of a Practice item fits this week. */
+  partial?: { take: number; remaining: number };
+  /** True when the item alone is bigger than the whole weekly budget. */
+  oversized?: boolean;
+};
+
 /**
  * Picks the next handful of unfinished steps that fit into the hours she has
- * this week. Recomputed on every render from live data, so it stays honest
- * whether she's ahead or behind.
+ * this week.
+ *
+ * Two rules keep this stable and honest:
+ *  - Practice items are splittable: if only part of the solves fit, this week
+ *    takes the slice that fits and the rest carries into future weeks, so one
+ *    large item can never structurally eat the whole budget.
+ *  - Items already shown this session stay pinned while they're incomplete,
+ *    and the fill never stops early — smaller later candidates backfill any
+ *    leftover budget instead of being dropped when an earlier item grows.
  */
 export function pickThisWeek(opts: {
   phases: RoadmapPhase[];
   skills: RoadmapSkill[];
   items: RoadmapItem[];
   weeklyHours: number;
-}): RoadmapItem[] {
-  const { weeklyHours } = opts;
-  const candidates = rankedCandidates(opts);
+  pinnedIds?: Set<string>;
+}): WeekEntry[] {
+  const { weeklyHours, pinnedIds } = opts;
+  const ranked = rankedCandidates(opts);
+  const candidates = pinnedIds
+    ? [...ranked].sort((a, b) => Number(pinnedIds.has(b.id)) - Number(pinnedIds.has(a.id)))
+    : ranked;
 
   const budget = Math.max(1, weeklyHours);
-  const chosen: RoadmapItem[] = [];
+  const chosen: WeekEntry[] = [];
   let used = 0;
+
   for (const item of candidates) {
-    const hours = itemHours(item);
-    if (chosen.length === 0 || used + hours <= budget) {
-      chosen.push(item);
-      used += hours;
+    const left = budget - used;
+    if (left <= 0.01) break;
+
+    const units = remainingUnits(item);
+    if (units <= 0) continue;
+    const perUnit = hoursPerUnit(item);
+    const fullHours = item.item_type === "practice" ? perUnit * units : itemHours(item);
+
+    if (fullHours <= left + 0.01) {
+      chosen.push({ item, hours: fullHours });
+      used += fullHours;
+      continue;
     }
-    if (used >= budget) break;
+
+    // Practice items can be partially included.
+    if (item.item_type === "practice" && perUnit > 0) {
+      const take = Math.floor((left + 0.01) / perUnit);
+      if (take >= 1) {
+        chosen.push({ item, hours: take * perUnit, partial: { take, remaining: units - take } });
+        used += take * perUnit;
+        continue;
+      }
+    }
+
+    // Nothing fits yet — keep scanning for a smaller item to backfill with.
+    if (chosen.length === 0) {
+      chosen.push({ item, hours: fullHours, oversized: fullHours > budget });
+      used += Math.min(fullHours, budget);
+    }
   }
+
   return chosen;
 }
+
 
 export function ThisWeekPanel({
   phases,
