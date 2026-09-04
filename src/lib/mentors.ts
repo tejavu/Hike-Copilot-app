@@ -47,6 +47,7 @@ export type MentorPreferences = {
   goal: string | null;
   target_role: string | null;
   priority_skills: string[];
+  mentorship_topics: string[];
   guidance_style: string | null;
   language: string | null;
   location_pref: MeetingPref;
