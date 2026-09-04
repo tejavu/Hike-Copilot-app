@@ -238,7 +238,7 @@ export function scoreJob(job: SourcedJob, profile: MatchProfile): number {
 
   for (const skill of profile.skills) credit(skill.name, weightFor(skill.level));
   for (const interest of profile.interests) credit(interest, 3);
-  return score;
+  return score * levelFactor(job, profile.targetLevel);
 }
 
 /**
