@@ -241,42 +241,6 @@ export function NeedsAssessment({
         {step === 3 && (
           <>
             <h2 className="font-display text-2xl font-semibold">
-              What kind of guidance helps you most?
-            </h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              There's no wrong answer — mentors are good at different things.
-            </p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {GUIDANCE_STYLES.map((option) => {
-                const active = draft.guidance_style === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => set("guidance_style", option.value)}
-                    className={cn(
-                      "rounded-2xl border p-4 text-left transition-colors",
-                      active ? "border-primary bg-primary/5" : "border-border hover:bg-accent/60",
-                    )}
-                  >
-                    <span className="flex items-center gap-2 text-sm font-semibold">
-                      {option.label}
-                      {active && <Check className="size-3.5 text-primary" />}
-                    </span>
-                    <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
-                      {option.hint}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {step === 4 && (
-          <>
-            <h2 className="font-display text-2xl font-semibold">
               Language and how you'd like to meet
             </h2>
             <div className="grid gap-4 sm:grid-cols-2">
