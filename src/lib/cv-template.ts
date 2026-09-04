@@ -172,8 +172,8 @@ export function buildCvHtml(data: CvData): string {
             entry(
               role.title || role.company || "Role",
               role.period || "",
-              [role.company, city].filter(Boolean).join(", "),
-              [role.detail || ""],
+              [role.company, role.location || city].filter(Boolean).join(", "),
+              role.bullets?.length ? role.bullets : [role.detail || ""],
             ),
           )
           .join("")
@@ -312,8 +312,8 @@ export function buildCvTex(data: CvData): string {
       .map(
         (role) =>
           `\\textbf{${tex(role.title || role.company || "Role")}} \\hfill ${tex(role.period || "")} \\\\{}\n${tex(
-            [role.company, city].filter(Boolean).join(", "),
-          )}\n${texItems([role.detail || ""])}\n\\vspace{4pt}\n`,
+            [role.company, role.location || city].filter(Boolean).join(", "),
+          )}\n${texItems(role.bullets?.length ? role.bullets : [role.detail || ""])}\n\\vspace{4pt}\n`,
       )
       .join("\n") || "% Add your roles in the app and they will appear here.\n";
 

@@ -144,6 +144,11 @@ export function OnboardingForm() {
   const [busyLabel, setBusyLabel] = useState("");
   const [cvSummary, setCvSummary] = useState<string | null>(null);
   const [newSkill, setNewSkill] = useState("");
+  /**
+   * The full role records (location, achievement lines) behind the one-line
+   * textarea, so editing the line doesn't throw the rest of the role away.
+   */
+  const [roleDetails, setRoleDetails] = useState<ExperienceEntry[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const form = draft ?? (profile ? draftFromProfile(profile) : null);
@@ -239,6 +244,7 @@ export function OnboardingForm() {
       }
 
       const skills: SkillConfidence[] = parsed.skills.map((name: string) => ({ name, level: 3 }));
+      if (parsed.experience.length) setRoleDetails(parsed.experience);
       setDraft({
         ...form,
         drawnTo: form.drawnTo || parsed.interests.join(", "),
@@ -322,7 +328,17 @@ export function OnboardingForm() {
         }),
         experience: experience.map((line) => {
           const parts = parseEntryLine(line);
-          return { title: parts.title, company: parts.org, period: parts.period, detail: parts.detail };
+          const known = [...roleDetails, ...(profile.experience ?? [])].find(
+            (role) => role.title.trim().toLowerCase() === parts.title.trim().toLowerCase(),
+          );
+          return {
+            title: parts.title,
+            company: parts.org || known?.company,
+            period: parts.period || known?.period,
+            detail: parts.detail || known?.detail,
+            location: known?.location,
+            bullets: known?.bullets,
+          };
         }),
         certifications,
         projects: projects.map((line) => {
