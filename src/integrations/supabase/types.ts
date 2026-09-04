@@ -411,6 +411,7 @@ export type Database = {
         Row: {
           availability_notes: string | null
           completed_at: string | null
+          cooldown_until: string | null
           created_at: string
           goal: string | null
           guidance_style: string | null
@@ -432,6 +433,7 @@ export type Database = {
         Insert: {
           availability_notes?: string | null
           completed_at?: string | null
+          cooldown_until?: string | null
           created_at?: string
           goal?: string | null
           guidance_style?: string | null
@@ -453,6 +455,7 @@ export type Database = {
         Update: {
           availability_notes?: string | null
           completed_at?: string | null
+          cooldown_until?: string | null
           created_at?: string
           goal?: string | null
           guidance_style?: string | null
