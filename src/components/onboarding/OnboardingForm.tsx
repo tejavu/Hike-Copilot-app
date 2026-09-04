@@ -1028,12 +1028,20 @@ export function OnboardingForm() {
             sequenced so you're never guessing what's next. Roadmap, Network and Mentor Match are
             unlocked now. You don't have to feel ready — you just have to start.
           </CardHint>
-          <Link
-            to="/roadmap"
-            className="animate-pop mt-5 inline-flex items-center gap-2 rounded-xl bg-warm-gradient px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lift transition-transform hover:-translate-y-0.5"
-          >
-            <PartyPopper className="size-4" /> Open my roadmap
-          </Link>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Link
+              to="/"
+              className="animate-pop inline-flex items-center gap-2 rounded-xl bg-warm-gradient px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lift transition-transform hover:-translate-y-0.5"
+            >
+              <PartyPopper className="size-4" /> Go to chat
+            </Link>
+            <Link
+              to="/roadmap"
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-sm font-semibold shadow-warm transition-colors hover:bg-accent"
+            >
+              Open my roadmap
+            </Link>
+          </div>
         </Card>
       )}
     </div>
