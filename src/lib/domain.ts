@@ -17,6 +17,8 @@ export type Profile = {
   projects: ProjectEntry[];
   languages: LanguageEntry[];
   goal: string | null;
+  /** Optional, user-written one-liner shown under the CV header. */
+  summary: string | null;
   timeline: string | null;
   timeline_months: number | null;
   onboarding_stage: string;

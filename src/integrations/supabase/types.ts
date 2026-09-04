@@ -668,6 +668,7 @@ export type Database = {
           roadmap_generated: boolean
           skill_confidence: Json
           skills: string[]
+          summary: string | null
           timeline: string | null
           timeline_months: number | null
           updated_at: string
@@ -700,6 +701,7 @@ export type Database = {
           roadmap_generated?: boolean
           skill_confidence?: Json
           skills?: string[]
+          summary?: string | null
           timeline?: string | null
           timeline_months?: number | null
           updated_at?: string
@@ -732,6 +734,7 @@ export type Database = {
           roadmap_generated?: boolean
           skill_confidence?: Json
           skills?: string[]
+          summary?: string | null
           timeline?: string | null
           timeline_months?: number | null
           updated_at?: string

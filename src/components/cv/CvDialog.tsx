@@ -40,12 +40,13 @@ function CvBody() {
   const { data: profile, isLoading } = useProfile();
   const { data: roadmap } = useRoadmap();
   const updateProfile = useUpdateProfile();
-  const [details, setDetails] = useState<{ location: string; phone: string; languages: string } | null>(null);
+  const [details, setDetails] = useState<{ location: string; phone: string; languages: string; summary: string } | null>(null);
 
   const form = details ?? {
     location: profile?.location ?? "",
     phone: profile?.phone ?? "",
     languages: (profile?.languages ?? []).map((l) => `${l.name}: ${l.level}`).join("\n"),
+    summary: profile?.summary ?? "",
   };
 
   const languages = form.languages
@@ -89,7 +90,7 @@ function CvBody() {
   }
 
   const data = {
-    profile: { ...profile, location: form.location, phone: form.phone, languages },
+    profile: { ...profile, location: form.location, phone: form.phone, languages, summary: form.summary },
     earned,
   };
   const html = buildCvHtml(data);
@@ -131,7 +132,12 @@ function CvBody() {
   };
 
   const saveDetails = async () => {
-    await updateProfile.mutateAsync({ location: form.location, phone: form.phone, languages });
+    await updateProfile.mutateAsync({
+      location: form.location,
+      phone: form.phone,
+      languages,
+      summary: form.summary.trim() || null,
+    });
     toast.success("Details saved.");
   };
 
@@ -151,6 +157,16 @@ function CvBody() {
             onChange={(e) => setDetails({ ...form, languages: e.target.value })}
             className="bg-card"
             placeholder={"English: C2\nGerman: B2\nFrench: A2"}
+          />
+        </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label className="text-xs">Add a short summary if you'd like one — entirely optional</Label>
+          <Textarea
+            rows={2}
+            value={form.summary}
+            onChange={(e) => setDetails({ ...form, summary: e.target.value })}
+            className="bg-card"
+            placeholder="A line or two in your own words. Leave it blank and nothing appears on your CV."
           />
         </div>
         <div className="flex flex-wrap gap-2 sm:col-span-2">
