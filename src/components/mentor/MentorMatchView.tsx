@@ -43,6 +43,8 @@ import {
   formatSlot,
   nextCheckInFrom,
   pickBestMentor,
+  activeCooldown,
+  MENTOR_COOLDOWN_DAYS,
   rankMentors,
   type EmailStatus,
   type Mentor,
@@ -367,6 +369,20 @@ export function MentorMatchView() {
 
   const needsAssessment = !preferences?.completed_at;
 
+  /**
+   * Cancelling a session pauses new mentor requests for 30 days. It never blocks
+   * an existing mentoring relationship — only starting a new one.
+   */
+  const cooldownUntil = activeCooldown(preferences?.cooldown_until);
+  const cooldownActive = Boolean(cooldownUntil) && !selectedMentor;
+  const cooldownDate = cooldownUntil
+    ? cooldownUntil.toLocaleDateString(undefined, {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      })
+    : "";
+
   return (
     <div className="space-y-6">
       <header className="rounded-3xl border border-border bg-warm-gradient p-6 text-primary-foreground shadow-lift md:p-8">
@@ -418,7 +434,22 @@ export function MentorMatchView() {
         </div>
       )}
 
-      {needsAssessment || assessing ? (
+      {cooldownActive ? (
+        <section className="rounded-3xl border border-border bg-card p-6 shadow-lift md:p-8">
+          <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+            Mentoring paused
+          </p>
+          <h2 className="mt-2 font-display text-2xl font-semibold">
+            You can request a new mentor from {cooldownDate}
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            Because a session was cancelled, matching takes a {MENTOR_COOLDOWN_DAYS}-day pause.
+            Mentors here volunteer their time, and the short gap keeps their calendars from being
+            held and released. Nothing is lost — your preferences, notes and past sessions all stay
+            exactly as they are, and everything else in Hike Copilot keeps working meanwhile.
+          </p>
+        </section>
+      ) : needsAssessment || assessing ? (
         <NeedsAssessment
           existing={preferences ?? null}
           inferred={{
