@@ -95,6 +95,7 @@ export function NeedsAssessment({
   }, [inferred.gapSkills, draft.priority_skills]);
 
   const [customSkill, setCustomSkill] = useState("");
+  const [customTopic, setCustomTopic] = useState("");
 
   const set = <K extends keyof AssessmentDraft>(key: K, value: AssessmentDraft[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
@@ -107,10 +108,19 @@ export function NeedsAssessment({
         : [...current.priority_skills, skill],
     }));
 
+  const toggleTopic = (topic: string) =>
+    setDraft((current) => ({
+      ...current,
+      mentorship_topics: current.mentorship_topics.includes(topic)
+        ? current.mentorship_topics.filter((item) => item !== topic)
+        : [...current.mentorship_topics, topic],
+    }));
+
   const canAdvance = () => {
     if (step === 0) return draft.goal.trim().length > 2;
     if (step === 1) return draft.target_role.trim().length > 1;
     if (step === 2) return draft.priority_skills.length > 0;
+    if (step === 5) return draft.mentorship_topics.length > 0;
     return true;
   };
 
