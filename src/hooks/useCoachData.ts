@@ -241,6 +241,7 @@ export function useResetCoach() {
         "profile",
         "jobs",
         "roadmap",
+        "weekly-plan",
         "documents",
         "mentor-preferences",
         "mentor-matches",
