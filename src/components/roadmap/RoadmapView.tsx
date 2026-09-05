@@ -243,18 +243,27 @@ const ITEM_META: Record<string, { label: string; icon: typeof Target }> = {
   visibility: { label: "Be seen", icon: Megaphone },
 };
 
+/** Sources that belong to Microsoft, so they can be visually flagged. */
+const MICROSOFT_PROVIDERS = new Set(["Microsoft Learn", "Microsoft", "LinkedIn Learning"]);
+
 function ItemRow({ item }: { item: RoadmapItem }) {
   const done = isItemComplete(item);
   const meta = ITEM_META[item.item_type] ?? ITEM_META["learn"]!;
   const Icon = meta.icon;
+  const microsoft = Boolean(item.provider && MICROSOFT_PROVIDERS.has(item.provider));
 
   return (
     <div
       className={cn(
         "rounded-xl border p-4 transition-colors",
-        done ? "border-success/40 bg-success/10" : "border-border bg-secondary/40",
+        done
+          ? "border-success/40 bg-success/10"
+          : microsoft
+            ? "border-primary/40 border-l-4 border-l-primary bg-primary/5"
+            : "border-border bg-secondary/40",
       )}
     >
+
       <div className="flex items-start gap-3">
         <span
           className={cn(
