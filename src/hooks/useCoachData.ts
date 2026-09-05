@@ -200,6 +200,7 @@ export function useResetCoach() {
       await wipe("event_engagement");
 
       // Roadmap, jobs, documents
+      await wipe("weekly_plans");
       await wipe("roadmap_phases");
       await wipe("jobs");
       await wipe("user_documents");
