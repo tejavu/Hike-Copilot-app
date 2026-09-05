@@ -60,7 +60,7 @@ export function ThisWeekPanel({
   useEffect(() => {
     if (!plan) return;
     const reserved = plan.next_item_id ? itemById.get(plan.next_item_id) : null;
-    if (plan.next_item_id && (!reserved || isItemCompleteSafe(reserved))) refreshNext();
+    if (plan.next_item_id && (!reserved || isItemComplete(reserved))) refreshNext();
     if (!plan.next_item_id) refreshNext();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan?.next_item_id, items]);
