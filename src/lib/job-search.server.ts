@@ -86,6 +86,7 @@ async function searchAdzuna(
   terms: string[],
   locations: string[],
   notes: string[],
+  targetLevel: TargetLevel | null,
 ): Promise<SourcedJob[]> {
   const appId = process.env["ADZUNA_APP_ID"];
   const appKey = process.env["ADZUNA_APP_KEY"];
@@ -116,7 +117,11 @@ async function searchAdzuna(
         url.searchParams.set("app_id", appId);
         url.searchParams.set("app_key", appKey);
         url.searchParams.set("results_per_page", "20");
-        url.searchParams.set("what_or", terms.join(" "));
+        // A junior profile rarely surfaces junior postings unless we ask for
+        // them — boards skew mid/senior by default.
+        const queryTerms =
+          targetLevel === "junior" ? [...terms, "junior", "graduate", "entry level"] : terms;
+        url.searchParams.set("what_or", queryTerms.join(" "));
         url.searchParams.set("max_days_old", "45");
         url.searchParams.set("content-type", "application/json");
         if (where) url.searchParams.set("where", where);
