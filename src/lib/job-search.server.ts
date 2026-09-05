@@ -382,14 +382,15 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
   const notes: string[] = [];
   const terms = topTerms(data.skills, data.interests, data.drawnTo);
 
+  const targetLevel = data.targetLevel ?? deriveTargetLevel(data.skills, data.recentRole);
+  const levelUnclear = !data.targetLevel && targetLevel === null;
+
   const [adzuna, swiss] = await Promise.all([
-    searchAdzuna(terms, data.locations, notes),
-    searchSwissBoards(terms, data.locations, notes),
+    searchAdzuna(terms, data.locations, notes, targetLevel),
+    searchSwissBoards(terms, data.locations, notes, targetLevel),
   ]);
 
   const live = [...swiss, ...adzuna];
-  const targetLevel = data.targetLevel ?? deriveTargetLevel(data.skills, data.recentRole);
-  const levelUnclear = !data.targetLevel && targetLevel === null;
 
   const ranked = rankJobs(live, {
     skills: data.skills,
