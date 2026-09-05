@@ -285,6 +285,22 @@ export function rankJobs(
 
   const widened = byCity.length === 0 && bySetup.length > 0;
   const pool = widened ? bySetup : byCity;
+
+  // A junior aiming at junior roles should SEE junior roles — not just have
+  // them outscored by mid-level postings with more keyword overlap. Reserve
+  // up to half the list for on-level postings when any exist.
+  if (profile.targetLevel) {
+    const onLevel = pool.filter(
+      (row) => levelOfJob(row.job.seniority, row.job.title) === profile.targetLevel,
+    );
+    const reserved = Math.min(onLevel.length, Math.ceil(count / 2));
+    if (reserved > 0) {
+      const rest = pool.filter((row) => !onLevel.includes(row));
+      const mixed = [...onLevel.slice(0, reserved), ...rest].slice(0, count);
+      return { jobs: mixed.map((row) => row.job), widened };
+    }
+  }
+
   return { jobs: pool.slice(0, count).map((row) => row.job), widened };
 }
 
