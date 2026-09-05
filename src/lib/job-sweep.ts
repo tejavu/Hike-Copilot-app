@@ -286,18 +286,29 @@ export function rankJobs(
   const widened = byCity.length === 0 && bySetup.length > 0;
   const pool = widened ? bySetup : byCity;
 
-  // A junior aiming at junior roles should SEE junior roles — not just have
-  // them outscored by mid-level postings with more keyword overlap. Reserve
-  // up to half the list for on-level postings when any exist.
+  // Level is a wall, not a nudge: only roles at the level she's at now, or the
+  // one level the roadmap is building her toward, may be suggested. A junior
+  // never sees mid-level postings, even if that leaves the list short.
   if (profile.targetLevel) {
-    const onLevel = pool.filter(
-      (row) => levelOfJob(row.job.seniority, row.job.title) === profile.targetLevel,
-    );
-    const reserved = Math.min(onLevel.length, Math.ceil(count / 2));
-    if (reserved > 0) {
-      const rest = pool.filter((row) => !onLevel.includes(row));
-      const mixed = [...onLevel.slice(0, reserved), ...rest].slice(0, count);
-      return { jobs: mixed.map((row) => row.job), widened };
+    const targetIndex = LEVEL_ORDER.indexOf(profile.targetLevel);
+    const reachable = pool.filter((row) => {
+      const jobIndex = LEVEL_ORDER.indexOf(levelOfJob(row.job.seniority, row.job.title));
+      return jobIndex >= targetIndex && jobIndex <= targetIndex + 1;
+    });
+    if (reachable.length > 0 || targetIndex === 0) {
+      // For juniors, "reachable" is junior + mid — but mid is only allowed as
+      // the roadmap's destination, which juniors haven't reached: hard-cap at
+      // the target level unless nothing on-level exists at all.
+      const onLevel = reachable.filter(
+        (row) => levelOfJob(row.job.seniority, row.job.title) === profile.targetLevel,
+      );
+      const finalPool =
+        profile.targetLevel === "junior"
+          ? onLevel
+          : reachable.length >= count
+            ? reachable
+            : [...onLevel, ...reachable.filter((row) => !onLevel.includes(row))];
+      return { jobs: finalPool.slice(0, count).map((row) => row.job), widened };
     }
   }
 
