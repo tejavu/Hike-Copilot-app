@@ -388,9 +388,14 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
   const targetLevel = data.targetLevel ?? deriveTargetLevel(data.skills, data.recentRole);
   const levelUnclear = !data.targetLevel && targetLevel === null;
 
+  // Jobs are always Switzerland-only, regardless of what the client sends.
+  const swissLocations = data.locations.filter(isSwissLocation).length > 0
+    ? data.locations.filter(isSwissLocation)
+    : ["Zurich, CH"];
+
   const [adzuna, swiss] = await Promise.all([
-    searchAdzuna(terms, data.locations, notes, targetLevel),
-    searchSwissBoards(terms, data.locations, notes, targetLevel),
+    searchAdzuna(terms, swissLocations, notes, targetLevel),
+    searchSwissBoards(terms, swissLocations, notes, targetLevel),
   ]);
 
   const live = [...swiss, ...adzuna];
@@ -399,7 +404,7 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
     skills: data.skills,
     interests: [...data.interests, data.drawnTo].filter(Boolean),
     setups: data.setups,
-    locations: data.locations,
+    locations: swissLocations,
     count: data.count,
     targetLevel,
   });
@@ -423,7 +428,7 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
   const examples = await exampleRoles(
     terms,
     data.drawnTo,
-    data.locations,
+    swissLocations,
     data.setups,
     data.count - shortlist.length,
     notes,
