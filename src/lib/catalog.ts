@@ -140,9 +140,10 @@ const CATALOG: Record<string, SkillPlan> = {
       difficulty: "Medium",
       target: 12,
       detail:
-        "Free in-browser sandbox modules on Microsoft Learn — portal walkthroughs, VMs, storage, functions. One module at a time. Browse: https://learn.microsoft.com/training/browse/?products=azure&resource_type=module",
+        "Free in-browser sandbox modules on Microsoft Learn — portal walkthroughs, VMs, storage, functions. One module at a time. Browse: https://learn.microsoft.com/training/browse/?products=azure&resource_type=module · Also on LinkedIn Learning: https://www.linkedin.com/learning/search?keywords=Azure",
       url: "https://learn.microsoft.com/training/browse/?products=azure&resource_type=module",
     },
+
     certify: {
       title: "AZ-900: Microsoft Certified Azure Fundamentals",
       provider: "Microsoft",
