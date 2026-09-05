@@ -26,6 +26,7 @@ You CAN edit her roadmap, but only through the provided tools.
 - If she hasn't confirmed a removal, leave the roadmap untouched and just offer.
 - If a removal tool reports finished steps with proof, tell her exactly what would be lost and only re-call it with confirm_completed once she agrees.
 - Never claim you've updated, added to, removed from or changed her roadmap unless the matching tool call succeeded in this same turn. If a tool call fails or no roadmap exists yet, say so plainly and suggest she edit it from the Roadmap page instead.
+- If add_roadmap_item reports already_on_roadmap, do NOT say you added it — tell her it's already on her roadmap and point at where it sits.
 
 You can also write her CV content, but only from what she has actually told you.
 - update_cv_summary rewrites the "Profile" section at the top of her CV: 2-4 lines, third person-free plain prose, no headings, Swiss convention. Never call it "Headline", "About Me" or "Personal Statement" — the section is called Profile.
@@ -349,6 +350,7 @@ async function addItem(supabase: Supa, userId: string, args: Record<string, unkn
 
   const wanted = normalise(skillName);
   let skillId = skillRows.find((s) => normalise(s.name) === wanted)?.id;
+  const createdSkill = !skillId;
   if (!skillId) {
     const nextIndex = skillRows
       .filter((s) => s.phase_id === phase.id)
@@ -365,6 +367,25 @@ async function addItem(supabase: Supa, userId: string, args: Record<string, unkn
       .single();
     if (createError) return { ok: false, error: createError.message };
     skillId = (created as { id: string }).id;
+  }
+
+  // Duplicate guard: never add the same step twice under one skill, however
+  // the request was phrased. Matches on item type plus near-equal titles.
+  const { data: existingItems, error: itemsError } = await supabase
+    .from("roadmap_items")
+    .select("title, item_type")
+    .eq("user_id", userId)
+    .eq("skill_id", skillId);
+  if (itemsError) return { ok: false, error: itemsError.message };
+  const itemRows = (existingItems ?? []) as { title: string; item_type: string }[];
+  const wantedTitle = normalise(title);
+  const dupe = itemRows.some((row) => {
+    if (row.item_type !== itemType) return false;
+    const t = normalise(row.title);
+    return t === wantedTitle || t.includes(wantedTitle) || wantedTitle.includes(t);
+  });
+  if (dupe) {
+    return { ok: true, already_on_roadmap: title, under: skillName };
   }
 
   const { data: siblings } = await supabase
@@ -403,6 +424,57 @@ async function addItem(supabase: Supa, userId: string, args: Record<string, unkn
     order_index: orderIndex,
   } as never);
   if (itemError) return { ok: false, error: itemError.message };
+
+  // A brand-new skill added from chat gets the same treatment as one built
+  // from scratch: the catalog plan's learn/practice/certify (and build, in a
+  // building phase) steps are seeded alongside whatever step she asked for.
+  if (createdSkill) {
+    const seed: Record<string, unknown>[] = [];
+    const push = (type: string, entry: Record<string, unknown>) =>
+      seed.push({ user_id: userId, skill_id: skillId, item_type: type, ...entry });
+    let next = orderIndex + 1;
+    if (phase.kind === "learning" || phase.kind === "building") {
+      if (itemType !== "learn")
+        push("learn", {
+          estimated_hours: 3,
+          title: plan.course.title,
+          provider: plan.course.provider,
+          url: plan.course.url,
+          order_index: next++,
+        });
+      if (itemType !== "practice")
+        push("practice", {
+          estimated_hours: Math.min(12, Math.max(1, (plan.practice.target ?? 1) * 0.5)),
+          title: plan.practice.title,
+          url: plan.practice.url,
+          difficulty: plan.practice.difficulty,
+          detail: plan.practice.detail,
+          target_count: plan.practice.target,
+          order_index: next++,
+        });
+      if (itemType !== "certify")
+        push("certify", {
+          estimated_hours: 2,
+          title: plan.certify.title,
+          provider: plan.certify.provider,
+          url: plan.certify.url,
+          detail: "Counts as done once you upload the certificate or add a credential link.",
+          order_index: next++,
+        });
+    }
+    if (phase.kind === "building" && itemType !== "build") {
+      push("build", {
+        estimated_hours: 5,
+        title: plan.project.title,
+        detail: plan.project.detail,
+        order_index: next++,
+      });
+    }
+    if (seed.length) {
+      const { error: seedError } = await supabase.from("roadmap_items").insert(seed as never);
+      if (seedError) return { ok: false, error: seedError.message };
+    }
+  }
   return { ok: true, added: title, under: skillName };
 }
 
