@@ -259,12 +259,14 @@ async function exampleRoles(
   setups: string[],
   count: number,
   notes: string[],
+  targetLevel: TargetLevel | null,
 ): Promise<SourcedJob[]> {
   const key = process.env["LOVABLE_API_KEY"];
   if (!key) return [];
 
   const prompt = `A woman in tech is job hunting. Her strongest skills: ${terms.join(", ") || "unspecified"}.
 She is drawn to: ${drawnTo || "unspecified"}. Preferred locations: ${locations.join(", ") || "flexible"}. Work setup: ${setups.join(", ") || "flexible"}.
+Seniority to aim for: ${targetLevel === "junior" ? "entry-level — junior, graduate or internship roles only, nothing requiring years of experience" : (targetLevel ?? "mid-level")}.
 
 Write ${count} realistic job archetypes that genuinely match HER field — not generic web or data roles unless that is her field. Return strict JSON:
 {"jobs":[{"title":"","company":"","location":"","description":"","required_skills":[""],"seniority":""}]}
@@ -424,6 +426,7 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
     data.setups,
     data.count - shortlist.length,
     notes,
+    targetLevel,
   );
   const jobs = [...shortlist, ...examples].slice(0, data.count);
   return {
