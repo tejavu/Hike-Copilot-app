@@ -182,6 +182,7 @@ async function searchSwissBoards(
   terms: string[],
   locations: string[],
   notes: string[],
+  targetLevel: TargetLevel | null,
 ): Promise<SourcedJob[]> {
   const gatewayKey = process.env["LOVABLE_API_KEY"];
   const connectionKey = process.env["FIRECRAWL_API_KEY"];
@@ -196,6 +197,7 @@ async function searchSwissBoards(
     SWISS_DETAIL_PATHS.map((p) => `site:${p}`).join(" OR "),
     terms.slice(0, 4).join(" "),
     swissCities.slice(0, 3).join(" "),
+    targetLevel === "junior" ? "(junior OR graduate OR entry-level OR internship)" : "",
   ]
     .filter(Boolean)
     .join(" ");
