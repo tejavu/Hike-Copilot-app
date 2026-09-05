@@ -349,6 +349,7 @@ async function addItem(supabase: Supa, userId: string, args: Record<string, unkn
 
   const wanted = normalise(skillName);
   let skillId = skillRows.find((s) => normalise(s.name) === wanted)?.id;
+  const createdSkill = !skillId;
   if (!skillId) {
     const nextIndex = skillRows
       .filter((s) => s.phase_id === phase.id)
