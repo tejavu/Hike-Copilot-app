@@ -27,25 +27,11 @@ export type JobSearchResult = {
   notes: string[];
 };
 
-/** Adzuna country codes we can actually query. */
-const ADZUNA_COUNTRIES: Record<string, string> = {
-  CH: "ch",
-  DE: "de",
-  AT: "at",
-  NL: "nl",
-  FR: "fr",
-  BE: "be",
-  IE: "gb",
-  UK: "gb",
-  GB: "gb",
-  ES: "es",
-  IT: "it",
-  PL: "pl",
-};
+/** Jobs are always scoped to Switzerland, regardless of the user's broader location prefs. */
+const ADZUNA_COUNTRY = "ch";
 
-function countryOf(location: string): string | null {
-  const code = location.split(",").pop()?.trim().toUpperCase() ?? "";
-  return ADZUNA_COUNTRIES[code] ?? null;
+function isSwissLocation(location: string): boolean {
+  return location.trim().toUpperCase().endsWith("CH");
 }
 
 function cityName(location: string): string {
