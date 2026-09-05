@@ -83,6 +83,38 @@ function skillsFrom(text: string, terms: string[]): string[] {
 
 // ------------------------------------------------------------------ Adzuna
 
+/**
+ * STEM category tags we accept, matched against whatever /categories actually
+ * returns for Switzerland — tag names differ per country, so nothing is assumed.
+ */
+const STEM_CATEGORY_TAGS = ["it-jobs", "engineering-jobs", "scientific-qa-jobs"];
+
+let stemCategoryCache: { tags: string[]; at: number } | null = null;
+
+async function stemCategories(appId: string, appKey: string, notes: string[]): Promise<string[]> {
+  if (stemCategoryCache && Date.now() - stemCategoryCache.at < 6 * 60 * 60 * 1000) {
+    return stemCategoryCache.tags;
+  }
+  try {
+    const url = new URL(`https://api.adzuna.com/v1/api/jobs/${ADZUNA_COUNTRY}/categories`);
+    url.searchParams.set("app_id", appId);
+    url.searchParams.set("app_key", appKey);
+    url.searchParams.set("content-type", "application/json");
+    const response = await fetch(url.toString());
+    if (!response.ok) throw new Error(`categories ${response.status}`);
+    const body = (await response.json()) as { results?: { tag?: string }[] };
+    const live = (body.results ?? []).map((r) => (r.tag ?? "").trim()).filter(Boolean);
+    const tags = STEM_CATEGORY_TAGS.filter((tag) => live.includes(tag));
+    if (tags.length === 0) throw new Error("no STEM categories in list");
+    stemCategoryCache = { tags, at: Date.now() };
+    return tags;
+  } catch (error) {
+    console.error("adzuna categories failed", error);
+    notes.push("Could not confirm the job categories — searching STEM fields directly.");
+    return STEM_CATEGORY_TAGS;
+  }
+}
+
 async function searchAdzuna(
   terms: string[],
   locations: string[],
@@ -96,6 +128,8 @@ async function searchAdzuna(
     return [];
   }
   if (terms.length === 0) return [];
+
+  const categories = await stemCategories(appId, appKey, notes);
 
   const targets = locations.filter(isSwissLocation).length > 0
     ? locations.filter(isSwissLocation)
@@ -118,13 +152,17 @@ async function searchAdzuna(
     for (const level of levelWords) queries.push({ where, level });
   }
 
-  // Sequential with a short pause — Adzuna rate-limits burst requests.
+  // Sequential over place/level with a short pause — Adzuna rate-limits bursts.
+  // Categories only take one value per call, so they fan out in parallel.
   const results: SourcedJob[][] = [];
   for (const { where, level } of queries) {
     if (results.length > 0) await new Promise((r) => setTimeout(r, 400));
-    results.push(
-      await (async () => {
-        const url = new URL(`https://api.adzuna.com/v1/api/jobs/${ADZUNA_COUNTRY}/search/1`);
+    const perCategory = await Promise.all(
+      categories.map(async (category) => {
+
+        const url = new URL(
+          `https://api.adzuna.com/v1/api/jobs/${ADZUNA_COUNTRY}/search/1`,
+        );
         url.searchParams.set("app_id", appId);
         url.searchParams.set("app_key", appKey);
         url.searchParams.set("results_per_page", "20");
@@ -132,8 +170,8 @@ async function searchAdzuna(
         if (level) url.searchParams.set("what", level);
         url.searchParams.set("max_days_old", "45");
         url.searchParams.set("content-type", "application/json");
+        url.searchParams.set("category", category);
         if (where) url.searchParams.set("where", where);
-
 
         try {
           // Adzuna throws the occasional 503; one quiet retry saves the search.
@@ -175,9 +213,11 @@ async function searchAdzuna(
           notes.push("Adzuna could not be reached.");
           return [];
         }
-      })(),
+      }),
     );
+    results.push(perCategory.flat());
   }
+
 
   return results.flat();
 }
@@ -206,8 +246,11 @@ async function searchSwissBoards(
     SWISS_DETAIL_PATHS.map((p) => `site:${p}`).join(" OR "),
     terms.slice(0, 4).join(" "),
     swissCities.slice(0, 3).join(" "),
+    // STEM only: software/IT, engineering (incl. hardware), science, R&D, data.
+    "(engineer OR engineering OR technology OR software OR hardware OR data OR scientist OR scientific OR research OR laboratory OR biomedical OR medtech OR pharma OR quality)",
     targetLevel === "junior" ? "(junior OR graduate OR entry-level OR internship)" : "",
   ]
+
     .filter(Boolean)
     .join(" ");
 
@@ -281,7 +324,7 @@ async function exampleRoles(
 She is drawn to: ${drawnTo || "unspecified"}. Preferred locations in Switzerland: ${locationText}. Work setup: ${setups.join(", ") || "flexible"}.
 Seniority to aim for: ${targetLevel === "junior" ? "entry-level — junior, graduate or internship roles only, nothing requiring years of experience" : (targetLevel ?? "mid-level")}.
 
-Write ${count} realistic Swiss job archetypes that genuinely match HER field — not generic web or data roles unless that is her field. Return strict JSON:
+Write ${count} realistic Swiss job archetypes that genuinely match HER field — not generic web or data roles unless that is her field. Every role must be a STEM role: software/IT, hardware and electronics, engineering of any discipline, data, or science and research (biomedical, life sciences, chemistry, physics, lab and quality/QA). Never suggest non-STEM roles such as sales, marketing, HR, admin, finance, hospitality or retail, even if a skill overlaps. Return strict JSON:
 {"jobs":[{"title":"","company":"","location":"","description":"","required_skills":[""],"seniority":""}]}
 Use plausible Swiss employer types (e.g. "a Zurich fintech", "a Basel pharma scale-up", "a Swiss medtech company") rather than inventing real company names. Description: 2 warm sentences. 3-5 required_skills.`;
 
