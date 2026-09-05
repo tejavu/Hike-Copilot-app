@@ -423,6 +423,57 @@ async function addItem(supabase: Supa, userId: string, args: Record<string, unkn
     order_index: orderIndex,
   } as never);
   if (itemError) return { ok: false, error: itemError.message };
+
+  // A brand-new skill added from chat gets the same treatment as one built
+  // from scratch: the catalog plan's learn/practice/certify (and build, in a
+  // building phase) steps are seeded alongside whatever step she asked for.
+  if (createdSkill) {
+    const seed: Record<string, unknown>[] = [];
+    const push = (type: string, entry: Record<string, unknown>) =>
+      seed.push({ user_id: userId, skill_id: skillId, item_type: type, ...entry });
+    let next = orderIndex + 1;
+    if (phase.kind === "learning" || phase.kind === "building") {
+      if (itemType !== "learn")
+        push("learn", {
+          estimated_hours: 3,
+          title: plan.course.title,
+          provider: plan.course.provider,
+          url: plan.course.url,
+          order_index: next++,
+        });
+      if (itemType !== "practice")
+        push("practice", {
+          estimated_hours: Math.min(12, Math.max(1, (plan.practice.target ?? 1) * 0.5)),
+          title: plan.practice.title,
+          url: plan.practice.url,
+          difficulty: plan.practice.difficulty,
+          detail: plan.practice.detail,
+          target_count: plan.practice.target,
+          order_index: next++,
+        });
+      if (itemType !== "certify")
+        push("certify", {
+          estimated_hours: 2,
+          title: plan.certify.title,
+          provider: plan.certify.provider,
+          url: plan.certify.url,
+          detail: "Counts as done once you upload the certificate or add a credential link.",
+          order_index: next++,
+        });
+    }
+    if (phase.kind === "building" && itemType !== "build") {
+      push("build", {
+        estimated_hours: 5,
+        title: plan.project.title,
+        detail: plan.project.detail,
+        order_index: next++,
+      });
+    }
+    if (seed.length) {
+      const { error: seedError } = await supabase.from("roadmap_items").insert(seed as never);
+      if (seedError) return { ok: false, error: seedError.message };
+    }
+  }
   return { ok: true, added: title, under: skillName };
 }
 
