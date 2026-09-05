@@ -261,13 +261,17 @@ async function exampleRoles(
   const key = process.env["LOVABLE_API_KEY"];
   if (!key) return [];
 
-  const prompt = `A woman in tech is job hunting. Her strongest skills: ${terms.join(", ") || "unspecified"}.
-She is drawn to: ${drawnTo || "unspecified"}. Preferred locations: ${locations.join(", ") || "flexible"}. Work setup: ${setups.join(", ") || "flexible"}.
+  // Example roles are always Swiss, even if the user once picked broader locations.
+  const swissLocations = locations.filter(isSwissLocation);
+  const locationText = swissLocations.length > 0 ? swissLocations.join(", ") : "Switzerland";
+
+  const prompt = `A woman in tech is job hunting in Switzerland. Her strongest skills: ${terms.join(", ") || "unspecified"}.
+She is drawn to: ${drawnTo || "unspecified"}. Preferred locations in Switzerland: ${locationText}. Work setup: ${setups.join(", ") || "flexible"}.
 Seniority to aim for: ${targetLevel === "junior" ? "entry-level — junior, graduate or internship roles only, nothing requiring years of experience" : (targetLevel ?? "mid-level")}.
 
-Write ${count} realistic job archetypes that genuinely match HER field — not generic web or data roles unless that is her field. Return strict JSON:
+Write ${count} realistic Swiss job archetypes that genuinely match HER field — not generic web or data roles unless that is her field. Return strict JSON:
 {"jobs":[{"title":"","company":"","location":"","description":"","required_skills":[""],"seniority":""}]}
-Use plausible European employer types (e.g. "a medtech scale-up") rather than inventing real company names. Description: 2 warm sentences. 3-5 required_skills.`;
+Use plausible Swiss employer types (e.g. "a Zurich fintech", "a Basel pharma scale-up", "a Swiss medtech company") rather than inventing real company names. Description: 2 warm sentences. 3-5 required_skills.`;
 
   try {
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
