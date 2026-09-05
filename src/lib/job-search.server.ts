@@ -85,15 +85,15 @@ async function searchAdzuna(
   }
   if (terms.length === 0) return [];
 
-  const targets = locations.length > 0 ? locations : ["Zurich, CH"];
+  const targets = locations.filter(isSwissLocation).length > 0
+    ? locations.filter(isSwissLocation)
+    : ["Zurich, CH"];
   const places = new Map<string, string | null>();
   for (const location of targets) {
-    const country = countryOf(location);
-    if (!country) continue;
-    places.set(`${country}|${cityName(location)}`, cityName(location));
+    const city = cityName(location);
+    // Remote means no city filter — country-level Switzerland search.
+    places.set(location, city.toLowerCase() === "remote" ? null : city);
   }
-  // Remote-friendly sweep so people open to remote aren't limited to one city.
-  places.set("gb|", null);
 
   // Level words must never sit in the same OR bucket as her skills: a posting
   // matching only "junior" would come back with nothing to do with her field.
@@ -101,10 +101,9 @@ async function searchAdzuna(
   const levelWords: (string | null)[] =
     targetLevel === "junior" ? ["junior", "graduate"] : [null];
 
-  const queries: { country: string; where: string | null; level: string | null }[] = [];
-  for (const [key, where] of places.entries()) {
-    const country = key.split("|")[0]!;
-    for (const level of levelWords) queries.push({ country, where, level });
+  const queries: { where: string | null; level: string | null }[] = [];
+  for (const [, where] of places.entries()) {
+    for (const level of levelWords) queries.push({ where, level });
   }
 
   // Sequential with a short pause — Adzuna rate-limits burst requests.
