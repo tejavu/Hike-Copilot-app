@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { runJobSearch } from "./job-search.server";
 import { normaliseSkill, planForSkill } from "./catalog";
+import type { ExperienceEntry } from "./domain";
 
 const schema = z.object({
   question: z.string().min(1).max(4000),
@@ -486,6 +487,7 @@ type ProfileRow = {
   location_pref: string | null;
   work_setup: string[] | null;
   recent_role: string | null;
+  experience: ExperienceEntry[] | null;
 };
 
 /**
@@ -501,7 +503,7 @@ async function findJobRecommendations(
 
   const { data: profileData, error: profileError } = await supabase
     .from("profiles")
-    .select("skill_confidence, skills, interests, drawn_to, location_pref, work_setup, recent_role")
+    .select("skill_confidence, skills, interests, drawn_to, location_pref, work_setup, recent_role, experience")
     .eq("id", userId)
     .maybeSingle();
   if (profileError) return { ok: false, error: profileError.message };
@@ -541,6 +543,7 @@ async function findJobRecommendations(
       .filter(Boolean),
     setups: profile.work_setup ?? [],
     recentRole: profile.recent_role ?? "",
+    experience: profile.experience ?? [],
     count,
   });
 

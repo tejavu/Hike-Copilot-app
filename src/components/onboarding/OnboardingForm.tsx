@@ -22,6 +22,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useJobs, useProfile, useUpdateJob, useUpdateProfile } from "@/hooks/useCoachData";
 import { parseCvDocuments } from "@/lib/cv-parse.functions";
 import { formatEntryLine, parseEntryLine } from "@/lib/cv-entry";
+import {
+  classifyEmployment,
+  toEmploymentType,
+  EMPLOYMENT_TYPES,
+  type EmploymentType,
+} from "@/lib/experience-weight";
 import { normaliseAnswer } from "@/lib/profile-parse.functions";
 import { writeRoadmapCopy } from "@/lib/roadmap-copy.functions";
 import {
@@ -70,6 +76,8 @@ type StepId =
 
 const SETUPS = ["Remote", "Hybrid", "On-site"];
 
+const ROLE_TYPE_CHOICES = EMPLOYMENT_TYPES;
+
 const LEVEL_CHOICES: { value: TargetLevel; label: string }[] = [
   { value: "junior", label: "Just starting out" },
   { value: "mid", label: "A few years in" },
@@ -100,7 +108,14 @@ type Draft = {
   goal: string;
   /** Only set when we couldn't work her level out and had to ask. */
   targetLevel: TargetLevel | null;
+  /** How each typed role counts, keyed by the role title in lower case. */
+  roleTypes: Record<string, EmploymentType>;
 };
+
+/** The role title as typed, used as the key for its employment type. */
+function roleKey(line: string): string {
+  return parseEntryLine(line).title.trim().toLowerCase();
+}
 
 function draftFromProfile(profile: Profile): Draft {
   return {
@@ -123,6 +138,15 @@ function draftFromProfile(profile: Profile): Draft {
     months: profile.timeline_months ?? 6,
     goal: profile.goal ?? "",
     targetLevel: null,
+    roleTypes: Object.fromEntries(
+      (profile.experience ?? [])
+        .filter((e) => e.title.trim())
+        .map((e) => [
+          e.title.trim().toLowerCase(),
+          toEmploymentType(e.employment_type) ??
+            classifyEmployment(e.title, e.company, e.detail),
+        ]),
+    ),
   };
 }
 
@@ -340,6 +364,10 @@ export function OnboardingForm() {
           if (detail) entry.detail = detail;
           if (known?.location) entry.location = known.location;
           if (known?.bullets?.length) entry.bullets = known.bullets;
+          entry.employment_type =
+            form.roleTypes[parts.title.trim().toLowerCase()] ??
+            toEmploymentType(known?.employment_type) ??
+            classifyEmployment(line, company, detail);
           return entry;
         }),
         certifications,
@@ -367,6 +395,7 @@ export function OnboardingForm() {
           locations: form.locations,
           setups: form.setups,
           recentRole: form.recentRole,
+          experience: nextPatch.experience ?? [],
           targetLevel: form.targetLevel,
           count: 10,
         },
@@ -413,7 +442,27 @@ export function OnboardingForm() {
 
   const likedJobs = (jobs ?? []).filter((j) => j.liked);
   const undecided = (jobs ?? []).filter((j) => j.liked === null);
-  const needsLevelAnswer = form ? deriveTargetLevel(form.skills, form.recentRole) === null : false;
+  /** One entry per non-empty role line she typed, with its chosen type. */
+  const roleLines = (form?.recentRole ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const typedRoles = roleLines.map((line) => {
+    const parts = parseEntryLine(line);
+    const key = roleKey(line);
+    return {
+      line,
+      key,
+      title: parts.title || line,
+      period: parts.period,
+      type:
+        form?.roleTypes[key] ??
+        classifyEmployment(line),
+    };
+  });
+  const needsLevelAnswer = form
+    ? deriveTargetLevel(form.skills, form.recentRole, typedRoles) === null
+    : false;
 
   const gapPreview = useMemo(() => {
     if (!form) return { strengths: [], gaps: [] };
@@ -699,8 +748,8 @@ export function OnboardingForm() {
         <Card>
           <CardTitle>What's your most recent role, or closest experience?</CardTitle>
           <CardHint>
-            One line each is plenty. "I'm starting fresh" is a completely fine answer — it just
-            tells me where to begin.
+            One line each is plenty, with the dates in brackets. "I'm starting fresh" is a
+            completely fine answer — it just tells me where to begin.
           </CardHint>
           <Textarea
             value={form.recentRole}
@@ -709,6 +758,48 @@ export function OnboardingForm() {
             className="mt-4"
             placeholder="Support Analyst — Alpine Insurance (2023–now)"
           />
+          {typedRoles.length > 0 && (
+            <div className="mt-5 space-y-3">
+              <Label className="text-xs font-semibold tracking-wide uppercase">
+                What kind of role was each one?
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Internships and student jobs count differently to full-time work, so this changes
+                which roles I show you.
+              </p>
+              {typedRoles.map((role) => (
+                <div key={role.key || role.line} className="rounded-2xl border border-border p-3">
+                  <p className="text-sm font-medium">
+                    {role.title}
+                    {role.period ? (
+                      <span className="text-muted-foreground font-normal"> · {role.period}</span>
+                    ) : null}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {ROLE_TYPE_CHOICES.map((choice) => (
+                      <button
+                        key={choice.value}
+                        type="button"
+                        onClick={() =>
+                          patch({
+                            roleTypes: { ...form.roleTypes, [role.key]: choice.value },
+                          })
+                        }
+                        className={cn(
+                          "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                          role.type === choice.value
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-card hover:border-primary/50",
+                        )}
+                      >
+                        {choice.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           <Nav onBack={() => setStep("constraints")} onNext={() => setStep("skills")} />
         </Card>
       )}

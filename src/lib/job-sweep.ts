@@ -1,5 +1,10 @@
 import { normaliseSkill } from "./catalog";
 import type { SkillConfidence } from "./domain";
+import {
+  EXPERIENCE_FLOOR_MONTHS,
+  weightedExperienceMonths,
+  type WeighableRole,
+} from "./experience-weight";
 
 /** A role as it comes back from a live source (or the labelled AI fallback). */
 export type SourcedJob = {
@@ -70,14 +75,21 @@ export function levelOfJob(seniority: string | null | undefined, title = ""): Ta
 const LEVEL_ORDER: TargetLevel[] = ["junior", "mid", "senior"];
 
 /**
- * Works out roughly what level she's aiming at from what we already know —
- * how confident she is in her skills, and whether she has a role behind her.
- * Returns null when there's genuinely nothing to go on, so the caller can ask
- * instead of guessing.
+ * Works out roughly what level she's aiming at.
+ *
+ * Time served is a floor, not one input among many: until the weighted
+ * experience total clears EXPERIENCE_FLOOR_MONTHS (full-time counted in full,
+ * working-student at half, internships at about a third), the answer is Junior
+ * no matter how confident she feels — course-driven confidence alone doesn't
+ * make someone mid-level in Swiss hiring. Above the floor, skill confidence
+ * decides between Mid and Senior.
+ *
+ * Returns null when there's genuinely nothing to go on, so the caller can ask.
  */
 export function deriveTargetLevel(
   skills: SkillConfidence[],
   recentRole: string | null | undefined,
+  experience?: readonly WeighableRole[] | null,
 ): TargetLevel | null {
   const levelled = skills.filter((s) => Number.isFinite(s.level) && s.level > 0);
   const role = (recentRole ?? "").trim().toLowerCase();
@@ -85,11 +97,24 @@ export function deriveTargetLevel(
     role.length === 0 ||
     /starting fresh|no experience|none|student|graduat|career change/.test(role);
 
-  if (levelled.length === 0 && fresh) return null;
-  if (levelled.length === 0) return "mid";
+  const weightedMonths = weightedExperienceMonths(experience);
+  const measured = weightedMonths > 0;
 
-  const avg = levelled.reduce((sum, s) => sum + s.level, 0) / levelled.length;
-  if (fresh) return avg >= 4.2 ? "mid" : "junior";
+  if (levelled.length === 0 && fresh && !measured) return null;
+
+  const avg = levelled.length
+    ? levelled.reduce((sum, s) => sum + s.level, 0) / levelled.length
+    : 3;
+
+  // Dated history we could actually read: the floor rules.
+  if (measured) {
+    if (weightedMonths < EXPERIENCE_FLOOR_MONTHS) return "junior";
+    return avg >= 4.2 ? "senior" : "mid";
+  }
+
+  // No dated history to weigh — fall back to the softer signals.
+  if (levelled.length === 0) return "mid";
+  if (fresh) return "junior";
   if (avg >= 4.2) return "senior";
   if (avg >= 3) return "mid";
   return "junior";

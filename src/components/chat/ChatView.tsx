@@ -326,6 +326,7 @@ export function ChatView() {
           .filter((l) => CH_LOCATION_OPTIONS.includes(l)),
         setups: currentProfile.work_setup,
         recentRole: currentProfile.recent_role ?? "",
+        experience: currentProfile.experience ?? [],
         count: 10,
       },
     });

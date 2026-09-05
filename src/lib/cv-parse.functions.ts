@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { parseEntryLine } from "./cv-entry";
+import { classifyEmployment, toEmploymentType } from "./experience-weight";
 
 const fileSchema = z.object({
   fileName: z.string().min(1).max(300),
@@ -22,6 +23,8 @@ export type ParsedExperience = {
   detail?: string;
   location?: string;
   bullets?: string[];
+  /** full_time | working_student | internship. */
+  employment_type?: string;
 };
 export type ParsedProject = { title: string; detail?: string; period?: string; url?: string };
 
@@ -49,12 +52,13 @@ const EMPTY: ParsedCv = {
 
 const SYSTEM = `You extract structured career data from uploaded documents (CVs, transcripts, certificates).
 Return ONLY minified JSON, no prose, no markdown fences, matching exactly:
-{"full_name":string|null,"interests":string[],"skills":string[],"education":[{"title":string,"institution":string,"period":string}],"experience":[{"title":string,"company":string,"period":string,"location":string,"detail":string,"bullets":string[]}],"projects":[{"title":string,"detail":string,"period":string,"url":string}],"certifications":string[],"summary":string}
+{"full_name":string|null,"interests":string[],"skills":string[],"education":[{"title":string,"institution":string,"period":string}],"experience":[{"title":string,"company":string,"period":string,"location":string,"employment_type":"full_time"|"working_student"|"internship","detail":string,"bullets":string[]}],"projects":[{"title":string,"detail":string,"period":string,"url":string}],"certifications":string[],"summary":string}
 Rules:
 - skills: concrete tools, languages, frameworks, methods (max 15).
 - interests: tech areas the person clearly leans toward, e.g. "frontend", "data science", "cloud" (max 6). Infer from their work if not stated.
 - education: title is the degree and field, institution is the school, period is the dates exactly as written (e.g. "2021 – 2023").
 - experience: EVERY paid role, internship, working-student job, apprenticeship, research assistantship and volunteer role in the document — never skip internships, and never merge two roles into one. title is the job title only, company is the employer only, period is the dates only, detail is one short line summarising the role. location is the city and country of the role if printed. bullets is 2-4 short lines taken from the document describing what was actually done and achieved there — keep the person's own facts, numbers, tools and outcomes, rewritten concisely in third-person-free plain style (start with a verb, no "I"). Never invent bullets; if the document gives none for that role, return [].
+- employment_type: classify each role. "internship" for internships and traineeships in any language (intern, Praktikum, Praktikant/in, stage, stagiaire, tirocinio, stagista, becario). "working_student" for working-student, part-time, apprenticeship or student-assistant roles (working student, Werkstudent/in, Teilzeit, studentische Hilfskraft, HiWi, temps partiel, tempo parziale, apprenti, Lehrling, research/teaching assistant, tutor). "full_time" otherwise. Judge from the job title, the employer line and the document's own wording — never guess from the field of work.
 - projects: personal, academic or side projects (max 8). title is the project name only, detail is one line on what it did/achieved, period is the dates, url only if a link is printed.
 - Keep dates out of title/company/institution fields — they belong in period.
 - certifications: certificate/course names only (max 10).
@@ -221,7 +225,13 @@ export const parseCvDocuments = createServerFn({ method: "POST" })
         10,
         (line) => {
           const parts = parseEntryLine(line);
-          return clean({ title: parts.title, company: parts.org, period: parts.period, detail: parts.detail });
+          return clean({
+            title: parts.title,
+            company: parts.org,
+            period: parts.period,
+            detail: parts.detail,
+            employment_type: classifyEmployment(line),
+          });
         },
         (o) =>
           clean({
@@ -230,6 +240,9 @@ export const parseCvDocuments = createServerFn({ method: "POST" })
             period: str(o, "period"),
             location: str(o, "location"),
             detail: str(o, "detail"),
+            employment_type:
+              toEmploymentType(o["employment_type"]) ??
+              classifyEmployment(str(o, "title"), str(o, "company"), str(o, "detail")),
             bullets: toBullets(o["bullets"]),
           }),
       ),
