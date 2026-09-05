@@ -246,8 +246,11 @@ async function searchSwissBoards(
     SWISS_DETAIL_PATHS.map((p) => `site:${p}`).join(" OR "),
     terms.slice(0, 4).join(" "),
     swissCities.slice(0, 3).join(" "),
+    // STEM only: software/IT, engineering (incl. hardware), science, R&D, data.
+    "(engineer OR engineering OR technology OR software OR hardware OR data OR scientist OR scientific OR research OR laboratory OR biomedical OR medtech OR pharma OR quality)",
     targetLevel === "junior" ? "(junior OR graduate OR entry-level OR internship)" : "",
   ]
+
     .filter(Boolean)
     .join(" ");
 
