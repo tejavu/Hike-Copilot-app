@@ -220,14 +220,14 @@ export function scoreJob(job: SourcedJob, profile: MatchProfile): number {
 }
 
 /**
- * Score plus how many of her skills the posting genuinely names. A posting has
- * to actually mention something she can do — a pile of weak partial-token hits
- * shouldn't add up to a "match".
+ * Score plus how many of her skills and interests the posting genuinely names.
+ * A posting has to actually mention something she can do or something she's
+ * drawn to — a pile of weak partial-token hits shouldn't add up to a "match".
  */
 export function matchJob(
   job: SourcedJob,
   profile: MatchProfile,
-): { score: number; skillHits: number } {
+): { score: number; skillHits: number; interestHits: number } {
   const haystackExact = new Set(job.required_skills.map(canonical));
   const text = `${job.title} ${job.required_skills.join(" ")} ${job.description}`;
   const haystackTokens = new Set(tokensOf(text));
@@ -235,12 +235,14 @@ export function matchJob(
 
   let score = 0;
   let skillHits = 0;
-  const credit = (term: string, weight: number, isSkill: boolean) => {
+  let interestHits = 0;
+  const credit = (term: string, weight: number, kind: "skill" | "interest") => {
     const key = canonical(term);
     if (!key) return;
     if (haystackExact.has(key)) {
       score += weight * 2;
-      if (isSkill) skillHits += 1;
+      if (kind === "skill") skillHits += 1;
+      else interestHits += 1;
       return;
     }
     const terms = tokensOf(key);
@@ -248,14 +250,15 @@ export function matchJob(
     const hits = terms.filter((t) => haystackTokens.has(t));
     if (hits.length === terms.length) {
       score += weight;
-      if (isSkill) skillHits += 1;
+      if (kind === "skill") skillHits += 1;
+      else interestHits += 1;
     } else if (hits.length > 0) score += weight * 0.4;
     if (terms.some((t) => titleTokens.has(t))) score += weight * 0.5;
   };
 
-  for (const skill of profile.skills) credit(skill.name, weightFor(skill.level), true);
-  for (const interest of profile.interests) credit(interest, 3, false);
-  return { score: score * levelFactor(job, profile.targetLevel), skillHits };
+  for (const skill of profile.skills) credit(skill.name, weightFor(skill.level), "skill");
+  for (const interest of profile.interests) credit(interest, 3, "interest");
+  return { score: score * levelFactor(job, profile.targetLevel), skillHits, interestHits };
 }
 
 
@@ -283,12 +286,19 @@ export function rankJobs(
   });
 
   const hasSkills = profile.skills.length > 0;
-  const hasSignal = hasSkills || profile.interests.length > 0;
+  const hasInterests = profile.interests.length > 0;
+  const hasSignal = hasSkills || hasInterests;
   const scored = unique
     .map((job) => ({ job, ...matchJob(job, profile) }))
-    // A posting only counts as a match if it names at least one skill she
-    // actually has; score alone let vaguely-worded junior ads through.
-    .filter((row) => !hasSignal || (row.score >= 4 && (!hasSkills || row.skillHits >= 1)))
+    // A posting only counts as a match if it names at least one thing she can
+    // already do OR one thing she said she's drawn to (roles she wants to work
+    // towards); score alone let vaguely-worded junior ads through.
+    .filter(
+      (row) =>
+        !hasSignal ||
+        (row.score >= 4 &&
+          (!hasSkills || row.skillHits >= 1 || (hasInterests && row.interestHits >= 1))),
+    )
     .sort((a, b) => b.score - a.score);
 
 
