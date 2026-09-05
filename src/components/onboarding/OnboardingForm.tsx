@@ -70,6 +70,8 @@ type StepId =
 
 const SETUPS = ["Remote", "Hybrid", "On-site"];
 
+const ROLE_TYPE_CHOICES = EMPLOYMENT_TYPES;
+
 const LEVEL_CHOICES: { value: TargetLevel; label: string }[] = [
   { value: "junior", label: "Just starting out" },
   { value: "mid", label: "A few years in" },
@@ -100,7 +102,14 @@ type Draft = {
   goal: string;
   /** Only set when we couldn't work her level out and had to ask. */
   targetLevel: TargetLevel | null;
+  /** How each typed role counts, keyed by the role title in lower case. */
+  roleTypes: Record<string, EmploymentType>;
 };
+
+/** The role title as typed, used as the key for its employment type. */
+function roleKey(line: string): string {
+  return parseEntryLine(line).title.trim().toLowerCase();
+}
 
 function draftFromProfile(profile: Profile): Draft {
   return {
@@ -123,6 +132,15 @@ function draftFromProfile(profile: Profile): Draft {
     months: profile.timeline_months ?? 6,
     goal: profile.goal ?? "",
     targetLevel: null,
+    roleTypes: Object.fromEntries(
+      (profile.experience ?? [])
+        .filter((e) => e.title.trim())
+        .map((e) => [
+          e.title.trim().toLowerCase(),
+          toEmploymentType(e.employment_type) ??
+            classifyEmployment(e.title, e.company, e.detail),
+        ]),
+    ),
   };
 }
 
@@ -340,6 +358,10 @@ export function OnboardingForm() {
           if (detail) entry.detail = detail;
           if (known?.location) entry.location = known.location;
           if (known?.bullets?.length) entry.bullets = known.bullets;
+          entry.employment_type =
+            form.roleTypes[parts.title.trim().toLowerCase()] ??
+            toEmploymentType(known?.employment_type) ??
+            classifyEmployment(line, company, detail);
           return entry;
         }),
         certifications,
@@ -367,6 +389,7 @@ export function OnboardingForm() {
           locations: form.locations,
           setups: form.setups,
           recentRole: form.recentRole,
+          experience: roleEntries,
           targetLevel: form.targetLevel,
           count: 10,
         },
