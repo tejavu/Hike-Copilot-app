@@ -86,6 +86,7 @@ async function searchAdzuna(
   terms: string[],
   locations: string[],
   notes: string[],
+  targetLevel: TargetLevel | null,
 ): Promise<SourcedJob[]> {
   const appId = process.env["ADZUNA_APP_ID"];
   const appKey = process.env["ADZUNA_APP_KEY"];
@@ -116,7 +117,11 @@ async function searchAdzuna(
         url.searchParams.set("app_id", appId);
         url.searchParams.set("app_key", appKey);
         url.searchParams.set("results_per_page", "20");
-        url.searchParams.set("what_or", terms.join(" "));
+        // A junior profile rarely surfaces junior postings unless we ask for
+        // them — boards skew mid/senior by default.
+        const queryTerms =
+          targetLevel === "junior" ? [...terms, "junior", "graduate", "entry level"] : terms;
+        url.searchParams.set("what_or", queryTerms.join(" "));
         url.searchParams.set("max_days_old", "45");
         url.searchParams.set("content-type", "application/json");
         if (where) url.searchParams.set("where", where);
@@ -177,6 +182,7 @@ async function searchSwissBoards(
   terms: string[],
   locations: string[],
   notes: string[],
+  targetLevel: TargetLevel | null,
 ): Promise<SourcedJob[]> {
   const gatewayKey = process.env["LOVABLE_API_KEY"];
   const connectionKey = process.env["FIRECRAWL_API_KEY"];
@@ -191,6 +197,7 @@ async function searchSwissBoards(
     SWISS_DETAIL_PATHS.map((p) => `site:${p}`).join(" OR "),
     terms.slice(0, 4).join(" "),
     swissCities.slice(0, 3).join(" "),
+    targetLevel === "junior" ? "(junior OR graduate OR entry-level OR internship)" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -252,12 +259,14 @@ async function exampleRoles(
   setups: string[],
   count: number,
   notes: string[],
+  targetLevel: TargetLevel | null,
 ): Promise<SourcedJob[]> {
   const key = process.env["LOVABLE_API_KEY"];
   if (!key) return [];
 
   const prompt = `A woman in tech is job hunting. Her strongest skills: ${terms.join(", ") || "unspecified"}.
 She is drawn to: ${drawnTo || "unspecified"}. Preferred locations: ${locations.join(", ") || "flexible"}. Work setup: ${setups.join(", ") || "flexible"}.
+Seniority to aim for: ${targetLevel === "junior" ? "entry-level — junior, graduate or internship roles only, nothing requiring years of experience" : (targetLevel ?? "mid-level")}.
 
 Write ${count} realistic job archetypes that genuinely match HER field — not generic web or data roles unless that is her field. Return strict JSON:
 {"jobs":[{"title":"","company":"","location":"","description":"","required_skills":[""],"seniority":""}]}
@@ -375,14 +384,15 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
   const notes: string[] = [];
   const terms = topTerms(data.skills, data.interests, data.drawnTo);
 
+  const targetLevel = data.targetLevel ?? deriveTargetLevel(data.skills, data.recentRole);
+  const levelUnclear = !data.targetLevel && targetLevel === null;
+
   const [adzuna, swiss] = await Promise.all([
-    searchAdzuna(terms, data.locations, notes),
-    searchSwissBoards(terms, data.locations, notes),
+    searchAdzuna(terms, data.locations, notes, targetLevel),
+    searchSwissBoards(terms, data.locations, notes, targetLevel),
   ]);
 
   const live = [...swiss, ...adzuna];
-  const targetLevel = data.targetLevel ?? deriveTargetLevel(data.skills, data.recentRole);
-  const levelUnclear = !data.targetLevel && targetLevel === null;
 
   const ranked = rankJobs(live, {
     skills: data.skills,
@@ -416,6 +426,7 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
     data.setups,
     data.count - shortlist.length,
     notes,
+    targetLevel,
   );
   const jobs = [...shortlist, ...examples].slice(0, data.count);
   return {
