@@ -442,7 +442,27 @@ export function OnboardingForm() {
 
   const likedJobs = (jobs ?? []).filter((j) => j.liked);
   const undecided = (jobs ?? []).filter((j) => j.liked === null);
-  const needsLevelAnswer = form ? deriveTargetLevel(form.skills, form.recentRole, typedRoles) === null : false;
+  /** One entry per non-empty role line she typed, with its chosen type. */
+  const roleLines = (form?.recentRole ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const typedRoles = roleLines.map((line) => {
+    const parts = parseEntryLine(line);
+    const key = roleKey(line);
+    return {
+      line,
+      key,
+      title: parts.title || line,
+      period: parts.period,
+      type:
+        form?.roleTypes[key] ??
+        classifyEmployment(line),
+    };
+  });
+  const needsLevelAnswer = form
+    ? deriveTargetLevel(form.skills, form.recentRole, typedRoles) === null
+    : false;
 
   const gapPreview = useMemo(() => {
     if (!form) return { strengths: [], gaps: [] };
