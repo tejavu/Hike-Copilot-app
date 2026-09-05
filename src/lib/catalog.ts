@@ -312,8 +312,15 @@ const ALIASES: Record<string, string> = {
   ml: "machine learning",
   ai: "machine learning",
   "deep learning": "machine learning",
-  cloud: "aws",
-  gcp: "aws",
+  // Neutral cloud wording defaults to the Microsoft ecosystem; naming AWS or
+  // GCP explicitly still resolves to those, so nothing curated is lost.
+  cloud: "azure",
+  "cloud computing": "azure",
+  "cloud computing systems": "azure",
+  "cloud services": "azure",
+  "cloud architecture": "azure",
+  "cloud engineering": "azure",
+  "cloud platforms": "azure",
   "microsoft azure": "azure",
   "az-900": "azure",
   devops: "docker",
@@ -333,29 +340,80 @@ export function normaliseSkill(raw: string): string {
 
 /**
  * Skills in the Microsoft ecosystem are far better served by Microsoft Learn
- * than by a generic course search — so the fallback plan swaps only its course
- * link when the skill name mentions one of these. Everything else, and every
- * curated CATALOG entry, is untouched.
+ * and LinkedIn Learning than by a generic course search — so the fallback plan
+ * swaps its course, practice and certification links when the skill name
+ * mentions one of these. Curated CATALOG entries are untouched.
  */
 const MICROSOFT_KEYWORDS = [
   "azure",
+  "cloud",
   ".net",
+  "dotnet",
   "c#",
   "power bi",
   "power platform",
+  "power automate",
+  "power apps",
+  "github",
   "github actions",
+  "github copilot",
+  "copilot",
+  "microsoft",
   "microsoft 365",
+  "office 365",
   "dynamics",
+  "sharepoint",
+  "teams",
+  "sql server",
+  "entra",
+  "active directory",
+  "intune",
+  "visual studio",
+  "typescript on azure",
 ];
 
-function microsoftCourse(skill: string, pretty: string): SkillPlan["course"] | null {
+export const LINKEDIN_LEARNING = "LinkedIn Learning";
+export const MICROSOFT_LEARN = "Microsoft Learn";
+
+function isMicrosoftSkill(skill: string): boolean {
   const key = normaliseSkill(skill);
-  const hit = MICROSOFT_KEYWORDS.some((word) => key.includes(word));
-  if (!hit) return null;
+  return MICROSOFT_KEYWORDS.some((word) => key.includes(word));
+}
+
+function linkedInLearningUrl(skill: string): string {
+  return `https://www.linkedin.com/learning/search?keywords=${encodeURIComponent(skill)}`;
+}
+
+/**
+ * A whole fallback plan sourced from Microsoft's own learning properties:
+ * Microsoft Learn for training, its hands-on sandbox modules for practice,
+ * Microsoft Credentials for certification, and LinkedIn Learning (also a
+ * Microsoft product) as a second course option in the Learn step's detail.
+ */
+function microsoftPlan(skill: string, pretty: string): SkillPlan {
+  const q = encodeURIComponent(skill);
   return {
-    title: `${pretty} on Microsoft Learn`,
-    provider: "Microsoft Learn",
-    url: `https://learn.microsoft.com/search/?terms=${encodeURIComponent(skill)}&category=Training`,
+    course: {
+      title: `${pretty} on Microsoft Learn`,
+      provider: MICROSOFT_LEARN,
+      url: `https://learn.microsoft.com/search/?terms=${q}&category=Training`,
+    },
+    practice: {
+      title: `${pretty} hands-on sandbox modules`,
+      difficulty: "Easy → Medium",
+      target: 12,
+      detail: `Free in-browser sandbox modules on Microsoft Learn — do one at a time. Modules: https://learn.microsoft.com/training/browse/?terms=${q}&resource_type=module · Also on LinkedIn Learning: ${linkedInLearningUrl(skill)}`,
+      url: `https://learn.microsoft.com/training/browse/?terms=${q}&resource_type=module`,
+    },
+    certify: {
+      title: `${pretty} — Microsoft certification`,
+      provider: "Microsoft",
+      url: `https://learn.microsoft.com/credentials/browse/?terms=${q}`,
+    },
+    project: {
+      title: `Build something small and real with ${pretty}`,
+      detail: `A focused project that shows ${pretty} in use, with a README that tells the story.`,
+    },
   };
 }
 
@@ -365,8 +423,10 @@ export function planForSkill(skill: string): SkillPlan {
   if (resolved) return resolved;
 
   const pretty = titleCase(skill);
+  if (isMicrosoftSkill(skill)) return microsoftPlan(skill, pretty);
+
   return {
-    course: microsoftCourse(skill, pretty) ?? {
+    course: {
       title: `${pretty}: a structured beginner-to-confident course`,
       provider: "Coursera",
       url: `https://www.coursera.org/search?query=${encodeURIComponent(skill)}`,
@@ -389,6 +449,7 @@ export function planForSkill(skill: string): SkillPlan {
     },
   };
 }
+
 
 export function titleCase(value: string): string {
   return value
