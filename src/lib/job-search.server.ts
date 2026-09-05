@@ -10,6 +10,18 @@ const inputSchema = z.object({
   count: z.number().min(1).max(20).default(6),
   /** Her most recent role, if any — one of the level signals. */
   recentRole: z.string().default(""),
+  /** Dated roles with their type — the weighted experience floor. */
+  experience: z
+    .array(
+      z.object({
+        title: z.string().default(""),
+        company: z.string().optional(),
+        period: z.string().optional(),
+        detail: z.string().optional(),
+        employment_type: z.string().optional(),
+      }),
+    )
+    .default([]),
   /** Set only when she answered the clarifying question herself. */
   targetLevel: z.enum(["junior", "mid", "senior"]).nullish(),
 });
