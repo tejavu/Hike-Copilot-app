@@ -285,11 +285,18 @@ function ItemRow({ item }: { item: RoadmapItem }) {
             )}
           </div>
           <p className={cn("mt-0.5 font-medium", done && "text-success")}>{item.title}</p>
-          {item.provider && (
-            <p className="text-xs text-muted-foreground">
-              {item.provider === "Microsoft Learn" ? `via ${item.provider}` : item.provider}
-            </p>
-          )}
+          {item.provider &&
+            (microsoft ? (
+              <Badge
+                variant="outline"
+                className="mt-1 h-5 border-primary/40 bg-primary/10 text-[0.65rem] font-semibold text-primary"
+              >
+                via {item.provider}
+              </Badge>
+            ) : (
+              <p className="text-xs text-muted-foreground">{item.provider}</p>
+            ))}
+
           {item.detail && (
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{linkify(item.detail)}</p>
           )}
