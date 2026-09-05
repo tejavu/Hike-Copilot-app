@@ -368,6 +368,25 @@ async function addItem(supabase: Supa, userId: string, args: Record<string, unkn
     skillId = (created as { id: string }).id;
   }
 
+  // Duplicate guard: never add the same step twice under one skill, however
+  // the request was phrased. Matches on item type plus near-equal titles.
+  const { data: existingItems, error: itemsError } = await supabase
+    .from("roadmap_items")
+    .select("title, item_type")
+    .eq("user_id", userId)
+    .eq("skill_id", skillId);
+  if (itemsError) return { ok: false, error: itemsError.message };
+  const itemRows = (existingItems ?? []) as { title: string; item_type: string }[];
+  const wantedTitle = normalise(title);
+  const dupe = itemRows.some((row) => {
+    if (row.item_type !== itemType) return false;
+    const t = normalise(row.title);
+    return t === wantedTitle || t.includes(wantedTitle) || wantedTitle.includes(t);
+  });
+  if (dupe) {
+    return { ok: true, already_on_roadmap: title, under: skillName };
+  }
+
   const { data: siblings } = await supabase
     .from("roadmap_items")
     .select("order_index")
