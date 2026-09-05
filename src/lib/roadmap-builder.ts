@@ -161,7 +161,9 @@ export async function generateRoadmap(opts: {
   }[]) {
     const kind = phaseKindById.get(skill.phase_id);
     if (kind === "learning") {
-      const plan = planForSkill(gapByHeading.get(skill.name) ?? skill.name);
+      const gap = gapByHeading.get(skill.name) ?? skill.name;
+      const plan = planForSkill(gap);
+      const extra = linkedInDetail(gap);
       items.push({
         user_id: userId,
         skill_id: skill.id,
@@ -170,6 +172,7 @@ export async function generateRoadmap(opts: {
         title: plan.course.title,
         provider: plan.course.provider,
         url: plan.course.url,
+        ...(extra ? { detail: extra } : {}),
         order_index: 0,
       });
       items.push({
