@@ -282,11 +282,15 @@ export function rankJobs(
     return true;
   });
 
-  const hasSignal = profile.skills.length > 0 || profile.interests.length > 0;
+  const hasSkills = profile.skills.length > 0;
+  const hasSignal = hasSkills || profile.interests.length > 0;
   const scored = unique
-    .map((job) => ({ job, score: scoreJob(job, profile) }))
-    .filter((row) => !hasSignal || row.score >= 4)
+    .map((job) => ({ job, ...matchJob(job, profile) }))
+    // A posting only counts as a match if it names at least one skill she
+    // actually has; score alone let vaguely-worded junior ads through.
+    .filter((row) => !hasSignal || (row.score >= 4 && (!hasSkills || row.skillHits >= 1)))
     .sort((a, b) => b.score - a.score);
+
 
   const bySetup = scored.filter((row) => {
     if (allowedSetups.size === 0) return true;
