@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ItemControls } from "@/components/roadmap/ItemControls";
 import { useWeeklyPlan } from "@/hooks/useWeeklyPlan";
+import { entryComplete, entryHoursDone, type PlanEntry } from "@/lib/week-plan";
 import {
-  entryComplete,
-  entryHoursDone,
-  isItemCompleteSafe,
-  type PlanEntry,
-} from "@/lib/week-plan-helpers";
-import { itemHours, type RoadmapItem, type RoadmapPhase, type RoadmapSkill } from "@/lib/domain";
+  isItemComplete,
+  itemHours,
+  type RoadmapItem,
+  type RoadmapPhase,
+  type RoadmapSkill,
+} from "@/lib/domain";
 
 const TYPE_LABEL: Record<string, string> = {
   learn: "Learn",
