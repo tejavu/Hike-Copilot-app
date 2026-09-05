@@ -397,7 +397,8 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
   const notes: string[] = [];
   const terms = topTerms(data.skills, data.interests, data.drawnTo);
 
-  const targetLevel = data.targetLevel ?? deriveTargetLevel(data.skills, data.recentRole);
+  const targetLevel =
+    data.targetLevel ?? deriveTargetLevel(data.skills, data.recentRole, data.experience);
   const levelUnclear = !data.targetLevel && targetLevel === null;
 
   // Jobs are always Switzerland-only, regardless of what the client sends.
