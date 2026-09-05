@@ -83,6 +83,38 @@ function skillsFrom(text: string, terms: string[]): string[] {
 
 // ------------------------------------------------------------------ Adzuna
 
+/**
+ * STEM category tags we accept, matched against whatever /categories actually
+ * returns for Switzerland — tag names differ per country, so nothing is assumed.
+ */
+const STEM_CATEGORY_TAGS = ["it-jobs", "engineering-jobs", "scientific-qa-jobs"];
+
+let stemCategoryCache: { tags: string[]; at: number } | null = null;
+
+async function stemCategories(appId: string, appKey: string, notes: string[]): Promise<string[]> {
+  if (stemCategoryCache && Date.now() - stemCategoryCache.at < 6 * 60 * 60 * 1000) {
+    return stemCategoryCache.tags;
+  }
+  try {
+    const url = new URL(`https://api.adzuna.com/v1/api/jobs/${ADZUNA_COUNTRY}/categories`);
+    url.searchParams.set("app_id", appId);
+    url.searchParams.set("app_key", appKey);
+    url.searchParams.set("content-type", "application/json");
+    const response = await fetch(url.toString());
+    if (!response.ok) throw new Error(`categories ${response.status}`);
+    const body = (await response.json()) as { results?: { tag?: string }[] };
+    const live = (body.results ?? []).map((r) => (r.tag ?? "").trim()).filter(Boolean);
+    const tags = STEM_CATEGORY_TAGS.filter((tag) => live.includes(tag));
+    if (tags.length === 0) throw new Error("no STEM categories in list");
+    stemCategoryCache = { tags, at: Date.now() };
+    return tags;
+  } catch (error) {
+    console.error("adzuna categories failed", error);
+    notes.push("Could not confirm the job categories — searching STEM fields directly.");
+    return STEM_CATEGORY_TAGS;
+  }
+}
+
 async function searchAdzuna(
   terms: string[],
   locations: string[],
@@ -96,6 +128,8 @@ async function searchAdzuna(
     return [];
   }
   if (terms.length === 0) return [];
+
+  const categories = await stemCategories(appId, appKey, notes);
 
   const targets = locations.filter(isSwissLocation).length > 0
     ? locations.filter(isSwissLocation)
@@ -118,12 +152,14 @@ async function searchAdzuna(
     for (const level of levelWords) queries.push({ where, level });
   }
 
-  // Sequential with a short pause — Adzuna rate-limits burst requests.
+  // Sequential over place/level with a short pause — Adzuna rate-limits bursts.
+  // Categories only take one value per call, so they fan out in parallel.
   const results: SourcedJob[][] = [];
   for (const { where, level } of queries) {
     if (results.length > 0) await new Promise((r) => setTimeout(r, 400));
-    results.push(
-      await (async () => {
+    const perCategory = await Promise.all(
+      categories.map(async (category) => {
+
         const url = new URL(`https://api.adzuna.com/v1/api/jobs/${ADZUNA_COUNTRY}/search/1`);
         url.searchParams.set("app_id", appId);
         url.searchParams.set("app_key", appKey);
