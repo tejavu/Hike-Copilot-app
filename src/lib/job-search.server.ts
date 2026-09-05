@@ -160,7 +160,9 @@ async function searchAdzuna(
     const perCategory = await Promise.all(
       categories.map(async (category) => {
 
-        const url = new URL(`https://api.adzuna.com/v1/api/jobs/${ADZUNA_COUNTRY}/search/1`);
+        const url = new URL(
+          `https://api.adzuna.com/v1/api/jobs/${ADZUNA_COUNTRY}/search/1`,
+        );
         url.searchParams.set("app_id", appId);
         url.searchParams.set("app_key", appKey);
         url.searchParams.set("results_per_page", "20");
@@ -168,8 +170,8 @@ async function searchAdzuna(
         if (level) url.searchParams.set("what", level);
         url.searchParams.set("max_days_old", "45");
         url.searchParams.set("content-type", "application/json");
+        url.searchParams.set("category", category);
         if (where) url.searchParams.set("where", where);
-
 
         try {
           // Adzuna throws the occasional 503; one quiet retry saves the search.
@@ -211,9 +213,11 @@ async function searchAdzuna(
           notes.push("Adzuna could not be reached.");
           return [];
         }
-      })(),
+      }),
     );
+    results.push(perCategory.flat());
   }
+
 
   return results.flat();
 }
