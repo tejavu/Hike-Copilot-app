@@ -187,7 +187,7 @@ async function searchSwissBoards(
     notes.push("Swiss board search is not configured yet.");
     return [];
   }
-  const swissCities = locations.filter((l) => l.trim().toUpperCase().endsWith("CH")).map(cityName);
+  const swissCities = locations.filter(isSwissLocation).map(cityName);
   if (terms.length === 0) return [];
 
   const query = [
