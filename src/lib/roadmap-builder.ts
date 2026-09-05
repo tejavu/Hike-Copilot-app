@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { planForSkill, titleCase, VISIBILITY_ITEMS } from "./catalog";
+import { LINKEDIN_LEARNING, planForSkill, titleCase, VISIBILITY_ITEMS } from "./catalog";
 import { getLinkedInCourses, type LinkedInCourse } from "./linkedin-learning.functions";
 import type { PhaseKind } from "./domain";
 
