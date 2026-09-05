@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { planForSkill, titleCase, VISIBILITY_ITEMS } from "./catalog";
+import { getLinkedInCourses, type LinkedInCourse } from "./linkedin-learning.functions";
 import type { PhaseKind } from "./domain";
 
 type PhaseSpec = { name: string; kind: PhaseKind; blurb: string };
@@ -84,6 +85,21 @@ export async function generateRoadmap(opts: {
   const focus = (gaps.length ? gaps : ["Interview confidence"]).slice(0, 6);
   const headingFor = (gap: string) => copy?.skills?.[gap]?.trim() || titleCase(gap);
 
+  // Real LinkedIn Learning courses for the Learn steps — best effort: when the
+  // lookup fails the steps simply keep their curated plan without the extra line.
+  let linkedInCourses: Record<string, LinkedInCourse[]> = {};
+  try {
+    linkedInCourses = await getLinkedInCourses({ data: { skills: focus } });
+  } catch (error) {
+    console.error("linkedin learning lookup failed", error);
+  }
+  const linkedInDetail = (gap: string): string | null => {
+    const courses = linkedInCourses[gap];
+    if (!courses?.length) return null;
+    const links = courses.map((c) => `${c.title}: ${c.url}`).join(" · ");
+    return `On LinkedIn Learning: ${links}`;
+  };
+
   const { data: phases, error: phaseError } = await supabase
     .from("roadmap_phases")
     .insert(
@@ -145,7 +161,9 @@ export async function generateRoadmap(opts: {
   }[]) {
     const kind = phaseKindById.get(skill.phase_id);
     if (kind === "learning") {
-      const plan = planForSkill(gapByHeading.get(skill.name) ?? skill.name);
+      const gap = gapByHeading.get(skill.name) ?? skill.name;
+      const plan = planForSkill(gap);
+      const extra = linkedInDetail(gap);
       items.push({
         user_id: userId,
         skill_id: skill.id,
@@ -154,6 +172,7 @@ export async function generateRoadmap(opts: {
         title: plan.course.title,
         provider: plan.course.provider,
         url: plan.course.url,
+        ...(extra ? { detail: extra } : {}),
         order_index: 0,
       });
       items.push({
