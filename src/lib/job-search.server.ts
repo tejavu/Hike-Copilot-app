@@ -73,11 +73,14 @@ function seniorityOf(title: string, description: string): string {
   return "Mid-level";
 }
 
-/** Pull the terms we searched for back out of a posting so cards show real tags. */
+/**
+ * Pull the terms we searched for back out of a posting so cards show real tags.
+ * Returns nothing when the posting mentions none of them — inventing her own
+ * skills as the posting's tags made unrelated roles look like perfect matches.
+ */
 function skillsFrom(text: string, terms: string[]): string[] {
   const value = text.toLowerCase();
-  const found = terms.filter((term) => value.includes(term.toLowerCase()));
-  return found.length > 0 ? found.slice(0, 6) : terms.slice(0, 4);
+  return terms.filter((term) => value.includes(term.toLowerCase())).slice(0, 6);
 }
 
 // ------------------------------------------------------------------ Adzuna
@@ -97,34 +100,43 @@ async function searchAdzuna(
   if (terms.length === 0) return [];
 
   const targets = locations.length > 0 ? locations : ["Zurich, CH"];
-  const queries = new Map<string, string | null>();
+  const places = new Map<string, string | null>();
   for (const location of targets) {
     const country = countryOf(location);
     if (!country) continue;
-    queries.set(`${country}|${cityName(location)}`, cityName(location));
+    places.set(`${country}|${cityName(location)}`, cityName(location));
   }
   // Remote-friendly sweep so people open to remote aren't limited to one city.
-  queries.set("gb|", null);
+  places.set("gb|", null);
+
+  // Level words must never sit in the same OR bucket as her skills: a posting
+  // matching only "junior" would come back with nothing to do with her field.
+  // They go in `what` (an AND filter) as separate passes instead.
+  const levelWords: (string | null)[] =
+    targetLevel === "junior" ? ["junior", "graduate"] : [null];
+
+  const queries: { country: string; where: string | null; level: string | null }[] = [];
+  for (const [key, where] of places.entries()) {
+    const country = key.split("|")[0]!;
+    for (const level of levelWords) queries.push({ country, where, level });
+  }
 
   // Sequential with a short pause — Adzuna rate-limits burst requests.
   const results: SourcedJob[][] = [];
-  for (const [key, where] of queries.entries()) {
+  for (const { country, where, level } of queries) {
     if (results.length > 0) await new Promise((r) => setTimeout(r, 400));
     results.push(
       await (async () => {
-        const country = key.split("|")[0]!;
         const url = new URL(`https://api.adzuna.com/v1/api/jobs/${country}/search/1`);
         url.searchParams.set("app_id", appId);
         url.searchParams.set("app_key", appKey);
         url.searchParams.set("results_per_page", "20");
-        // A junior profile rarely surfaces junior postings unless we ask for
-        // them — boards skew mid/senior by default.
-        const queryTerms =
-          targetLevel === "junior" ? [...terms, "junior", "graduate", "entry level"] : terms;
-        url.searchParams.set("what_or", queryTerms.join(" "));
+        url.searchParams.set("what_or", terms.join(" "));
+        if (level) url.searchParams.set("what", level);
         url.searchParams.set("max_days_old", "45");
         url.searchParams.set("content-type", "application/json");
         if (where) url.searchParams.set("where", where);
+
 
         try {
           // Adzuna throws the occasional 503; one quiet retry saves the search.
