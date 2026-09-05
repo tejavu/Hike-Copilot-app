@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarClock, Clock, Sparkles } from "lucide-react";
+import { useEffect, useMemo } from "react";
+import { CalendarClock, Clock, Plus, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ItemControls } from "@/components/roadmap/ItemControls";
+import { useWeeklyPlan } from "@/hooks/useWeeklyPlan";
+import { entryComplete, entryHoursDone, type PlanEntry } from "@/lib/week-plan";
 import {
   isItemComplete,
   itemHours,
-  ITEM_TYPE_ORDER,
   type RoadmapItem,
   type RoadmapPhase,
   type RoadmapSkill,
@@ -25,139 +27,6 @@ function formatHours(hours: number) {
   return Number.isInteger(rounded) ? `${rounded}h` : `${rounded.toFixed(1)}h`;
 }
 
-/**
- * Every skill's earliest incomplete step (no Build before its Learn is done),
- * ranked by phase, then skill order, then step type. This is the shared
- * candidate pool both the weekly pick and the "Up next" suggestion draw from.
- */
-function rankedCandidates(opts: {
-  phases: RoadmapPhase[];
-  skills: RoadmapSkill[];
-  items: RoadmapItem[];
-}): RoadmapItem[] {
-  const { phases, skills, items } = opts;
-  const phaseOrder = new Map(phases.map((p, i) => [p.id, p.order_index ?? i]));
-  const skillById = new Map(skills.map((s) => [s.id, s]));
-
-  const bySkill = new Map<string, RoadmapItem[]>();
-  for (const item of items) {
-    const list = bySkill.get(item.skill_id) ?? [];
-    list.push(item);
-    bySkill.set(item.skill_id, list);
-  }
-
-  const candidates: RoadmapItem[] = [];
-  for (const [skillId, list] of bySkill) {
-    const sorted = [...list].sort(
-      (a, b) =>
-        (ITEM_TYPE_ORDER[a.item_type] ?? 9) - (ITEM_TYPE_ORDER[b.item_type] ?? 9) ||
-        a.order_index - b.order_index,
-    );
-    const next = sorted.find((item) => !isItemComplete(item));
-    if (next && skillById.has(skillId)) candidates.push(next);
-  }
-
-  candidates.sort((a, b) => {
-    const sa = skillById.get(a.skill_id)!;
-    const sb = skillById.get(b.skill_id)!;
-    return (
-      (phaseOrder.get(sa.phase_id) ?? 99) - (phaseOrder.get(sb.phase_id) ?? 99) ||
-      sa.order_index - sb.order_index ||
-      (ITEM_TYPE_ORDER[a.item_type] ?? 9) - (ITEM_TYPE_ORDER[b.item_type] ?? 9)
-    );
-  });
-
-  return candidates;
-}
-
-/** How many units of a Practice item are still outstanding (1 for other types). */
-function remainingUnits(item: RoadmapItem): number {
-  if (item.item_type !== "practice") return 1;
-  const target = item.target_count ?? 1;
-  return Math.max(0, target - (item.progress_count ?? 0));
-}
-
-/** Hours per single solve, so a big Practice item can be split across weeks. */
-function hoursPerUnit(item: RoadmapItem): number {
-  const target = Math.max(1, item.target_count ?? 1);
-  return itemHours(item) / target;
-}
-
-export type WeekEntry = {
-  item: RoadmapItem;
-  /** Hours this week only (a partial Practice slice costs less than the whole). */
-  hours: number;
-  /** Set when only part of a Practice item fits this week. */
-  partial?: { take: number; remaining: number };
-  /** True when the item alone is bigger than the whole weekly budget. */
-  oversized?: boolean;
-};
-
-/**
- * Picks the next handful of unfinished steps that fit into the hours she has
- * this week.
- *
- * Two rules keep this stable and honest:
- *  - Practice items are splittable: if only part of the solves fit, this week
- *    takes the slice that fits and the rest carries into future weeks, so one
- *    large item can never structurally eat the whole budget.
- *  - Items already shown this session stay pinned while they're incomplete,
- *    and the fill never stops early — smaller later candidates backfill any
- *    leftover budget instead of being dropped when an earlier item grows.
- */
-export function pickThisWeek(opts: {
-  phases: RoadmapPhase[];
-  skills: RoadmapSkill[];
-  items: RoadmapItem[];
-  weeklyHours: number;
-  pinnedIds?: Set<string>;
-}): WeekEntry[] {
-  const { weeklyHours, pinnedIds } = opts;
-  const ranked = rankedCandidates(opts);
-  const candidates = pinnedIds
-    ? [...ranked].sort((a, b) => Number(pinnedIds.has(b.id)) - Number(pinnedIds.has(a.id)))
-    : ranked;
-
-  const budget = Math.max(1, weeklyHours);
-  const chosen: WeekEntry[] = [];
-  let used = 0;
-
-  for (const item of candidates) {
-    const left = budget - used;
-    if (left <= 0.01) break;
-
-    const units = remainingUnits(item);
-    if (units <= 0) continue;
-    const perUnit = hoursPerUnit(item);
-    const fullHours = item.item_type === "practice" ? perUnit * units : itemHours(item);
-
-    if (fullHours <= left + 0.01) {
-      chosen.push({ item, hours: fullHours });
-      used += fullHours;
-      continue;
-    }
-
-    // Practice items can be partially included.
-    if (item.item_type === "practice" && perUnit > 0) {
-      const take = Math.floor((left + 0.01) / perUnit);
-      if (take >= 1) {
-        chosen.push({ item, hours: take * perUnit, partial: { take, remaining: units - take } });
-        used += take * perUnit;
-        continue;
-      }
-    }
-
-    // Nothing fits yet — keep scanning for a smaller item to backfill with.
-    if (chosen.length === 0) {
-      chosen.push({ item, hours: fullHours, oversized: fullHours > budget });
-      used += Math.min(fullHours, budget);
-    }
-  }
-
-  return chosen;
-}
-
-
 export function ThisWeekPanel({
   phases,
   skills,
@@ -170,55 +39,45 @@ export function ThisWeekPanel({
   weeklyHours: number | null;
 }) {
   const budget = weeklyHours && weeklyHours > 0 ? weeklyHours : 5;
+  const data = useMemo(() => ({ phases, skills, items }), [phases, skills, items]);
+  const ready = items.length > 0;
+  const { plan, loading, addNext, adding, refreshNext } = useWeeklyPlan(data, budget, ready);
 
-  // Items already shown this session stay in the list while they're
-  // incomplete, so ticking one thing off can't reshuffle unrelated tasks out.
-  const pinnedRef = useRef<Set<string>>(new Set());
-  const picked = useMemo(
-    () => pickThisWeek({ phases, skills, items, weeklyHours: budget, pinnedIds: pinnedRef.current }),
-    [phases, skills, items, budget],
-  );
-  const candidates = useMemo(() => rankedCandidates({ phases, skills, items }), [phases, skills, items]);
+  const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const skillById = useMemo(() => new Map(skills.map((s) => [s.id, s])), [skills]);
 
-  // Items she ticks off stay visible (checked) until she leaves and returns,
-  // instead of vanishing mid-click and being silently swapped for a new task.
-  const [keptDone, setKeptDone] = useState<RoadmapItem[]>([]);
-  const prevPickedRef = useRef<Set<string> | null>(null);
+  const lines = useMemo(() => {
+    if (!plan) return [] as { entry: PlanEntry; item: RoadmapItem }[];
+    return plan.entries
+      .map((entry) => ({ entry, item: itemById.get(entry.item_id) }))
+      .filter((l): l is { entry: PlanEntry; item: RoadmapItem } => Boolean(l.item));
+  }, [plan, itemById]);
+
+  const upNext = plan?.next_item_id ? (itemById.get(plan.next_item_id) ?? null) : null;
+
+  // If the reserved item gets finished elsewhere on the roadmap, reserve the
+  // next one — the label and what actually arrives must never disagree.
   useEffect(() => {
-    const currentIds = new Set(picked.map((e) => e.item.id));
-    const prev = prevPickedRef.current;
-    if (prev) {
-      const newlyDone = items.filter((i) => prev.has(i.id) && isItemComplete(i) && !currentIds.has(i.id));
-      if (newlyDone.length > 0) {
-        setKeptDone((kept) => {
-          const map = new Map(kept.map((i) => [i.id, i]));
-          for (const item of newlyDone) map.set(item.id, item);
-          return [...map.values()];
-        });
-      }
-    }
-    prevPickedRef.current = currentIds;
-    for (const id of currentIds) pinnedRef.current.add(id);
-  }, [picked, items]);
+    if (!plan) return;
+    const reserved = plan.next_item_id ? itemById.get(plan.next_item_id) : null;
+    if (plan.next_item_id && (!reserved || isItemComplete(reserved))) refreshNext();
+    if (!plan.next_item_id) refreshNext();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan?.next_item_id, items]);
 
-  // The next thing after this week's list: read-only.
-  const pickedIds = useMemo(() => new Set(picked.map((e) => e.item.id)), [picked]);
-  const upNext = useMemo(
-    () => candidates.find((i) => !pickedIds.has(i.id)) ?? null,
-    [candidates, pickedIds],
-  );
+  const planned = lines.reduce((sum, l) => sum + l.entry.planned_hours, 0);
+  const doneHours = lines.reduce((sum, l) => sum + entryHoursDone(l.item, l.entry), 0);
+  const fill = planned > 0 ? Math.min(100, Math.round((doneHours / planned) * 100)) : 0;
+  const ahead = doneHours > planned + 0.01;
+  const allDone = lines.length > 0 && lines.every((l) => entryComplete(l.item, l.entry));
 
-  const planned = picked.reduce((sum, entry) => sum + entry.hours, 0);
-  const fill = Math.min(100, Math.round((planned / budget) * 100));
-  // "if you have time" only makes sense when there's slack left. When the
-  // week is already full (often from one oversized item), say so instead.
-  const budgetFull = planned >= budget - 0.01;
-
-  const renderItem = (entry: WeekEntry | { item: RoadmapItem; hours: number }, done: boolean) => {
-    const item = entry.item;
-    const partial = "partial" in entry ? entry.partial : undefined;
-    const oversized = "oversized" in entry ? entry.oversized : false;
+  const renderLine = ({ entry, item }: { entry: PlanEntry; item: RoadmapItem }) => {
+    const done = entryComplete(item, entry);
+    const partial =
+      item.item_type === "practice" && (entry.reps ?? 0) < (item.target_count ?? 1)
+        ? { take: entry.reps ?? 0, remaining: (item.target_count ?? 1) - (entry.from_progress ?? 0) - (entry.reps ?? 0) }
+        : null;
+    const oversized = entry.planned_hours > budget + 0.01;
     return (
       <li
         key={item.id}
@@ -239,7 +98,7 @@ export function ThisWeekPanel({
                 Done
               </Badge>
             )}
-            {partial && (
+            {partial && partial.take > 0 && (
               <Badge variant="secondary" className="h-5 text-[0.65rem]">
                 {partial.take} this week
               </Badge>
@@ -248,7 +107,7 @@ export function ThisWeekPanel({
           <p className={`mt-0.5 font-medium ${done ? "line-through decoration-muted-foreground/50" : ""}`}>
             {item.title}
           </p>
-          {partial && (
+          {partial && partial.remaining > 0 && (
             <p className="mt-0.5 text-xs text-muted-foreground">
               Just {partial.take} of them this week — the other {partial.remaining} carry into the weeks after.
             </p>
@@ -258,20 +117,16 @@ export function ThisWeekPanel({
               This one is bigger than a single week on its own — take it at your own pace.
             </p>
           )}
-          {/* Same per-type control as the main roadmap; completing here
-              updates the same row. Done items keep their control visible
-              (checked state) until the next visit. */}
           <div className="mt-2.5">
             <ItemControls item={item} />
           </div>
         </div>
         <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-muted-foreground tabular-nums">
-          <Clock className="size-3" /> {formatHours(entry.hours)}
+          <Clock className="size-3" /> {formatHours(entry.planned_hours)}
         </span>
       </li>
     );
   };
-
 
   return (
     <section className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-warm">
@@ -286,28 +141,29 @@ export function ThisWeekPanel({
               : "Based on about 5h a week — tell me your real number and I'll adjust."}
           </p>
         </div>
-        <p className="text-xs font-semibold text-muted-foreground tabular-nums">
-          {formatHours(planned)} of {formatHours(budget)} planned
-        </p>
+        <div className="text-right">
+          <p className="text-xs font-semibold text-muted-foreground tabular-nums">
+            {formatHours(doneHours)} done of {formatHours(planned)} planned
+          </p>
+          {ahead && <p className="text-xs font-semibold text-primary">Ahead of plan — nice.</p>}
+        </div>
       </div>
       <Progress value={fill} className="mt-3 h-2" />
 
-      {picked.length === 0 && keptDone.length === 0 ? (
+      {loading ? (
+        <p className="mt-4 text-sm text-muted-foreground">Getting your week ready…</p>
+      ) : lines.length === 0 ? (
         <p className="mt-4 text-sm text-muted-foreground">
           Nothing left outstanding — everything on your roadmap is done. That's worth a pause.
         </p>
       ) : (
-        <ul className="mt-4 space-y-2.5">
-          {picked.map((entry) => renderItem(entry, false))}
-          {keptDone.map((item) => renderItem({ item, hours: itemHours(item) }, true))}
-        </ul>
+        <ul className="mt-4 space-y-2.5">{lines.map(renderLine)}</ul>
       )}
 
       {upNext && (
         <div className="mt-4 rounded-xl border border-dashed border-border bg-secondary/20 p-3.5">
           <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-            <Sparkles className="size-3.5 text-primary" />{" "}
-            {budgetFull ? "Next — once this week's hours are used up" : "Up next — if you have time"}
+            <Sparkles className="size-3.5 text-primary" /> Next up — saved for after this week
           </p>
 
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
@@ -326,11 +182,26 @@ export function ThisWeekPanel({
               <Clock className="size-3" /> {formatHours(itemHours(upNext))}
             </span>
           </div>
+
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-3"
+            disabled={adding}
+            onClick={() => addNext()}
+          >
+            <Plus className="size-3.5" /> Add this to my week
+          </Button>
+          {allDone && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              You've finished everything you planned for this week — add it only if you want to keep going.
+            </p>
+          )}
         </div>
       )}
 
       <p className="mt-3 text-xs text-muted-foreground">
-        Finished something? It stays ticked here for now, and this list refreshes next time you open the roadmap.
+        This week's list stays exactly as it is until next week — anything you don't get to carries over.
       </p>
     </section>
   );

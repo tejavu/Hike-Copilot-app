@@ -973,6 +973,39 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_plans: {
+        Row: {
+          budget_hours: number
+          created_at: string
+          entries: Json
+          id: string
+          next_item_id: string | null
+          updated_at: string
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          budget_hours?: number
+          created_at?: string
+          entries?: Json
+          id?: string
+          next_item_id?: string | null
+          updated_at?: string
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          budget_hours?: number
+          created_at?: string
+          entries?: Json
+          id?: string
+          next_item_id?: string | null
+          updated_at?: string
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
