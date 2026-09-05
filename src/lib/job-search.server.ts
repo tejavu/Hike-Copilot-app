@@ -324,7 +324,7 @@ async function exampleRoles(
 She is drawn to: ${drawnTo || "unspecified"}. Preferred locations in Switzerland: ${locationText}. Work setup: ${setups.join(", ") || "flexible"}.
 Seniority to aim for: ${targetLevel === "junior" ? "entry-level — junior, graduate or internship roles only, nothing requiring years of experience" : (targetLevel ?? "mid-level")}.
 
-Write ${count} realistic Swiss job archetypes that genuinely match HER field — not generic web or data roles unless that is her field. Return strict JSON:
+Write ${count} realistic Swiss job archetypes that genuinely match HER field — not generic web or data roles unless that is her field. Every role must be a STEM role: software/IT, hardware and electronics, engineering of any discipline, data, or science and research (biomedical, life sciences, chemistry, physics, lab and quality/QA). Never suggest non-STEM roles such as sales, marketing, HR, admin, finance, hospitality or retail, even if a skill overlaps. Return strict JSON:
 {"jobs":[{"title":"","company":"","location":"","description":"","required_skills":[""],"seniority":""}]}
 Use plausible Swiss employer types (e.g. "a Zurich fintech", "a Basel pharma scale-up", "a Swiss medtech company") rather than inventing real company names. Description: 2 warm sentences. 3-5 required_skills.`;
 
