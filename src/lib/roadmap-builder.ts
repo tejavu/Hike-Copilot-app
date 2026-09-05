@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { planForSkill, titleCase, VISIBILITY_ITEMS } from "./catalog";
+import { LINKEDIN_LEARNING, planForSkill, titleCase, VISIBILITY_ITEMS } from "./catalog";
 import { getLinkedInCourses, type LinkedInCourse } from "./linkedin-learning.functions";
 import type { PhaseKind } from "./domain";
 
@@ -164,15 +164,27 @@ export async function generateRoadmap(opts: {
       const gap = gapByHeading.get(skill.name) ?? skill.name;
       const plan = planForSkill(gap);
       const extra = linkedInDetail(gap);
+      // LinkedIn Learning (a Microsoft property) is preferred over a generic
+      // Coursera search — Coursera only stands in when no real course was found.
+      const liCourses = linkedInCourses[gap] ?? [];
+      const preferLinkedIn = liCourses.length > 0 && /coursera/i.test(plan.course.provider);
+      const primary = preferLinkedIn
+        ? { title: liCourses[0]!.title, provider: LINKEDIN_LEARNING, url: liCourses[0]!.url }
+        : plan.course;
+      const learnDetail = preferLinkedIn
+        ? liCourses.length > 1
+          ? `Also on LinkedIn Learning: ${liCourses[1]!.title}: ${liCourses[1]!.url}`
+          : null
+        : extra;
       items.push({
         user_id: userId,
         skill_id: skill.id,
         item_type: "learn",
         estimated_hours: 3,
-        title: plan.course.title,
-        provider: plan.course.provider,
-        url: plan.course.url,
-        ...(extra ? { detail: extra } : {}),
+        title: primary.title,
+        provider: primary.provider,
+        url: primary.url,
+        ...(learnDetail ? { detail: learnDetail } : {}),
         order_index: 0,
       });
       items.push({

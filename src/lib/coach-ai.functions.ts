@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { runJobSearch } from "./job-search.server";
-import { normaliseSkill } from "./catalog";
+import { normaliseSkill, planForSkill } from "./catalog";
 
 const schema = z.object({
   question: z.string().min(1).max(4000),
@@ -377,14 +377,28 @@ async function addItem(supabase: Supa, userId: string, args: Record<string, unkn
     0,
   );
 
+  // A step added from chat must still point somewhere real: when the model
+  // gives no link, fall back to the catalog plan for that skill.
+  const plan = planForSkill(skillName);
+  const suggested =
+    itemType === "learn"
+      ? { url: plan.course.url, provider: plan.course.provider, detail: null as string | null }
+      : itemType === "practice"
+        ? { url: plan.practice.url, provider: null, detail: plan.practice.detail }
+        : itemType === "certify"
+          ? { url: plan.certify.url, provider: plan.certify.provider, detail: null }
+          : itemType === "build"
+            ? { url: null, provider: null, detail: plan.project.detail }
+            : { url: null, provider: null, detail: null };
+
   const { error: itemError } = await supabase.from("roadmap_items").insert({
     user_id: userId,
     skill_id: skillId,
     item_type: itemType,
     title,
-    provider: args["provider"] ? String(args["provider"]) : null,
-    url: args["url"] ? String(args["url"]) : null,
-    detail: args["detail"] ? String(args["detail"]) : null,
+    provider: args["provider"] ? String(args["provider"]) : suggested.provider,
+    url: args["url"] ? String(args["url"]) : suggested.url,
+    detail: args["detail"] ? String(args["detail"]) : suggested.detail,
     target_count: itemType === "practice" ? Number(args["target_count"] ?? 3) : null,
     order_index: orderIndex,
   } as never);
