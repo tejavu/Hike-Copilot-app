@@ -1,5 +1,6 @@
 import { normaliseSkill } from "./catalog";
-import type { SkillConfidence } from "./domain";
+import type { ExperienceEntry, SkillConfidence } from "./domain";
+import { EXPERIENCE_FLOOR_MONTHS, weightedExperienceMonths } from "./experience-weight";
 
 /** A role as it comes back from a live source (or the labelled AI fallback). */
 export type SourcedJob = {
