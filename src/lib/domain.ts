@@ -48,6 +48,8 @@ export type ExperienceEntry = {
   location?: string;
   /** What she actually did there — one achievement per line. */
   bullets?: string[];
+  /** full_time | working_student | internship — drives the level floor. */
+  employment_type?: string;
 };
 export type WebsiteLink = { label: string; url: string };
 export type LanguageEntry = { name: string; level: string };
