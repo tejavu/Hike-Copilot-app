@@ -22,6 +22,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useJobs, useProfile, useUpdateJob, useUpdateProfile } from "@/hooks/useCoachData";
 import { parseCvDocuments } from "@/lib/cv-parse.functions";
 import { formatEntryLine, parseEntryLine } from "@/lib/cv-entry";
+import {
+  classifyEmployment,
+  toEmploymentType,
+  EMPLOYMENT_TYPES,
+  type EmploymentType,
+} from "@/lib/experience-weight";
 import { normaliseAnswer } from "@/lib/profile-parse.functions";
 import { writeRoadmapCopy } from "@/lib/roadmap-copy.functions";
 import {
@@ -389,7 +395,7 @@ export function OnboardingForm() {
           locations: form.locations,
           setups: form.setups,
           recentRole: form.recentRole,
-          experience: roleEntries,
+          experience: nextPatch.experience ?? [],
           targetLevel: form.targetLevel,
           count: 10,
         },
@@ -436,7 +442,7 @@ export function OnboardingForm() {
 
   const likedJobs = (jobs ?? []).filter((j) => j.liked);
   const undecided = (jobs ?? []).filter((j) => j.liked === null);
-  const needsLevelAnswer = form ? deriveTargetLevel(form.skills, form.recentRole) === null : false;
+  const needsLevelAnswer = form ? deriveTargetLevel(form.skills, form.recentRole, typedRoles) === null : false;
 
   const gapPreview = useMemo(() => {
     if (!form) return { strengths: [], gaps: [] };
