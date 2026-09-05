@@ -108,11 +108,11 @@ async function searchAdzuna(
 
   // Sequential with a short pause — Adzuna rate-limits burst requests.
   const results: SourcedJob[][] = [];
-  for (const { country, where, level } of queries) {
+  for (const { where, level } of queries) {
     if (results.length > 0) await new Promise((r) => setTimeout(r, 400));
     results.push(
       await (async () => {
-        const url = new URL(`https://api.adzuna.com/v1/api/jobs/${country}/search/1`);
+        const url = new URL(`https://api.adzuna.com/v1/api/jobs/${ADZUNA_COUNTRY}/search/1`);
         url.searchParams.set("app_id", appId);
         url.searchParams.set("app_key", appKey);
         url.searchParams.set("results_per_page", "20");
@@ -131,7 +131,7 @@ async function searchAdzuna(
             response = await fetch(url.toString());
           }
           if (!response.ok) {
-            notes.push(`Adzuna (${country}) returned ${response.status}.`);
+            notes.push(`Adzuna (Switzerland) returned ${response.status}.`);
             return [];
           }
           const body = (await response.json()) as {
