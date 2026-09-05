@@ -748,8 +748,8 @@ export function OnboardingForm() {
         <Card>
           <CardTitle>What's your most recent role, or closest experience?</CardTitle>
           <CardHint>
-            One line each is plenty. "I'm starting fresh" is a completely fine answer — it just
-            tells me where to begin.
+            One line each is plenty, with the dates in brackets. "I'm starting fresh" is a
+            completely fine answer — it just tells me where to begin.
           </CardHint>
           <Textarea
             value={form.recentRole}
@@ -758,6 +758,48 @@ export function OnboardingForm() {
             className="mt-4"
             placeholder="Support Analyst — Alpine Insurance (2023–now)"
           />
+          {typedRoles.length > 0 && (
+            <div className="mt-5 space-y-3">
+              <Label className="text-xs font-semibold tracking-wide uppercase">
+                What kind of role was each one?
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Internships and student jobs count differently to full-time work, so this changes
+                which roles I show you.
+              </p>
+              {typedRoles.map((role) => (
+                <div key={role.key || role.line} className="rounded-2xl border border-border p-3">
+                  <p className="text-sm font-medium">
+                    {role.title}
+                    {role.period ? (
+                      <span className="text-muted-foreground font-normal"> · {role.period}</span>
+                    ) : null}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {ROLE_TYPE_CHOICES.map((choice) => (
+                      <button
+                        key={choice.value}
+                        type="button"
+                        onClick={() =>
+                          patch({
+                            roleTypes: { ...form.roleTypes, [role.key]: choice.value },
+                          })
+                        }
+                        className={cn(
+                          "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                          role.type === choice.value
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-card hover:border-primary/50",
+                        )}
+                      >
+                        {choice.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           <Nav onBack={() => setStep("constraints")} onNext={() => setStep("skills")} />
         </Card>
       )}
