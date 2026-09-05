@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Loader2, Minus, Plus, Upload } from "lucide-react";
+import { Github, Loader2, Minus, Plus, Upload } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -109,12 +110,20 @@ export function ItemControls({ item }: { item: RoadmapItem }) {
   if (needsProof && !done) {
     return (
       <div className="flex flex-wrap items-center gap-2">
-        <Input
-          value={proof}
-          onChange={(e) => setProof(e.target.value)}
-          placeholder={item.item_type === "build" ? "Link to your repo or live demo" : "Credential or certificate link"}
-          className="h-9 max-w-xs bg-card text-sm"
-        />
+        <div className="flex items-center gap-2">
+          <Input
+            value={proof}
+            onChange={(e) => setProof(e.target.value)}
+            placeholder={item.item_type === "build" ? "Link to your repo or live demo" : "Credential or certificate link"}
+            className="h-9 max-w-xs bg-card text-sm"
+          />
+          {item.item_type === "build" && (
+            <Badge variant="outline" className="h-7 gap-1 text-[0.65rem] font-normal">
+              <Github className="size-3" />
+              Suggested: GitHub
+            </Badge>
+          )}
+        </div>
         <Button size="sm" onClick={() => void saveProof()} disabled={!proof.trim() || updateItem.isPending}>
           Save proof
         </Button>

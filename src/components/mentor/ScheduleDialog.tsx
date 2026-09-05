@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarPlus, Check, Loader2, Video } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -149,6 +150,9 @@ export function ScheduleDialog({
               <p className="inline-flex items-center gap-2 text-sm font-semibold text-accent-foreground">
                 <Video className="size-4" />
                 Microsoft Teams
+                <Badge variant="secondary" className="h-5 text-[0.65rem] font-normal">
+                  Microsoft Teams
+                </Badge>
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-accent-foreground">
                 Hike Copilot can't create a Teams meeting for you yet — that needs you to authorise Microsoft
