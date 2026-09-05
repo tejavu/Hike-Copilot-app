@@ -436,6 +436,19 @@ ${JSON.stringify(payload)}`;
 export const jobSearchSchema = inputSchema;
 
 /** Runs the whole sourcing pipeline: live boards first, labelled examples last. */
+/**
+ * Hard STEM gate: even inside IT/engineering/science categories, postings for
+ * commercial or support functions leak through (a "Sales Engineer" in the
+ * engineering category is still a sales job). This platform is STEM-only, so
+ * any role whose title is plainly non-STEM is dropped, whatever the source.
+ */
+const NON_STEM_TITLE =
+  /\b(sales|account manager|account executive|marketing|seo|content (writer|manager)|copywriter|recruiter|talent acquisition|\bhr\b|human resources|people (partner|operations)|office manager|assistant|sekret|kaufm|verkauf|verkäuf|kundenberater|customer (success|service|support)|call center|accountant|controller|finance|finanz|treasury|audit(?! engineer)|legal|jurist|compliance officer|procurement|einkauf|logistics|supply chain|warehouse|lager|facility|hausmeister|driver|fahrer|retail|verkaufsberater|consultant(?!.*(engineer|tech|data|cloud|sap|security)))\b/i;
+
+function isStemRole(job: SourcedJob): boolean {
+  return !NON_STEM_TITLE.test(job.title);
+}
+
 export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<JobSearchResult> {
   const notes: string[] = [];
   const terms = topTerms(data.skills, data.interests, data.drawnTo);
@@ -454,7 +467,7 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
     searchSwissBoards(terms, swissLocations, notes, targetLevel),
   ]);
 
-  const live = [...swiss, ...adzuna];
+  const live = [...swiss, ...adzuna].filter(isStemRole);
 
   const ranked = rankJobs(live, {
     skills: data.skills,
@@ -481,7 +494,7 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
     };
   }
 
-  const examples = await exampleRoles(
+  const examples = (await exampleRoles(
     terms,
     data.drawnTo,
     swissLocations,
@@ -489,7 +502,7 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
     data.count - shortlist.length,
     notes,
     targetLevel,
-  );
+  )).filter(isStemRole);
   const jobs = [...shortlist, ...examples].slice(0, data.count);
   return {
     jobs,
