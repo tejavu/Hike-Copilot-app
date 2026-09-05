@@ -27,25 +27,11 @@ export type JobSearchResult = {
   notes: string[];
 };
 
-/** Adzuna country codes we can actually query. */
-const ADZUNA_COUNTRIES: Record<string, string> = {
-  CH: "ch",
-  DE: "de",
-  AT: "at",
-  NL: "nl",
-  FR: "fr",
-  BE: "be",
-  IE: "gb",
-  UK: "gb",
-  GB: "gb",
-  ES: "es",
-  IT: "it",
-  PL: "pl",
-};
+/** Jobs are always scoped to Switzerland, regardless of the user's broader location prefs. */
+const ADZUNA_COUNTRY = "ch";
 
-function countryOf(location: string): string | null {
-  const code = location.split(",").pop()?.trim().toUpperCase() ?? "";
-  return ADZUNA_COUNTRIES[code] ?? null;
+function isSwissLocation(location: string): boolean {
+  return location.trim().toUpperCase().endsWith("CH");
 }
 
 function cityName(location: string): string {
@@ -99,15 +85,15 @@ async function searchAdzuna(
   }
   if (terms.length === 0) return [];
 
-  const targets = locations.length > 0 ? locations : ["Zurich, CH"];
+  const targets = locations.filter(isSwissLocation).length > 0
+    ? locations.filter(isSwissLocation)
+    : ["Zurich, CH"];
   const places = new Map<string, string | null>();
   for (const location of targets) {
-    const country = countryOf(location);
-    if (!country) continue;
-    places.set(`${country}|${cityName(location)}`, cityName(location));
+    const city = cityName(location);
+    // Remote means no city filter — country-level Switzerland search.
+    places.set(location, city.toLowerCase() === "remote" ? null : city);
   }
-  // Remote-friendly sweep so people open to remote aren't limited to one city.
-  places.set("gb|", null);
 
   // Level words must never sit in the same OR bucket as her skills: a posting
   // matching only "junior" would come back with nothing to do with her field.
@@ -115,19 +101,18 @@ async function searchAdzuna(
   const levelWords: (string | null)[] =
     targetLevel === "junior" ? ["junior", "graduate"] : [null];
 
-  const queries: { country: string; where: string | null; level: string | null }[] = [];
-  for (const [key, where] of places.entries()) {
-    const country = key.split("|")[0]!;
-    for (const level of levelWords) queries.push({ country, where, level });
+  const queries: { where: string | null; level: string | null }[] = [];
+  for (const [, where] of places.entries()) {
+    for (const level of levelWords) queries.push({ where, level });
   }
 
   // Sequential with a short pause — Adzuna rate-limits burst requests.
   const results: SourcedJob[][] = [];
-  for (const { country, where, level } of queries) {
+  for (const { where, level } of queries) {
     if (results.length > 0) await new Promise((r) => setTimeout(r, 400));
     results.push(
       await (async () => {
-        const url = new URL(`https://api.adzuna.com/v1/api/jobs/${country}/search/1`);
+        const url = new URL(`https://api.adzuna.com/v1/api/jobs/${ADZUNA_COUNTRY}/search/1`);
         url.searchParams.set("app_id", appId);
         url.searchParams.set("app_key", appKey);
         url.searchParams.set("results_per_page", "20");
@@ -146,7 +131,7 @@ async function searchAdzuna(
             response = await fetch(url.toString());
           }
           if (!response.ok) {
-            notes.push(`Adzuna (${country}) returned ${response.status}.`);
+            notes.push(`Adzuna (Switzerland) returned ${response.status}.`);
             return [];
           }
           const body = (await response.json()) as {
@@ -202,7 +187,7 @@ async function searchSwissBoards(
     notes.push("Swiss board search is not configured yet.");
     return [];
   }
-  const swissCities = locations.filter((l) => l.trim().toUpperCase().endsWith("CH")).map(cityName);
+  const swissCities = locations.filter(isSwissLocation).map(cityName);
   if (terms.length === 0) return [];
 
   const query = [
@@ -276,13 +261,17 @@ async function exampleRoles(
   const key = process.env["LOVABLE_API_KEY"];
   if (!key) return [];
 
-  const prompt = `A woman in tech is job hunting. Her strongest skills: ${terms.join(", ") || "unspecified"}.
-She is drawn to: ${drawnTo || "unspecified"}. Preferred locations: ${locations.join(", ") || "flexible"}. Work setup: ${setups.join(", ") || "flexible"}.
+  // Example roles are always Swiss, even if the user once picked broader locations.
+  const swissLocations = locations.filter(isSwissLocation);
+  const locationText = swissLocations.length > 0 ? swissLocations.join(", ") : "Switzerland";
+
+  const prompt = `A woman in tech is job hunting in Switzerland. Her strongest skills: ${terms.join(", ") || "unspecified"}.
+She is drawn to: ${drawnTo || "unspecified"}. Preferred locations in Switzerland: ${locationText}. Work setup: ${setups.join(", ") || "flexible"}.
 Seniority to aim for: ${targetLevel === "junior" ? "entry-level — junior, graduate or internship roles only, nothing requiring years of experience" : (targetLevel ?? "mid-level")}.
 
-Write ${count} realistic job archetypes that genuinely match HER field — not generic web or data roles unless that is her field. Return strict JSON:
+Write ${count} realistic Swiss job archetypes that genuinely match HER field — not generic web or data roles unless that is her field. Return strict JSON:
 {"jobs":[{"title":"","company":"","location":"","description":"","required_skills":[""],"seniority":""}]}
-Use plausible European employer types (e.g. "a medtech scale-up") rather than inventing real company names. Description: 2 warm sentences. 3-5 required_skills.`;
+Use plausible Swiss employer types (e.g. "a Zurich fintech", "a Basel pharma scale-up", "a Swiss medtech company") rather than inventing real company names. Description: 2 warm sentences. 3-5 required_skills.`;
 
   try {
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -399,9 +388,14 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
   const targetLevel = data.targetLevel ?? deriveTargetLevel(data.skills, data.recentRole);
   const levelUnclear = !data.targetLevel && targetLevel === null;
 
+  // Jobs are always Switzerland-only, regardless of what the client sends.
+  const swissLocations = data.locations.filter(isSwissLocation).length > 0
+    ? data.locations.filter(isSwissLocation)
+    : ["Zurich, CH"];
+
   const [adzuna, swiss] = await Promise.all([
-    searchAdzuna(terms, data.locations, notes, targetLevel),
-    searchSwissBoards(terms, data.locations, notes, targetLevel),
+    searchAdzuna(terms, swissLocations, notes, targetLevel),
+    searchSwissBoards(terms, swissLocations, notes, targetLevel),
   ]);
 
   const live = [...swiss, ...adzuna];
@@ -410,7 +404,7 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
     skills: data.skills,
     interests: [...data.interests, data.drawnTo].filter(Boolean),
     setups: data.setups,
-    locations: data.locations,
+    locations: swissLocations,
     count: data.count,
     targetLevel,
   });
@@ -434,7 +428,7 @@ export async function runJobSearch(data: z.infer<typeof inputSchema>): Promise<J
   const examples = await exampleRoles(
     terms,
     data.drawnTo,
-    data.locations,
+    swissLocations,
     data.setups,
     data.count - shortlist.length,
     notes,
