@@ -1,6 +1,10 @@
 import { normaliseSkill } from "./catalog";
-import type { ExperienceEntry, SkillConfidence } from "./domain";
-import { EXPERIENCE_FLOOR_MONTHS, weightedExperienceMonths } from "./experience-weight";
+import type { SkillConfidence } from "./domain";
+import {
+  EXPERIENCE_FLOOR_MONTHS,
+  weightedExperienceMonths,
+  type WeighableRole,
+} from "./experience-weight";
 
 /** A role as it comes back from a live source (or the labelled AI fallback). */
 export type SourcedJob = {
@@ -85,7 +89,7 @@ const LEVEL_ORDER: TargetLevel[] = ["junior", "mid", "senior"];
 export function deriveTargetLevel(
   skills: SkillConfidence[],
   recentRole: string | null | undefined,
-  experience?: ExperienceEntry[] | null,
+  experience?: readonly WeighableRole[] | null,
 ): TargetLevel | null {
   const levelled = skills.filter((s) => Number.isFinite(s.level) && s.level > 0);
   const role = (recentRole ?? "").trim().toLowerCase();

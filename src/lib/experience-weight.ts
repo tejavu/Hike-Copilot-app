@@ -1,4 +1,11 @@
-import type { ExperienceEntry } from "./domain";
+/** Anything with a period we can read — profile rows or validated input. */
+export type WeighableRole = {
+  title?: string | undefined;
+  company?: string | undefined;
+  detail?: string | undefined;
+  period?: string | undefined;
+  employment_type?: string | undefined;
+};
 
 /**
  * How a role counted toward real professional experience. Swiss CVs mix
@@ -103,7 +110,7 @@ export function monthsInPeriod(period: string | undefined | null): number {
  * Total experience in weighted months: full-time counts in full,
  * working-student roughly half, internships about a third.
  */
-export function weightedExperienceMonths(entries: ExperienceEntry[] | null | undefined): number {
+export function weightedExperienceMonths(entries: readonly WeighableRole[] | null | undefined): number {
   let total = 0;
   for (const entry of entries ?? []) {
     const months = monthsInPeriod(entry.period);
@@ -117,7 +124,7 @@ export function weightedExperienceMonths(entries: ExperienceEntry[] | null | und
 }
 
 /** Turns free-text role lines into entries we can weigh. */
-export function experienceFromLines(lines: string[]): ExperienceEntry[] {
+export function experienceFromLines(lines: string[]): WeighableRole[] {
   return lines.map((line) => {
     const period = line.match(/\(([^)]*\d{4}[^)]*)\)/)?.[1] ?? "";
     return { title: line, period, employment_type: classifyEmployment(line) };
