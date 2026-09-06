@@ -285,7 +285,6 @@ export function ChatView() {
               .join(" · ")}`
           : null,
         parsed.certifications.length ? `Certifications: ${parsed.certifications.join(", ")}` : null,
-
       ].filter(Boolean) as string[];
 
       const haveEnough = parsed.skills.length > 0 && parsed.interests.length > 0;

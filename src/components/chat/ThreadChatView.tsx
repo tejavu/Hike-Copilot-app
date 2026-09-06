@@ -8,7 +8,12 @@ import copilotLogo from "@/assets/copilot-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useJobs, useProfile, useRoadmap } from "@/hooks/useCoachData";
-import { useDeleteThread, useRenameThread, useThreadMessages, useThreads } from "@/hooks/useChatThreads";
+import {
+  useDeleteThread,
+  useRenameThread,
+  useThreadMessages,
+  useThreads,
+} from "@/hooks/useChatThreads";
 import { askCoach } from "@/lib/coach-ai.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,7 +54,14 @@ export function ThreadChatView({ threadId }: { threadId: string }) {
   const say = async (content: string, role: "assistant" | "user") => {
     const { error } = await supabase
       .from("chat_messages")
-      .insert({ user_id: user!.id, thread_id: threadId, role, content, kind: "text", payload: null } as never);
+      .insert({
+        user_id: user!.id,
+        thread_id: threadId,
+        role,
+        content,
+        kind: "text",
+        payload: null,
+      } as never);
     if (error) throw error;
   };
 
@@ -90,8 +102,12 @@ export function ThreadChatView({ threadId }: { threadId: string }) {
     <div className="mx-auto flex h-[calc(100vh-3.5rem)] w-full max-w-3xl flex-col px-4 md:h-screen md:px-8">
       <div className="flex items-center justify-between gap-3 border-b border-border py-4">
         <div className="min-w-0">
-          <h1 className="truncate font-display text-lg font-semibold">{thread?.title ?? "New chat"}</h1>
-          <p className="text-xs text-muted-foreground">A side conversation — your coaching chat stays untouched.</p>
+          <h1 className="truncate font-display text-lg font-semibold">
+            {thread?.title ?? "New chat"}
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            A side conversation — your coaching chat stays untouched.
+          </p>
         </div>
         <button
           type="button"
@@ -105,10 +121,16 @@ export function ThreadChatView({ threadId }: { threadId: string }) {
       <div className="flex-1 space-y-5 overflow-y-auto py-8">
         {!isLoading && (messages?.length ?? 0) === 0 && (
           <div className="mx-auto max-w-md pt-10 text-center">
-            <img src={copilotLogo} alt="" width={816} height={816} className="mx-auto size-12 object-contain" />
+            <img
+              src={copilotLogo}
+              alt=""
+              width={816}
+              height={816}
+              className="mx-auto size-12 object-contain"
+            />
             <p className="mt-4 text-sm text-muted-foreground">
-              Ask me anything — a role you spotted, an interview you're nervous about, or a skill you want to add to
-              your roadmap.
+              Ask me anything — a role you spotted, an interview you're nervous about, or a skill
+              you want to add to your roadmap.
             </p>
           </div>
         )}
@@ -138,7 +160,12 @@ export function ThreadChatView({ threadId }: { threadId: string }) {
             rows={1}
             className="max-h-32 min-h-11 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0"
           />
-          <Button size="icon" className="size-11 shrink-0 rounded-xl" onClick={() => void send()} disabled={busy}>
+          <Button
+            size="icon"
+            className="size-11 shrink-0 rounded-xl"
+            onClick={() => void send()}
+            disabled={busy}
+          >
             <Send className="size-4" />
           </Button>
         </div>
@@ -198,7 +225,12 @@ function buildContext(
     `CV summary: ${profile.summary ?? "not written yet"}`,
     `CV experience entries: ${(profile.experience ?? []).map((e) => [e.title, e.company].filter(Boolean).join(" at ")).join("; ") || "none"}`,
     `CV project entries: ${(profile.projects ?? []).map((p) => p.title).join("; ") || "none"}`,
-    `Liked roles: ${(jobs ?? []).filter((j) => j.liked).map((j) => `${j.title} at ${j.company}`).join("; ") || "none"}`,
+    `Liked roles: ${
+      (jobs ?? [])
+        .filter((j) => j.liked)
+        .map((j) => `${j.title} at ${j.company}`)
+        .join("; ") || "none"
+    }`,
     `Roadmap steps: ${(roadmap?.items ?? []).length}`,
   ].join("\n");
 }
