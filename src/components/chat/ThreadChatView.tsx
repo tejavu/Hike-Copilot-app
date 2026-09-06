@@ -205,7 +205,7 @@ function Bubble({ message }: { message: ChatMessage }) {
             "leading-relaxed",
             isUser
               ? "rounded-2xl rounded-br-md bg-primary px-4 py-3 text-primary-foreground"
-              : "w-full gap-3 overflow-visible py-2",
+              : "rounded-2xl rounded-bl-md border border-border bg-card px-4 py-3 text-foreground",
           )}
         >
           {isUser ? (
@@ -220,6 +220,7 @@ function Bubble({ message }: { message: ChatMessage }) {
     </div>
   );
 }
+
 
 function buildContext(
   profile: Profile | null | undefined,
