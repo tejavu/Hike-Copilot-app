@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import copilotLogo from "@/assets/copilot-logo.png";
+import copilotLogo from "@/assets/logo-hike.png.asset.json";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useJobs, useProfile, useRoadmap } from "@/hooks/useCoachData";
@@ -180,7 +180,7 @@ function Bubble({ message }: { message: ChatMessage }) {
     <div className={cn("animate-rise flex gap-3", isUser && "flex-row-reverse")}>
       {!isUser && (
         <img
-          src={copilotLogo}
+          src={copilotLogo.url}
           alt=""
           loading="lazy"
           width={816}
