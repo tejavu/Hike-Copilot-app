@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import copilotLogo from "@/assets/copilot-logo.png";
+import copilotLogo from "@/assets/logo-hike.png.asset.json";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -650,7 +650,7 @@ function Bubble({ message }: { message: ChatMessage }) {
     <div className={cn("flex gap-3", isUser && "flex-row-reverse")}>
       {!isUser && (
         <img
-          src={copilotLogo}
+          src={copilotLogo.url}
           alt=""
           loading="lazy"
           width={816}

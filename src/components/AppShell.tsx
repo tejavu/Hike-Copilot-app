@@ -20,7 +20,7 @@ import { useProfile } from "@/hooks/useCoachData";
 import { useCreateThread, useThreads } from "@/hooks/useChatThreads";
 import { useAuth } from "@/hooks/useAuth";
 import { CvDialog } from "@/components/cv/CvDialog";
-import copilotLogo from "@/assets/copilot-logo.png";
+import copilotLogo from "@/assets/logo-hike.png.asset.json";
 
 type NavItem = {
   to: "/" | "/roadmap" | "/network" | "/mentor-match";
@@ -90,7 +90,7 @@ function SidebarBody({ onNavigate }: { onNavigate: () => void }) {
       <div className="px-5 pt-6 pb-5">
         <div className="flex items-center gap-2.5">
           <img
-            src={copilotLogo}
+            src={copilotLogo.url}
             alt="Hike Copilot logo"
             width={816}
             height={816}
