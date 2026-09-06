@@ -575,8 +575,8 @@ export function ChatView() {
                 onChoosePath={choosePath}
                 onUpload={uploadFiles}
                 onDecideJob={decideJob}
-
               />
+
             )}
           </div>
         ))}
