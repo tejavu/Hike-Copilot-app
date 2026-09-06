@@ -49,6 +49,7 @@ import { type ChatMessage, type Job, type Profile } from "@/lib/domain";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
 import { cn } from "@/lib/utils";
 
 function guessMime(name: string): string {
@@ -284,7 +285,6 @@ export function ChatView() {
               .join(" · ")}`
           : null,
         parsed.certifications.length ? `Certifications: ${parsed.certifications.join(", ")}` : null,
-
       ].filter(Boolean) as string[];
 
       const haveEnough = parsed.skills.length > 0 && parsed.interests.length > 0;
@@ -641,16 +641,24 @@ function Bubble({ message }: { message: ChatMessage }) {
           className="mt-1 size-8 shrink-0 object-contain"
         />
       )}
-      <div
-        className={cn(
-          "max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-line",
-          isUser
-            ? "rounded-br-md bg-primary text-primary-foreground"
-            : "rounded-bl-md border border-border bg-card text-card-foreground shadow-warm",
-        )}
-      >
-        {message.content}
-      </div>
+      <Message from={message.role} className="w-auto max-w-[85%]">
+        <MessageContent
+          className={cn(
+            "leading-relaxed",
+            isUser
+              ? "rounded-2xl rounded-br-md bg-primary px-4 py-3 text-primary-foreground"
+              : "w-full gap-3 overflow-visible py-2",
+          )}
+        >
+          {isUser ? (
+            <span className="whitespace-pre-wrap">{message.content}</span>
+          ) : (
+            <MessageResponse className="[&_a]:font-medium [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4 [&_li]:my-1 [&_ol]:my-3 [&_ol]:pl-5 [&_p]:my-3 [&_strong]:font-semibold [&_ul]:my-3 [&_ul]:pl-5">
+              {message.content}
+            </MessageResponse>
+          )}
+        </MessageContent>
+      </Message>
     </div>
   );
 }
