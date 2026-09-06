@@ -131,19 +131,7 @@ export function ThreadChatView({ threadId }: { threadId: string }) {
 
       <div className="flex-1 space-y-5 overflow-y-auto py-8">
         {!isLoading && (messages?.length ?? 0) === 0 && (
-          <div className="mx-auto max-w-md pt-10 text-center">
-            <img
-              src={copilotLogo}
-              alt=""
-              width={816}
-              height={816}
-              className="mx-auto size-12 object-contain"
-            />
-            <p className="mt-4 text-sm text-muted-foreground">
-              Ask me anything — a role you spotted, an interview you're nervous about, or a skill
-              you want to add to your roadmap.
-            </p>
-          </div>
+          <Bubble message={WELCOME_MESSAGE} />
         )}
         {(messages ?? []).map((message) => (
           <Bubble key={message.id} message={message} />
@@ -155,6 +143,7 @@ export function ThreadChatView({ threadId }: { threadId: string }) {
         )}
         <div ref={bottom} />
       </div>
+
 
       <div className="sticky bottom-0 border-t border-border bg-background/90 py-4 backdrop-blur">
         <div className="flex items-end gap-2 rounded-2xl border border-border bg-card p-2 shadow-warm">

@@ -561,6 +561,9 @@ export function ChatView() {
         </div>
       </div>
       <div className="flex-1 space-y-5 overflow-y-auto py-8">
+        {!isLoading && (messages?.length ?? 0) === 0 && stage === "done" && (
+          <Bubble message={WELCOME_MESSAGE} />
+        )}
         {(messages ?? []).map((message) => (
           <div key={message.id} className="animate-rise space-y-3">
             <Bubble message={message} />
@@ -571,7 +574,7 @@ export function ChatView() {
                 busy={busy}
                 onChoosePath={choosePath}
                 onUpload={uploadFiles}
-                onDecideJob={decideJob}
+                onDecideJob={onDecideJob}
               />
             )}
           </div>
@@ -583,6 +586,7 @@ export function ChatView() {
         )}
         <div ref={bottom} />
       </div>
+
 
       <div className="sticky bottom-0 border-t border-border bg-background/90 py-4 backdrop-blur">
         <div className="flex items-end gap-2 rounded-2xl border border-border bg-card p-2 shadow-warm">
