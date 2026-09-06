@@ -574,7 +574,8 @@ export function ChatView() {
                 busy={busy}
                 onChoosePath={choosePath}
                 onUpload={uploadFiles}
-                onDecideJob={onDecideJob}
+                onDecideJob={decideJob}
+
               />
             )}
           </div>
