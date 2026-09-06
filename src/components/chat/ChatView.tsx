@@ -650,7 +650,7 @@ function Bubble({ message }: { message: ChatMessage }) {
     <div className={cn("flex gap-3", isUser && "flex-row-reverse")}>
       {!isUser && (
         <img
-          src={copilotLogo}
+          src={copilotLogo.url}
           alt=""
           loading="lazy"
           width={816}
