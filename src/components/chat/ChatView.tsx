@@ -52,6 +52,18 @@ import { Badge } from "@/components/ui/badge";
 import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
 import { cn } from "@/lib/utils";
 
+const WELCOME_MESSAGE: ChatMessage = {
+  id: "welcome",
+  user_id: "",
+  role: "assistant",
+  content:
+    "Welcome to Hike Copilot! I'm here to help with your CV, your roadmap, and finding roles that match your skills — what would you like to work on?",
+  kind: "text",
+  payload: null,
+  created_at: new Date().toISOString(),
+};
+
+
 function guessMime(name: string): string {
   const ext = name.split(".").pop()?.toLowerCase();
   if (ext === "pdf") return "application/pdf";

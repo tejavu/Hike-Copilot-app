@@ -21,6 +21,18 @@ import { Message, MessageContent, MessageResponse } from "@/components/ai-elemen
 import { cn } from "@/lib/utils";
 import type { ChatMessage, Job, Profile } from "@/lib/domain";
 
+const WELCOME_MESSAGE: ChatMessage = {
+  id: "welcome",
+  user_id: "",
+  role: "assistant",
+  content:
+    "Welcome to Hike Copilot! I'm here to help with your CV, your roadmap, and finding roles that match your skills — what would you like to work on?",
+  kind: "text",
+  payload: null,
+  created_at: new Date().toISOString(),
+};
+
+
 export function ThreadChatView({ threadId }: { threadId: string }) {
   const { user } = useAuth();
   const qc = useQueryClient();
