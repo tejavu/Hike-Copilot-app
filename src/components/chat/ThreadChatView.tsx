@@ -52,16 +52,15 @@ export function ThreadChatView({ threadId }: { threadId: string }) {
   };
 
   const say = async (content: string, role: "assistant" | "user") => {
-    const { error } = await supabase
-      .from("chat_messages")
-      .insert({
-        user_id: user!.id,
-        thread_id: threadId,
-        role,
-        content,
-        kind: "text",
-        payload: null,
-      } as never);
+    if (!user) throw new Error("Sign in to send a message.");
+    const { error } = await supabase.from("chat_messages").insert({
+      user_id: user.id,
+      thread_id: threadId,
+      role,
+      content,
+      kind: "text",
+      payload: null,
+    } as never);
     if (error) throw error;
   };
 
