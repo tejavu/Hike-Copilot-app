@@ -21,6 +21,18 @@ import { Message, MessageContent, MessageResponse } from "@/components/ai-elemen
 import { cn } from "@/lib/utils";
 import type { ChatMessage, Job, Profile } from "@/lib/domain";
 
+const WELCOME_MESSAGE: ChatMessage = {
+  id: "welcome",
+  user_id: "",
+  role: "assistant",
+  content:
+    "Welcome to Hike Copilot! I'm here to help with your CV, your roadmap, and finding roles that match your skills — what would you like to work on?",
+  kind: "text",
+  payload: null,
+  created_at: new Date().toISOString(),
+};
+
+
 export function ThreadChatView({ threadId }: { threadId: string }) {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -119,19 +131,7 @@ export function ThreadChatView({ threadId }: { threadId: string }) {
 
       <div className="flex-1 space-y-5 overflow-y-auto py-8">
         {!isLoading && (messages?.length ?? 0) === 0 && (
-          <div className="mx-auto max-w-md pt-10 text-center">
-            <img
-              src={copilotLogo}
-              alt=""
-              width={816}
-              height={816}
-              className="mx-auto size-12 object-contain"
-            />
-            <p className="mt-4 text-sm text-muted-foreground">
-              Ask me anything — a role you spotted, an interview you're nervous about, or a skill
-              you want to add to your roadmap.
-            </p>
-          </div>
+          <Bubble message={WELCOME_MESSAGE} />
         )}
         {(messages ?? []).map((message) => (
           <Bubble key={message.id} message={message} />
@@ -143,6 +143,7 @@ export function ThreadChatView({ threadId }: { threadId: string }) {
         )}
         <div ref={bottom} />
       </div>
+
 
       <div className="sticky bottom-0 border-t border-border bg-background/90 py-4 backdrop-blur">
         <div className="flex items-end gap-2 rounded-2xl border border-border bg-card p-2 shadow-warm">
@@ -193,7 +194,7 @@ function Bubble({ message }: { message: ChatMessage }) {
             "leading-relaxed",
             isUser
               ? "rounded-2xl rounded-br-md bg-primary px-4 py-3 text-primary-foreground"
-              : "w-full gap-3 overflow-visible py-2",
+              : "rounded-2xl rounded-bl-md border border-border bg-card px-4 py-3 text-foreground",
           )}
         >
           {isUser ? (
@@ -208,6 +209,7 @@ function Bubble({ message }: { message: ChatMessage }) {
     </div>
   );
 }
+
 
 function buildContext(
   profile: Profile | null | undefined,

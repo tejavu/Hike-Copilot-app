@@ -52,6 +52,18 @@ import { Badge } from "@/components/ui/badge";
 import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
 import { cn } from "@/lib/utils";
 
+const WELCOME_MESSAGE: ChatMessage = {
+  id: "welcome",
+  user_id: "",
+  role: "assistant",
+  content:
+    "Welcome to Hike Copilot! I'm here to help with your CV, your roadmap, and finding roles that match your skills — what would you like to work on?",
+  kind: "text",
+  payload: null,
+  created_at: new Date().toISOString(),
+};
+
+
 function guessMime(name: string): string {
   const ext = name.split(".").pop()?.toLowerCase();
   if (ext === "pdf") return "application/pdf";
@@ -549,6 +561,9 @@ export function ChatView() {
         </div>
       </div>
       <div className="flex-1 space-y-5 overflow-y-auto py-8">
+        {!isLoading && (messages?.length ?? 0) === 0 && stage === "done" && (
+          <Bubble message={WELCOME_MESSAGE} />
+        )}
         {(messages ?? []).map((message) => (
           <div key={message.id} className="animate-rise space-y-3">
             <Bubble message={message} />
@@ -561,6 +576,7 @@ export function ChatView() {
                 onUpload={uploadFiles}
                 onDecideJob={decideJob}
               />
+
             )}
           </div>
         ))}
@@ -571,6 +587,7 @@ export function ChatView() {
         )}
         <div ref={bottom} />
       </div>
+
 
       <div className="sticky bottom-0 border-t border-border bg-background/90 py-4 backdrop-blur">
         <div className="flex items-end gap-2 rounded-2xl border border-border bg-card p-2 shadow-warm">
@@ -647,7 +664,7 @@ function Bubble({ message }: { message: ChatMessage }) {
             "leading-relaxed",
             isUser
               ? "rounded-2xl rounded-br-md bg-primary px-4 py-3 text-primary-foreground"
-              : "w-full gap-3 overflow-visible py-2",
+              : "rounded-2xl rounded-bl-md border border-border bg-card px-4 py-3 text-foreground",
           )}
         >
           {isUser ? (
@@ -662,6 +679,7 @@ function Bubble({ message }: { message: ChatMessage }) {
     </div>
   );
 }
+
 
 function Interactive({
   message,
